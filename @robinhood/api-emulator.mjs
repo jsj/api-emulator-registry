@@ -95,6 +95,28 @@ function defaultState(baseUrl = 'https://api.robinhood.com') {
       { symbol: 'MSFT', last_trade_price: '425.00', previous_close: '421.50', ask_price: '425.20', bid_price: '424.90', trading_halted: false },
     ],
     watchlists: [{ name: 'Default', symbols: ['AAPL', 'HOOD', 'MSFT', 'BTC-USD'] }],
+    notifications: [
+      {
+        id: 'notification_emulator',
+        type: 'portfolio',
+        title: 'Portfolio ready',
+        message: 'Your emulator account is active.',
+        read: false,
+        destination: 'portfolio',
+        created_at: fixedNow,
+      },
+    ],
+    optionsAccounts: [
+      {
+        id: 'options_acct_emulator',
+        account: `${baseUrl}/accounts/acct_emulator/`,
+        state: 'approved',
+        trading_level: 'level_2',
+        cash_available: '10000.00',
+        buying_power: '10000.00',
+        created_at: fixedNow,
+      },
+    ],
     applications: [
       {
         id: 'application_emulator',
@@ -235,26 +257,197 @@ function quotePayload(quote) {
   };
 }
 
+function quoteForSymbol(s, symbol) {
+  return quotePayload(s.quotes.find((quote) => quote.symbol === symbol) ?? { symbol, last_trade_price: '0.00', previous_close: '0.00' });
+}
+
+function enrichedPositions(s) {
+  return s.positions.map((position) => ({
+    ...position,
+    quote: quoteForSymbol(s, position.symbol),
+    instrument: s.instruments.find((instrument) => instrument.symbol === position.symbol) ?? position.instrument,
+  }));
+}
+
+function watchlistPayload(s, watchlist = s.watchlists[0]) {
+  return {
+    id: 'watchlist_default',
+    name: watchlist.name,
+    display_name: watchlist.name,
+    owner_type: 'custom',
+    symbols: watchlist.symbols,
+    instruments: watchlist.symbols
+      .filter((symbol) => !symbol.includes('-'))
+      .map((symbol) => s.instruments.find((instrument) => instrument.symbol === symbol))
+      .filter(Boolean),
+    quotes: watchlist.symbols.map((symbol) => quoteForSymbol(s, symbol)),
+    updated_at: fixedNow,
+  };
+}
+
+function userDefaultsPayload(s) {
+  return {
+    defaults: {
+      account: s.accounts[0].url,
+      account_id: s.accounts[0].id,
+      portfolio: s.portfolios[0],
+      watchlist: 'watchlist_default',
+      currency: 'USD',
+      home_sections: ['portfolio', 'positions', 'watchlist', 'crypto'],
+    },
+    user_defaults: {
+      default_account: s.accounts[0].url,
+      default_account_id: s.accounts[0].id,
+      default_watchlist_id: 'watchlist_default',
+      preferred_currency: 'USD',
+      portfolio_modules: ['summary', 'positions', 'watchlist', 'crypto'],
+      watchlist_symbols: s.watchlists[0].symbols,
+    },
+  };
+}
+
+function userSettingsPayload(s) {
+  const settings = {
+    home: { default_tab: 'investing', modules: ['portfolio', 'positions', 'watchlist', 'crypto'] },
+    portfolio: { show_positions: true, show_chart: true, show_buying_power: true },
+    watchlist: { default_watchlist_id: 'watchlist_default', symbols: s.watchlists[0].symbols },
+    notifications: { push_enabled: true, inbox_badge_enabled: true },
+  };
+  return {
+    settings,
+    results: Object.entries(settings).map(([key, value]) => ({ key, value, updated_at: fixedNow })),
+  };
+}
+
+function accountSwitcherPayload(s) {
+  return {
+    selected_account_id: s.accounts[0].id,
+    accounts: s.accounts.map((account) => ({
+      id: account.id,
+      account_number: account.account_number,
+      label: 'Individual',
+      type: account.type,
+      status: account.status,
+      equity: s.portfolios[0].equity,
+      buying_power: account.buying_power,
+      currency: account.currency,
+    })),
+  };
+}
+
+function unifiedAccountsPayload(s) {
+  return {
+    default_account_id: s.accounts[0].id,
+    accounts: s.accounts,
+    portfolios: s.portfolios,
+    positions: enrichedPositions(s),
+    crypto_accounts: [{ id: 'crypto_acct_emulator', status: 'active', account_number: 'RHC0000001', currency: 'USD' }],
+    options_accounts: s.optionsAccounts,
+  };
+}
+
+function rhyAccountsPayload(s) {
+  return {
+    accounts: s.accounts.map((account) => ({
+      ...account,
+      portfolio: s.portfolios[0],
+      positions: enrichedPositions(s),
+      watchlists: [watchlistPayload(s)],
+    })),
+    primary_account_id: s.accounts[0].id,
+  };
+}
+
+function rhyTabStatePayload(s) {
+  return {
+    selected_tab: 'investing',
+    tabs: [
+      { id: 'investing', title: 'Investing', enabled: true, account_id: s.accounts[0].id },
+      { id: 'crypto', title: 'Crypto', enabled: true, account_id: 'crypto_acct_emulator' },
+      { id: 'retirement', title: 'Retirement', enabled: false },
+    ],
+  };
+}
+
+function cryptoHomePayload(s) {
+  return {
+    account: { id: 'crypto_acct_emulator', status: 'active', currency: 'USD' },
+    holdings: s.holdings,
+    currency_pairs: s.currencyPairs,
+    quotes: s.quotes.filter((quote) => quote.symbol.includes('-')).map(quotePayload),
+    cards: [
+      { id: 'btc_holding', title: 'Bitcoin', subtitle: '0.125 BTC', asset_code: 'BTC' },
+    ],
+  };
+}
+
+function discoveryListsPayload(s, ownerType = 'custom') {
+  return page([{ ...watchlistPayload(s), owner_type: ownerType }]);
+}
+
+function profilePagePayload(s) {
+  return {
+    user: s.user,
+    sections: [
+      { id: 'account', title: 'Account', rows: [{ id: 'account_center', title: 'Account center', destination: 'account_center' }] },
+      { id: 'transfers', title: 'Transfers', rows: [{ id: 'transfer_accounts', title: 'Transfer accounts', destination: 'transfer_accounts' }] },
+      { id: 'documents', title: 'Documents', rows: [] },
+    ],
+  };
+}
+
+function transferAccountsPayload(s) {
+  return {
+    brokerage_accounts: s.accounts,
+    ach_relationships: s.achRelationships,
+    default_account_id: s.accounts[0].id,
+    suggested_amounts: ['25.00', '100.00', '500.00', '1000.00'],
+  };
+}
+
+function marketdataQuotesPayload(s, c) {
+  const ids = csv(c.req.query('ids'));
+  const symbols = csv(c.req.query('symbols') ?? c.req.query('symbol'), ids.length ? [] : s.quotes.map((quote) => quote.symbol));
+  const quotes = symbols.map((symbol) => quoteForSymbol(s, symbol));
+  if (ids.length) {
+    quotes.push(...ids.map((id, index) => ({
+      id,
+      instrument_id: id,
+      symbol: s.instruments[index % s.instruments.length]?.symbol ?? 'AAPL',
+      last_trade_price: s.quotes[index % s.quotes.length]?.last_trade_price ?? '202.00',
+      previous_close: s.quotes[index % s.quotes.length]?.previous_close ?? '200.00',
+      trading_halted: false,
+      updated_at: fixedNow,
+    })));
+  }
+  return { results: quotes };
+}
+
 function homePayload(s) {
   return {
     user: s.user,
     account: s.accounts[0],
     portfolio: s.portfolios[0],
-    positions: s.positions,
-    watchlists: s.watchlists,
+    positions: enrichedPositions(s),
+    watchlists: [watchlistPayload(s)],
     onboarding: { state: 'complete', application: s.applications[0] },
-    features: {},
-    experiments: {},
-    notifications: [],
+    features: { portfolio: true, positions: true, watchlists: true, crypto: true, options: true },
+    experiments: {
+      ios_home_v2: { enabled: true, variant: 'treatment', value: 'modules' },
+      portfolio_modules: { enabled: true, variant: 'treatment', value: 'summary_positions_watchlist' },
+    },
+    notifications: s.notifications,
     crypto: {
       accounts: s.accounts,
       holdings: s.holdings,
       currency_pairs: s.currencyPairs,
-      quotes: s.quotes.filter((quote) => quote.symbol.includes('-')),
+      quotes: s.quotes.filter((quote) => quote.symbol.includes('-')).map(quotePayload),
     },
     cards: [
-      { id: 'portfolio', title: 'Portfolio', subtitle: '$22,631.25', action: 'open_portfolio' },
-      { id: 'watchlist', title: 'Watchlist', subtitle: '4 symbols', action: 'open_watchlist' },
+      { id: 'portfolio', type: 'portfolio_summary', title: 'Portfolio', subtitle: '$22,631.25', value: s.portfolios[0].equity, action: 'open_portfolio' },
+      { id: 'positions', type: 'positions', title: 'Positions', subtitle: '2 holdings', items: enrichedPositions(s), action: 'open_positions' },
+      { id: 'watchlist', type: 'watchlist', title: 'Watchlist', subtitle: '4 symbols', items: watchlistPayload(s).quotes, action: 'open_watchlist' },
+      { id: 'crypto', type: 'crypto', title: 'Crypto', subtitle: 'BTC-USD', items: cryptoHomePayload(s).holdings, action: 'open_crypto' },
     ],
   };
 }
@@ -263,8 +456,8 @@ function mobileConfigPayload() {
   return {
     minimum_supported_version: '1.0.0',
     force_upgrade: false,
-    features: {},
-    experiments: {},
+    features: { portfolio: true, positions: true, watchlists: true, crypto: true, options: true },
+    experiments: { ios_home_v2: 'treatment', portfolio_modules: 'treatment' },
     endpoints: {
       api: 'https://api.robinhood.com',
       bonfire: 'https://bonfire.robinhood.com',
@@ -308,7 +501,7 @@ function marketHoursPayload(market = 'XNYS', date = '2026-05-16') {
 }
 
 function kaizenExperimentsPayload(c) {
-  const names = csv(c.req.queries?.('names')?.join(',') ?? c.req.query('names'));
+  const names = csv(c.req.queries?.('names')?.join(',') ?? c.req.query('names'), ['ios_home_v2', 'portfolio_modules', 'watchlist_refresh', 'bonfire_account_defaults']);
   return {
     results: names.map((name) => ({ name, enabled: false, variant: 'control', value: null })),
     experiments: Object.fromEntries(names.map((name) => [name, { enabled: false, variant: 'control', value: null }])),
@@ -321,8 +514,8 @@ function vitalsPayload() {
     force_upgrade: false,
     upgrade_required: false,
     minimum_supported_version: '1.0.0',
-    features: {},
-    vitals: {},
+    features: { portfolio_enabled: true, watchlists_enabled: true, crypto_enabled: true, options_enabled: true },
+    vitals: { session_state: 'authenticated', account_state: 'active', market_data_state: 'ready' },
   };
 }
 
@@ -389,8 +582,8 @@ export const plugin = {
     app.get('/api/v1/user/id/', (c) => c.json(userIdPayload(state(store))));
     app.get('/applications/', (c) => c.json(page(state(store).applications)));
     app.get('/api/v1/applications/', (c) => c.json(page(state(store).applications)));
-    app.get('/notifications/', (c) => c.json(page([])));
-    app.get('/api/v1/notifications/', (c) => c.json(page([])));
+    app.get('/notifications/', (c) => c.json(page(state(store).notifications)));
+    app.get('/api/v1/notifications/', (c) => c.json(page(state(store).notifications)));
     app.get('/markets/', (c) => c.json(page(state(store).markets)));
     app.get('/api/v1/markets/', (c) => c.json(page(state(store).markets)));
     app.get('/markets/:market/hours/:date/', (c) => c.json(marketHoursPayload(c.req.param('market'), c.req.param('date'))));
@@ -415,6 +608,10 @@ export const plugin = {
     app.get('/api/v1/positions/', (c) => c.json(page(state(store).positions)));
     app.get('/watchlists/', (c) => c.json(page(state(store).watchlists)));
     app.get('/api/v1/watchlists/', (c) => c.json(page(state(store).watchlists)));
+    app.get('/discovery/lists/default/', (c) => c.json(watchlistPayload(state(store))));
+    app.get('/discovery/lists/default', (c) => c.json(watchlistPayload(state(store))));
+    app.get('/discovery/lists/', (c) => c.json(discoveryListsPayload(state(store), c.req.query('owner_type') ?? 'custom')));
+    app.get('/discovery/lists', (c) => c.json(discoveryListsPayload(state(store), c.req.query('owner_type') ?? 'custom')));
     app.get('/quotes/', (c) => {
       const symbols = csv(c.req.query('symbols') ?? c.req.query('symbol'), state(store).quotes.map((quote) => quote.symbol));
       return c.json(page(state(store).quotes.filter((quote) => symbols.includes(quote.symbol)).map(quotePayload)));
@@ -440,20 +637,79 @@ export const plugin = {
     app.get('/vitals/fetch', (c) => c.json(vitalsPayload()));
     app.get('/region', (c) => c.json({ region: 'US', country_code: 'US', locale: 'en_US', supported: true }));
     app.get('/region/', (c) => c.json({ region: 'US', country_code: 'US', locale: 'en_US', supported: true }));
-    app.get('/accounts/v2/user_defaults', (c) => c.json({ defaults: {}, user_defaults: {} }));
+    app.get('/accounts/v2/user_defaults', (c) => c.json(userDefaultsPayload(state(store))));
+    app.get('/ceres/v1/user_settings', (c) => c.json(userSettingsPayload(state(store))));
     app.get('/discovery/analytics/ids', (c) => c.json({ analytics_id: 'analytics_emulator', device_id: 'robinhood-emulator-device' }));
     app.get('/discovery/analytics/ids/', (c) => c.json({ analytics_id: 'analytics_emulator', device_id: 'robinhood-emulator-device' }));
+    app.get('/inbox/should_badge/', (c) => c.json({ should_badge: state(store).notifications.some((notification) => !notification.read), unread_count: state(store).notifications.filter((notification) => !notification.read).length }));
+    app.get('/inbox/should_badge', (c) => c.json({ should_badge: state(store).notifications.some((notification) => !notification.read), unread_count: state(store).notifications.filter((notification) => !notification.read).length }));
+    app.get('/push/pending_challenge/', (c) => c.json({ pending_challenge: null, pending_challenges: [] }));
+    app.get('/push/pending_challenge', (c) => c.json({ pending_challenge: null, pending_challenges: [] }));
+    app.get('/pathfinder/issues/', (c) => c.json(page([])));
+    app.get('/pathfinder/issues', (c) => c.json(page([])));
+    app.get('/subscription/subscriptions/', (c) => c.json(page([])));
+    app.get('/subscription/subscriptions', (c) => c.json(page([])));
+    app.get('/midlands/notifications/stack/', (c) => c.json({ stack: state(store).notifications, unread_count: state(store).notifications.filter((notification) => !notification.read).length }));
+    app.get('/midlands/notifications/stack', (c) => c.json({ stack: state(store).notifications, unread_count: state(store).notifications.filter((notification) => !notification.read).length }));
+    app.get('/profile/page/', (c) => c.json(profilePagePayload(state(store))));
+    app.get('/profile/page', (c) => c.json(profilePagePayload(state(store))));
+    app.get('/account_center/', (c) => c.json({ user: state(store).user, account: state(store).accounts[0], sections: profilePagePayload(state(store)).sections }));
+    app.get('/account_center', (c) => c.json({ user: state(store).user, account: state(store).accounts[0], sections: profilePagePayload(state(store)).sections }));
+    app.get('/transfer/accounts/', (c) => c.json(transferAccountsPayload(state(store))));
+    app.get('/transfer/accounts', (c) => c.json(transferAccountsPayload(state(store))));
+    app.get('/transfer/suggested_amounts/', (c) => c.json({ amounts: transferAccountsPayload(state(store)).suggested_amounts, default_amount: '100.00' }));
+    app.get('/transfer/suggested_amounts', (c) => c.json({ amounts: transferAccountsPayload(state(store)).suggested_amounts, default_amount: '100.00' }));
+    app.get('/application/spending/eligibility/', (c) => c.json({ eligible: true, status: 'eligible', reason: null }));
+    app.get('/application/spending/eligibility', (c) => c.json({ eligible: true, status: 'eligible', reason: null }));
+    app.get('/user_info/investment_profile/refresh/', (c) => c.json(investmentProfilePayload(state(store))));
+    app.get('/user_info/investment_profile/refresh', (c) => c.json(investmentProfilePayload(state(store))));
+    app.get('/social/user_profile/', (c) => c.json({ user: state(store).user, display_name: 'Robin Emulator', avatar_url: null }));
+    app.get('/social/user_profile', (c) => c.json({ user: state(store).user, display_name: 'Robin Emulator', avatar_url: null }));
+    app.get('/feature-discovery/features/:feature', (c) => c.json({ feature: c.req.param('feature'), enabled: true, discovered: true }));
+    app.get('/onboarding/resume_application_enabled/', (c) => c.json({ enabled: false, resume_application_enabled: false }));
+    app.get('/onboarding/resume_application_enabled', (c) => c.json({ enabled: false, resume_application_enabled: false }));
+    app.get('/p2p/treatment/', (c) => c.json({ treatment: 'enabled', enabled: true }));
+    app.get('/p2p/treatment', (c) => c.json({ treatment: 'enabled', enabled: true }));
+    app.get('/pathfinder/support_chats/', (c) => c.json(page([])));
+    app.get('/pathfinder/support_chats', (c) => c.json(page([])));
+    app.get('/marketdata/quotes/', (c) => c.json(marketdataQuotesPayload(state(store), c)));
+    app.get('/marketdata/quotes', (c) => c.json(marketdataQuotesPayload(state(store), c)));
+    app.post('/webauthn/register/soft_request/', (c) => c.json({ status: 'ok', request_id: 'webauthn_soft_request_emulator', should_register: false }));
+    app.get('/webauthn/register/soft_request/', (c) => c.json({ status: 'ok', request_id: 'webauthn_soft_request_emulator', should_register: false }));
     app.post('/track', (c) => c.json(ok()));
     app.post('/trackv2', (c) => c.json(ok()));
+    app.post('/track_realtime', (c) => c.json(ok()));
     app.post('/api/:project/envelope/', (c) => c.text('', 200));
     app.post('/recaptcha/api3/:action', (c) => c.json(ok({ token: 'recaptcha_emulator_token' })));
     app.post('/bitdrift_public.protobuf.client.v1.ApiService/Mux', (c) => c.text('', 200));
     app.post('/v1/open', (c) => c.json(ok({ clicked_branch_link: false })));
-    app.get('/config/app/:appId', (c) => c.json({ app_id: c.req.param('appId'), parameters: {} }));
+    app.get('/config/app/:appId', (c) => c.json({ app_id: c.req.param('appId'), parameters: mobileConfigPayload() }));
     app.get('/midlands/tags/tag/:tag/', (c) => c.json({ tag: c.req.param('tag'), instruments: state(store).instruments }));
     app.post('/api/v1/push/register/', (c) => c.json(ok({ device_token: 'robinhood-emulator-device' })));
-    app.get('/options/accounts/', (c) => c.json(page([])));
-    app.get('/api/v1/options/accounts/', (c) => c.json(page([])));
+    app.get('/options/accounts/', (c) => c.json(page(state(store).optionsAccounts)));
+    app.get('/api/v1/options/accounts/', (c) => c.json(page(state(store).optionsAccounts)));
+    app.get('/home/account_switcher/v2/', (c) => c.json(accountSwitcherPayload(state(store))));
+    app.get('/home/account_switcher/v2', (c) => c.json(accountSwitcherPayload(state(store))));
+    app.get('/phoenix/accounts/unified', (c) => c.json(unifiedAccountsPayload(state(store))));
+    app.get('/rhy/accounts/', (c) => c.json(rhyAccountsPayload(state(store))));
+    app.get('/rhy/accounts', (c) => c.json(rhyAccountsPayload(state(store))));
+    app.get('/rhy/tab_state/', (c) => c.json(rhyTabStatePayload(state(store))));
+    app.get('/rhy/tab_state', (c) => c.json(rhyTabStatePayload(state(store))));
+    app.get('/retirement_dashboard/state/', (c) => c.json({ enabled: false, accounts: [], cards: [] }));
+    app.get('/retirement_dashboard/state', (c) => c.json({ enabled: false, accounts: [], cards: [] }));
+    app.get('/crypto/home/:accountId/state', (c) => c.json({ ...cryptoHomePayload(state(store)), account_id: c.req.param('accountId') }));
+    app.get('/crypto/home/cta_buttons/', (c) => c.json({ buttons: [{ id: 'buy_crypto', title: 'Buy', enabled: true }, { id: 'sell_crypto', title: 'Sell', enabled: true }] }));
+    app.get('/crypto/home/cta_buttons', (c) => c.json({ buttons: [{ id: 'buy_crypto', title: 'Buy', enabled: true }, { id: 'sell_crypto', title: 'Sell', enabled: true }] }));
+    app.get('/app-comms/surface/:surface', (c) => c.json({ surface: c.req.param('surface'), location: c.req.query('location') ?? null, messages: [] }));
+    app.get('/app-comms/batch/surface/:surface', (c) => c.json({ surface: c.req.param('surface'), locations: csv(c.req.query('locations')), messages: [] }));
+    app.get('/screeners/', (c) => c.json({ results: [{ id: 'popular', title: 'Popular stocks', instruments: state(store).instruments, filters: [] }] }));
+    app.get('/screeners', (c) => c.json({ results: [{ id: 'popular', title: 'Popular stocks', instruments: state(store).instruments, filters: [] }] }));
+    app.get('/lists/order/', (c) => c.json({ order: ['watchlist_default'], results: [{ id: 'watchlist_default', name: 'Default' }] }));
+    app.get('/lists/order', (c) => c.json({ order: ['watchlist_default'], results: [{ id: 'watchlist_default', name: 'Default' }] }));
+    app.get('/slip/updated-agreements-required/', (c) => c.json({ required: false, agreements: [] }));
+    app.get('/slip/updated-agreements-required', (c) => c.json({ required: false, agreements: [] }));
+    app.post('/accounts/remote-cache-wipe', (c) => c.json(ok({ account_id: state(store).accounts[0].id, cache_scope: 'mobile_home', wiped_at: fixedNow })));
+    app.get('/accounts/remote-cache-wipe', (c) => c.json(ok({ account_id: state(store).accounts[0].id, cache_scope: 'mobile_home', wiped_at: fixedNow })));
     app.get('/orders/', (c) => c.json(page(state(store).orders)));
     app.get('/api/v1/orders/', (c) => c.json(page(state(store).orders)));
     app.post('/orders/', async (c) => {

@@ -2,7 +2,7 @@
 
 RentAHuman provides REST and MCP APIs for agents, humans, bookings, bounties, applications, escrow, conversations, transfers, wallet operations, services, API keys, reviews, and webhooks.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

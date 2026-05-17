@@ -100,6 +100,7 @@ export const contract = {
     "workers-ai",
     "ai-gateway",
     "send-email",
+    "email-service",
     "d1",
     "kv",
     "r2",
@@ -110,6 +111,7 @@ export const contract = {
     "sandbox",
     "durable-objects",
     "vectorize",
+    "realtimekit",
   ],
   fidelity: "binding-resource-model-subset",
 } as const;
@@ -130,6 +132,59 @@ type WorkflowInstanceRecord = {
   modifiedAt: string;
   status: "running" | "complete" | "paused" | "terminated" | "errored";
   events: Array<{ type: string; payload: unknown; sentAt: string }>;
+};
+type RealtimeKitAppRecord = {
+  id: string;
+  accountId: string;
+  name: string;
+  created_at: string;
+};
+type RealtimeKitPresetRecord = {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  permissions: Record<string, unknown>;
+};
+type RealtimeKitMeetingRecord = {
+  id: string;
+  appId: string;
+  title: string;
+  status: "ACTIVE" | "INACTIVE";
+  record_on_start: boolean;
+  summarize_on_end: boolean;
+  live_stream_on_start: boolean;
+  persist_chat: boolean;
+  session_keep_alive_time_in_secs: number;
+  created_at: string;
+  updated_at: string;
+};
+type RealtimeKitParticipantRecord = {
+  id: string;
+  meeting_id: string;
+  name: string;
+  preset_name: string;
+  custom_participant_id?: string;
+  client_specific_id?: string;
+  token: string;
+  created_at: string;
+  updated_at: string;
+};
+type RealtimeKitSessionRecord = {
+  id: string;
+  meeting_id: string;
+  status: "ACTIVE" | "ENDED";
+  started_at: string;
+  ended_at: string | null;
+};
+type RealtimeKitRecordingRecord = {
+  id: string;
+  meeting_id: string;
+  status: "RECORDING" | "PAUSED" | "STOPPED";
+  created_at: string;
+  updated_at: string;
+  download_url?: string;
 };
 
 type CloudflarePlatformOptions = {
@@ -187,22 +242,90 @@ type D1DatabaseLike = {
 type SendEmailInput = {
   from?: unknown;
   to?: unknown;
+  cc?: unknown;
+  bcc?: unknown;
+  reply_to?: unknown;
+  replyTo?: unknown;
   subject?: unknown;
   html?: unknown;
   text?: unknown;
   headers?: unknown;
+  attachments?: unknown;
+  mime_message?: unknown;
+  raw?: unknown;
 };
 
 type SentEmailRecord = {
   id: string;
+  messageId: string;
   from: unknown;
   to: unknown;
+  cc: string[];
+  bcc: string[];
+  replyTo: unknown;
   subject: string | null;
   html: string | null;
   text: string | null;
   headers: unknown;
+  attachments: unknown[];
+  raw: string | null;
+  size: number;
   sentAt: string;
 };
+
+type InboundEmailRecord = {
+  id: string;
+  from: string;
+  to: string;
+  raw: string;
+  parsed: ReturnType<typeof parseRawEmail>;
+  forwarded: string[];
+  replies: SentEmailRecord[];
+  rejected: string | null;
+  receivedAt: string;
+};
+
+type EmailSuppressionRecord = {
+  id: string;
+  email: string;
+  reason: string;
+  created_at: string;
+};
+
+type EmailRoutingAddressRecord = {
+  id: string;
+  email: string;
+  verified: boolean;
+  created: string;
+  modified: string;
+};
+
+function parseRawEmail(raw: string) {
+  const [head = "", ...bodyParts] = raw.split(/\r?\n\r?\n/);
+  const headerList = head.split(/\r?\n/).reduce<Array<{ key: string; value: string }>>((items, line) => {
+    if (/^\s/.test(line) && items.length) {
+      items[items.length - 1].value += ` ${line.trim()}`;
+      return items;
+    }
+    const index = line.indexOf(":");
+    if (index > 0) items.push({ key: line.slice(0, index).toLowerCase(), value: line.slice(index + 1).trim() });
+    return items;
+  }, []);
+  const headers = Object.fromEntries(headerList.map((item) => [item.key, item.value]));
+  const body = bodyParts.join("\n\n");
+  return {
+    headers: headerList,
+    subject: headers.subject ?? null,
+    from: headers.from ?? null,
+    to: headers.to ?? null,
+    replyTo: headers["reply-to"] ?? null,
+    messageId: headers["message-id"] ?? null,
+    date: headers.date ? new Date(headers.date).toISOString() : null,
+    html: body,
+    text: body,
+    attachments: [],
+  };
+}
 
 type LoaderEntrypoint = {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> | Response;
@@ -237,9 +360,18 @@ type SandboxEmulator = {
 
 const encoder = new TextEncoder();
 const sentEmails: SentEmailRecord[] = [];
+const inboundEmails: InboundEmailRecord[] = [];
+const emailSuppressions = new Map<string, EmailSuppressionRecord>();
+const emailRoutingAddresses = new Map<string, EmailRoutingAddressRecord>();
 const queueMessages = new Map<string, QueueMessageRecord[]>();
 const workflowInstances = new Map<string, WorkflowInstanceRecord[]>();
 const analyticsEvents = new Map<string, unknown[]>();
+const realtimeKitApps = new Map<string, RealtimeKitAppRecord>();
+const realtimeKitPresets = new Map<string, RealtimeKitPresetRecord[]>();
+const realtimeKitMeetings = new Map<string, RealtimeKitMeetingRecord[]>();
+const realtimeKitParticipants = new Map<string, RealtimeKitParticipantRecord[]>();
+const realtimeKitSessions = new Map<string, RealtimeKitSessionRecord[]>();
+const realtimeKitRecordings = new Map<string, RealtimeKitRecordingRecord[]>();
 const d1Databases = new Map<string, D1DatabaseLike>();
 const d1Branches = new Map<string, Set<string>>();
 const kvNamespaces = new Map<string, MemoryKVNamespace>();
@@ -988,6 +1120,368 @@ function workflowRoutes(app: AppLike): void {
   app.get?.("/client/v4/accounts/:accountId/workflows/:workflowName/versions/:versionId/graph", (c: any) =>
     c.json(cloudflareEnvelope({ nodes: [], edges: [] })),
   );
+}
+
+function realtimeKitRoutes(app: AppLike): void {
+  const now = () => new Date().toISOString();
+  const defaultAppId = "emulator-realtimekit-app";
+  const listResponse = (data: unknown[]) => ({
+    success: true,
+    data,
+    paging: { total_count: data.length, start_offset: data.length ? 1 : 0, end_offset: data.length },
+  });
+  const dataResponse = (data: unknown) => ({ success: true, data });
+  const appKey = (accountId: string, appId: string) => `${accountId}:${appId}`;
+  const ensureApp = (accountId: string, appId = defaultAppId) => {
+    const key = appKey(accountId, appId);
+    if (!realtimeKitApps.has(key)) {
+      realtimeKitApps.set(key, {
+        id: appId,
+        accountId,
+        name: appId === defaultAppId ? "emulator-realtimekit" : appId,
+        created_at: "2026-01-01T00:00:00.000Z",
+      });
+    }
+    ensurePresets(key);
+    return realtimeKitApps.get(key)!;
+  };
+  const ensurePresets = (key: string) => {
+    if (!realtimeKitPresets.has(key)) {
+      realtimeKitPresets.set(key, [
+        createRealtimeKitPreset("host", "Host", { audio: true, video: true, chat: true, stage: true }),
+        createRealtimeKitPreset("participant", "Participant", { audio: true, video: true, chat: true }),
+        createRealtimeKitPreset("viewer", "Viewer", { audio: false, video: false, chat: true }),
+      ]);
+    }
+    return realtimeKitPresets.get(key)!;
+  };
+  const meetingsFor = (key: string) => {
+    if (!realtimeKitMeetings.has(key)) realtimeKitMeetings.set(key, []);
+    return realtimeKitMeetings.get(key)!;
+  };
+  const participantsFor = (meetingId: string) => {
+    if (!realtimeKitParticipants.has(meetingId)) realtimeKitParticipants.set(meetingId, []);
+    return realtimeKitParticipants.get(meetingId)!;
+  };
+  const sessionsFor = (key: string) => {
+    if (!realtimeKitSessions.has(key)) realtimeKitSessions.set(key, []);
+    return realtimeKitSessions.get(key)!;
+  };
+  const recordingsFor = (key: string) => {
+    if (!realtimeKitRecordings.has(key)) realtimeKitRecordings.set(key, []);
+    return realtimeKitRecordings.get(key)!;
+  };
+  const findMeeting = (meetingId: string) => {
+    for (const meetings of realtimeKitMeetings.values()) {
+      const meeting = meetings.find((item) => item.id === meetingId);
+      if (meeting) return meeting;
+    }
+    return null;
+  };
+  const findParticipantByToken = (token: string) => {
+    for (const participants of realtimeKitParticipants.values()) {
+      const participant = participants.find((item) => item.token === token);
+      if (participant) return participant;
+    }
+    return null;
+  };
+  const createMeeting = async (c: any, accountId: string, appId: string) => {
+    const body = await contextJson(c);
+    const key = appKey(accountId, appId);
+    ensureApp(accountId, appId);
+    const timestamp = now();
+    const meeting: RealtimeKitMeetingRecord = {
+      id: String(body?.id ?? `rtk-meeting-${crypto.randomUUID()}`),
+      appId,
+      title: String(body?.title ?? "Emulator RealtimeKit Meeting"),
+      status: body?.status === "INACTIVE" ? "INACTIVE" : "ACTIVE",
+      record_on_start: Boolean(body?.record_on_start),
+      summarize_on_end: Boolean(body?.summarize_on_end),
+      live_stream_on_start: Boolean(body?.live_stream_on_start),
+      persist_chat: Boolean(body?.persist_chat),
+      session_keep_alive_time_in_secs: Number(body?.session_keep_alive_time_in_secs ?? 60),
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    meetingsFor(key).push(meeting);
+    sessionsFor(key).push({
+      id: `rtk-session-${crypto.randomUUID()}`,
+      meeting_id: meeting.id,
+      status: "ACTIVE",
+      started_at: timestamp,
+      ended_at: null,
+    });
+    return meeting;
+  };
+  const createParticipant = async (c: any, meetingId: string) => {
+    const body = await contextJson(c);
+    const meeting = findMeeting(meetingId);
+    const timestamp = now();
+    const participantId = String(body?.id ?? body?.custom_participant_id ?? `rtk-participant-${crypto.randomUUID()}`);
+    const participant: RealtimeKitParticipantRecord = {
+      id: participantId,
+      meeting_id: meetingId,
+      name: String(body?.name ?? "RealtimeKit Participant"),
+      preset_name: String(body?.preset_name ?? body?.presetName ?? "participant"),
+      custom_participant_id: body?.custom_participant_id,
+      client_specific_id: body?.client_specific_id,
+      token: `rtk_token_${meetingId}_${participantId}`,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+    participantsFor(meetingId).push(participant);
+    if (!meeting) {
+      const key = appKey("emulator", defaultAppId);
+      ensureApp("emulator", defaultAppId);
+      meetingsFor(key).push({
+        id: meetingId,
+        appId: defaultAppId,
+        title: "Emulator RealtimeKit Meeting",
+        status: "ACTIVE",
+        record_on_start: false,
+        summarize_on_end: false,
+        live_stream_on_start: false,
+        persist_chat: false,
+        session_keep_alive_time_in_secs: 60,
+        created_at: timestamp,
+        updated_at: timestamp,
+      });
+    }
+    return participant;
+  };
+  const routeAccount = (c: any) => c.req.param("accountId") ?? "emulator";
+  const routeApp = (c: any) => c.req.param("appId") ?? defaultAppId;
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/apps", (c: any) => {
+    const accountId = routeAccount(c);
+    ensureApp(accountId);
+    return c.json(dataResponse(Array.from(realtimeKitApps.values()).filter((item) => item.accountId === accountId)));
+  });
+  app.post("/client/v4/accounts/:accountId/realtime/kit/apps", async (c: any) => {
+    const body = await contextJson(c);
+    const accountId = routeAccount(c);
+    const id = String(body?.id ?? `rtk-app-${crypto.randomUUID()}`);
+    const appRecord = { id, accountId, name: String(body?.name ?? id), created_at: now() };
+    realtimeKitApps.set(appKey(accountId, id), appRecord);
+    ensurePresets(appKey(accountId, id));
+    return c.json(dataResponse({ app: appRecord }));
+  });
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/presets", (c: any) => {
+    const key = appKey(routeAccount(c), routeApp(c));
+    ensureApp(routeAccount(c), routeApp(c));
+    return c.json(listResponse(ensurePresets(key)));
+  });
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/presets", async (c: any) => {
+    const body = await contextJson(c);
+    const key = appKey(routeAccount(c), routeApp(c));
+    ensureApp(routeAccount(c), routeApp(c));
+    const preset = createRealtimeKitPreset(String(body?.name ?? `preset-${crypto.randomUUID()}`), String(body?.description ?? ""), body?.permissions ?? {});
+    ensurePresets(key).push(preset);
+    return c.json(dataResponse(preset));
+  });
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/presets/:presetId", (c: any) => {
+    const preset = ensurePresets(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("presetId") || item.name === c.req.param("presetId"));
+    return c.json(dataResponse(preset ?? null));
+  });
+  app.patch?.("/client/v4/accounts/:accountId/realtime/kit/:appId/presets/:presetId", async (c: any) => {
+    const body = await contextJson(c);
+    const preset = ensurePresets(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("presetId") || item.name === c.req.param("presetId"));
+    if (preset) Object.assign(preset, body, { updated_at: now() });
+    return c.json(dataResponse(preset ?? null));
+  });
+  app.delete?.("/client/v4/accounts/:accountId/realtime/kit/:appId/presets/:presetId", (c: any) => {
+    const presets = ensurePresets(appKey(routeAccount(c), routeApp(c)));
+    const index = presets.findIndex((item) => item.id === c.req.param("presetId") || item.name === c.req.param("presetId"));
+    if (index >= 0) presets.splice(index, 1);
+    return c.json(dataResponse({ id: c.req.param("presetId"), deleted: index >= 0 }));
+  });
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings", (c: any) => {
+    const key = appKey(routeAccount(c), routeApp(c));
+    ensureApp(routeAccount(c), routeApp(c));
+    return c.json(listResponse(meetingsFor(key)));
+  });
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings", async (c: any) =>
+    c.json(dataResponse(await createMeeting(c, routeAccount(c), routeApp(c)))),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId", (c: any) =>
+    c.json(dataResponse(findMeeting(c.req.param("meetingId")))),
+  );
+  app.put?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId", async (c: any) =>
+    c.json(dataResponse(await updateRealtimeKitMeeting(c, c.req.param("meetingId")))),
+  );
+  app.patch?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId", async (c: any) =>
+    c.json(dataResponse(await updateRealtimeKitMeeting(c, c.req.param("meetingId")))),
+  );
+  app.delete?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId", (c: any) => {
+    const meetings = meetingsFor(appKey(routeAccount(c), routeApp(c)));
+    const index = meetings.findIndex((item) => item.id === c.req.param("meetingId"));
+    if (index >= 0) meetings.splice(index, 1);
+    realtimeKitParticipants.delete(c.req.param("meetingId"));
+    return c.json(dataResponse({ id: c.req.param("meetingId"), deleted: index >= 0 }));
+  });
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants", (c: any) =>
+    c.json(listResponse(participantsFor(c.req.param("meetingId")))),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants", async (c: any) =>
+    c.json(dataResponse(await createParticipant(c, c.req.param("meetingId")))),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants/:participantId", (c: any) =>
+    c.json(dataResponse(participantsFor(c.req.param("meetingId")).find((item) => item.id === c.req.param("participantId")) ?? null)),
+  );
+  app.patch?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants/:participantId", async (c: any) => {
+    const participant = participantsFor(c.req.param("meetingId")).find((item) => item.id === c.req.param("participantId"));
+    if (participant) Object.assign(participant, await contextJson(c), { updated_at: now() });
+    return c.json(dataResponse(participant ?? null));
+  });
+  app.delete?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants/:participantId", (c: any) => {
+    const participants = participantsFor(c.req.param("meetingId"));
+    const index = participants.findIndex((item) => item.id === c.req.param("participantId"));
+    if (index >= 0) participants.splice(index, 1);
+    return c.json(dataResponse({ id: c.req.param("participantId"), deleted: index >= 0 }));
+  });
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/participants/:participantId/token", (c: any) => {
+    const participant = participantsFor(c.req.param("meetingId")).find((item) => item.id === c.req.param("participantId"));
+    if (participant) participant.token = `rtk_token_${c.req.param("meetingId")}_${participant.id}_${Date.now()}`;
+    return c.json(dataResponse({ token: participant?.token ?? null, authToken: participant?.token ?? null }));
+  });
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session", (c: any) =>
+    c.json(dataResponse(sessionsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.meeting_id === c.req.param("meetingId") && item.status === "ACTIVE") ?? null)),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session/kick", (c: any) =>
+    c.json(dataResponse({ kicked: true })),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session/kick-all", (c: any) =>
+    c.json(dataResponse({ kicked: participantsFor(c.req.param("meetingId")).length })),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session/mute", (c: any) =>
+    c.json(dataResponse({ muted: true })),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session/mute-all", (c: any) =>
+    c.json(dataResponse({ muted: participantsFor(c.req.param("meetingId")).length })),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/meetings/:meetingId/active-session/poll", async (c: any) =>
+    c.json(dataResponse({ id: `rtk-poll-${crypto.randomUUID()}`, ...(await contextJson(c)) })),
+  );
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions", (c: any) =>
+    c.json(listResponse(sessionsFor(appKey(routeAccount(c), routeApp(c))))),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId", (c: any) =>
+    c.json(dataResponse(sessionsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("sessionId")) ?? null)),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId/participants", (c: any) => {
+    const session = sessionsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("sessionId"));
+    return c.json(listResponse(session ? participantsFor(session.meeting_id) : []));
+  });
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId/chat", (c: any) =>
+    c.json(listResponse([{ id: "rtk-chat-1", message: "Welcome to the emulator meeting.", created_at: "2026-01-01T00:00:00.000Z" }])),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId/transcript", (c: any) =>
+    c.json(listResponse([{ speaker: "Emulator", text: "RealtimeKit transcript fixture.", start_time: 0, end_time: 1 }])),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId/summary", (c: any) =>
+    c.json(dataResponse({ summary: "RealtimeKit emulator summary.", text_format: "markdown" })),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/sessions/:sessionId/summary", (c: any) =>
+    c.json(dataResponse({ summary: "RealtimeKit emulator summary.", text_format: "markdown" })),
+  );
+
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/recordings", (c: any) =>
+    c.json(listResponse(recordingsFor(appKey(routeAccount(c), routeApp(c))))),
+  );
+  app.post("/client/v4/accounts/:accountId/realtime/kit/:appId/recordings", async (c: any) => {
+    const body = await contextJson(c);
+    const timestamp = now();
+    const recording = {
+      id: `rtk-recording-${crypto.randomUUID()}`,
+      meeting_id: String(body?.meeting_id ?? body?.meetingId ?? "unknown"),
+      status: "RECORDING" as const,
+      created_at: timestamp,
+      updated_at: timestamp,
+      download_url: `https://example.com/realtimekit/${crypto.randomUUID()}.mp4`,
+    };
+    recordingsFor(appKey(routeAccount(c), routeApp(c))).push(recording);
+    return c.json(dataResponse(recording));
+  });
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/recordings/active-recording/:meetingId", (c: any) =>
+    c.json(dataResponse(recordingsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.meeting_id === c.req.param("meetingId") && item.status !== "STOPPED") ?? null)),
+  );
+  app.get?.("/client/v4/accounts/:accountId/realtime/kit/:appId/recordings/:recordingId", (c: any) =>
+    c.json(dataResponse(recordingsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("recordingId")) ?? null)),
+  );
+  app.put?.("/client/v4/accounts/:accountId/realtime/kit/:appId/recordings/:recordingId", async (c: any) => {
+    const recording = recordingsFor(appKey(routeAccount(c), routeApp(c))).find((item) => item.id === c.req.param("recordingId"));
+    const body = await contextJson(c);
+    if (recording) {
+      recording.status = String(body?.action ?? body?.status ?? "STOPPED").toUpperCase() === "PAUSE" ? "PAUSED" : String(body?.action ?? body?.status ?? "STOPPED").toUpperCase() === "RESUME" ? "RECORDING" : "STOPPED";
+      recording.updated_at = now();
+    }
+    return c.json(dataResponse(recording ?? null));
+  });
+
+  app.get?.("/v2/presets", (c: any) => {
+    const key = appKey("emulator", defaultAppId);
+    ensureApp("emulator", defaultAppId);
+    return c.json(listResponse(ensurePresets(key)));
+  });
+  app.post("/v2/meetings", async (c: any) => c.json(dataResponse(await createMeeting(c, "emulator", defaultAppId))));
+  app.get?.("/v2/meetings/:meetingId", (c: any) => c.json(dataResponse(findMeeting(c.req.param("meetingId")))));
+  app.post("/v2/meetings/:meetingId/participants", async (c: any) => {
+    const participant = await createParticipant(c, c.req.param("meetingId"));
+    return c.json(dataResponse({ ...participant, authToken: participant.token }));
+  });
+  app.get?.("/v2/internals/participant-details", (c: any) => {
+    const auth = String(c.req.header?.("authorization") ?? c.req.header?.("Authorization") ?? "");
+    const token = auth.replace(/^Bearer\s+/i, "");
+    const participant = findParticipantByToken(token);
+    return c.json(dataResponse({
+      participant: participant ?? {
+        id: "rtk-participant-emulator",
+        organization_id: "rtk-org-emulator",
+        meeting_id: "rtk-meeting-emulator",
+      },
+    }));
+  });
+  app.get?.("/inspect/realtimekit", (c: any) => c.json({
+    apps: Array.from(realtimeKitApps.values()),
+    presets: Object.fromEntries(realtimeKitPresets.entries()),
+    meetings: Object.fromEntries(realtimeKitMeetings.entries()),
+    participants: Object.fromEntries(realtimeKitParticipants.entries()),
+    sessions: Object.fromEntries(realtimeKitSessions.entries()),
+    recordings: Object.fromEntries(realtimeKitRecordings.entries()),
+  }));
+  app.post("/inspect/realtimekit/reset", (c: any) => {
+    realtimeKitApps.clear();
+    realtimeKitPresets.clear();
+    realtimeKitMeetings.clear();
+    realtimeKitParticipants.clear();
+    realtimeKitSessions.clear();
+    realtimeKitRecordings.clear();
+    return c.json({ success: true });
+  });
+}
+
+function createRealtimeKitPreset(name: string, description: string, permissions: Record<string, unknown>): RealtimeKitPresetRecord {
+  return {
+    id: `rtk-preset-${name}`,
+    name,
+    description,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    permissions,
+  };
+}
+
+async function updateRealtimeKitMeeting(c: any, meetingId: string): Promise<RealtimeKitMeetingRecord | null> {
+  const meeting = Array.from(realtimeKitMeetings.values()).flat().find((item) => item.id === meetingId);
+  if (!meeting) return null;
+  const body = await contextJson(c);
+  Object.assign(meeting, body, { updated_at: new Date().toISOString() });
+  return meeting;
 }
 
 function cloudflareEnvelope(result: unknown) {
@@ -1769,7 +2263,7 @@ class MemorySendEmail {
     private readonly sink: SentEmailRecord[] = sentEmails,
   ) {}
 
-  async send(message: SendEmailInput): Promise<{ id: string; success: true }> {
+  async send(message: SendEmailInput): Promise<{ id: string; messageId: string; success: true }> {
     if (this.options?.fail) {
       const message =
         typeof this.options.fail === "object"
@@ -1778,18 +2272,27 @@ class MemorySendEmail {
       throw new Error(message);
     }
 
+    const raw = typeof message.raw === "string" ? message.raw : typeof message.mime_message === "string" ? message.mime_message : null;
+    const attachments = normalizeAttachments(message.attachments);
     const record: SentEmailRecord = {
       id: crypto.randomUUID(),
+      messageId: `<emu-email-${crypto.randomUUID()}@cloudflare-emulator.local>`,
       from: message.from ?? null,
       to: message.to ?? null,
+      cc: normalizeEmailList(message.cc),
+      bcc: normalizeEmailList(message.bcc),
+      replyTo: message.replyTo ?? message.reply_to ?? null,
       subject: typeof message.subject === "string" ? message.subject : null,
       html: typeof message.html === "string" ? message.html : null,
       text: typeof message.text === "string" ? message.text : null,
       headers: message.headers ?? null,
+      attachments,
+      raw,
+      size: encoder.encode(JSON.stringify({ ...message, attachments })).byteLength,
       sentAt: new Date().toISOString(),
     };
     this.sink.push(record);
-    return { id: record.id, success: true };
+    return { id: record.id, messageId: record.messageId, success: true };
   }
 
   list(): SentEmailRecord[] {
@@ -1799,6 +2302,28 @@ class MemorySendEmail {
   clear(): void {
     this.sink.length = 0;
   }
+}
+
+function normalizeEmailList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => typeof item === "object" && item && "address" in item ? String((item as { address?: unknown }).address ?? "") : String(item)).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
+  if (value && typeof value === "object" && "address" in value) return [String((value as { address?: unknown }).address ?? "")].filter(Boolean);
+  return [];
+}
+
+function normalizeAttachments(value: unknown): unknown[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((attachment) => {
+    if (!attachment || typeof attachment !== "object") return attachment;
+    const item = attachment as Record<string, unknown>;
+    return {
+      ...item,
+      type: item.type ?? item.contentType,
+      contentType: item.contentType ?? item.type,
+      content_id: item.content_id ?? item.contentId,
+      contentId: item.contentId ?? item.content_id,
+    };
+  });
 }
 
 class MemoryQueue {
@@ -2027,14 +2552,16 @@ export function createCloudflareBindings(
   options: CloudflarePlatformOptions = {},
 ) {
   const d1Seed = resolveD1Seed(options.d1?.seed);
+  const emailBinding = new MemorySendEmail(options.sendEmail);
   const env: Record<string, unknown> = {
     AI: createAiBinding(),
     APP_DB: new MemoryD1Database(d1Seed),
     AUTH_DB: new MemoryD1Database(d1Seed),
     DB: new MemoryD1Database(d1Seed),
+    EMAIL: emailBinding,
     LOADER: new MemoryWorkerLoader(options.loader),
     SANDBOX: createSandboxEmulator(options.sandbox),
-    TRANSACTIONAL_EMAIL: new MemorySendEmail(options.sendEmail),
+    TRANSACTIONAL_EMAIL: emailBinding,
   };
   d1Databases.set("APP_DB", env.APP_DB as MemoryD1Database);
   d1Databases.set("AUTH_DB", env.AUTH_DB as MemoryD1Database);
@@ -2253,6 +2780,145 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
+function emailAddress(value: unknown): string {
+  return normalizeEmailList(value)[0] ?? "";
+}
+
+function emailApiError(c: any, status: number, code: number, message: string) {
+  return c.json({ success: false, errors: [{ code, message }], messages: [], result: null }, status);
+}
+
+function validateEmailRequest(input: SendEmailInput) {
+  if (!emailAddress(input.from) || normalizeEmailList(input.to).length === 0 || typeof input.subject !== "string") {
+    return { status: 400, code: 10001, message: "email.sending.error.invalid_request_schema" };
+  }
+  if (typeof input.html !== "string" && typeof input.text !== "string" && normalizeAttachments(input.attachments).length === 0) {
+    return { status: 400, code: 10200, message: "email.sending.error.email.invalid" };
+  }
+  if (encoder.encode(JSON.stringify(input)).byteLength > 5 * 1024 * 1024) {
+    return { status: 400, code: 10202, message: "email.sending.error.email.too_big" };
+  }
+  return null;
+}
+
+function emailDeliveryResult(input: SendEmailInput) {
+  const recipients = normalizeEmailList(input.to);
+  const suppressed = new Set(Array.from(emailSuppressions.values()).map((item) => item.email));
+  return {
+    delivered: recipients.filter((email) => !suppressed.has(email)),
+    queued: [],
+    permanent_bounces: recipients.filter((email) => suppressed.has(email)),
+  };
+}
+
+function emailServiceRoutes(app: AppLike): void {
+  app.post("/client/v4/accounts/:accountId/email/sending/send", async (c: any) => {
+    const input = (await c.req.json().catch(() => ({}))) as SendEmailInput;
+    const invalid = validateEmailRequest(input);
+    if (invalid) return emailApiError(c, invalid.status, invalid.code, invalid.message);
+    await new MemorySendEmail().send(input);
+    return c.json(cloudflareEnvelope(emailDeliveryResult(input)));
+  });
+
+  app.post("/client/v4/accounts/:accountId/email/sending/send_raw", async (c: any) => {
+    const input = (await c.req.json().catch(() => ({}))) as SendEmailInput;
+    if (!emailAddress(input.from) || normalizeEmailList(input.to).length === 0 || typeof input.mime_message !== "string") {
+      return emailApiError(c, 400, 10001, "email.sending.error.invalid_request_schema");
+    }
+    await new MemorySendEmail().send({
+      ...input,
+      subject: parseRawEmail(input.mime_message).subject ?? "(raw email)",
+      raw: input.mime_message,
+    });
+    return c.json(cloudflareEnvelope(emailDeliveryResult(input)));
+  });
+
+  app.get?.("/client/v4/accounts/:accountId/email/sending/limits", (c: any) =>
+    c.json(cloudflareEnvelope({
+      daily: { limit: 1000, sent: sentEmails.length, remaining: Math.max(0, 1000 - sentEmails.length) },
+      message_size: { limit: 5 * 1024 * 1024 },
+    })),
+  );
+
+  app.get?.("/client/v4/accounts/:accountId/email/sending/feedback", (c: any) =>
+    c.json(cloudflareEnvelope({ delivered: sentEmails.length, queued: 0, permanent_bounces: 0 })),
+  );
+
+  const listSuppressions = (c: any) => c.json(cloudflareEnvelope(Array.from(emailSuppressions.values())));
+  app.get?.("/client/v4/accounts/:accountId/email/sending/suppression", listSuppressions);
+  app.get?.("/client/v4/accounts/:accountId/email/routing/suppression", listSuppressions);
+  const createSuppression = async (c: any) => {
+    const body = await contextJson(c);
+    const id = String(body?.id ?? crypto.randomUUID());
+    const record = {
+      id,
+      email: String(body?.email ?? body?.address ?? ""),
+      reason: String(body?.reason ?? "manual"),
+      created_at: new Date().toISOString(),
+    };
+    emailSuppressions.set(id, record);
+    return c.json(cloudflareEnvelope(record));
+  };
+  app.post("/client/v4/accounts/:accountId/email/sending/suppression", createSuppression);
+  app.post("/client/v4/accounts/:accountId/email/routing/suppression", createSuppression);
+  const getSuppression = (c: any) => c.json(cloudflareEnvelope(emailSuppressions.get(c.req.param("suppression_id")) ?? null));
+  app.get?.("/client/v4/accounts/:accountId/email/sending/suppression/:suppression_id", getSuppression);
+  app.get?.("/client/v4/accounts/:accountId/email/routing/suppression/:suppression_id", getSuppression);
+  const deleteSuppression = (c: any) => {
+    const id = c.req.param("suppression_id");
+    emailSuppressions.delete(id);
+    return c.json(cloudflareEnvelope({ id, deleted: true }));
+  };
+  app.delete?.("/client/v4/accounts/:accountId/email/sending/suppression/:suppression_id", deleteSuppression);
+  app.delete?.("/client/v4/accounts/:accountId/email/routing/suppression/:suppression_id", deleteSuppression);
+
+  app.get?.("/client/v4/accounts/:accountId/email/routing/addresses", (c: any) =>
+    c.json(cloudflareEnvelope(Array.from(emailRoutingAddresses.values()))),
+  );
+  app.post("/client/v4/accounts/:accountId/email/routing/addresses", async (c: any) => {
+    const body = await contextJson(c);
+    const email = String(body?.email ?? body?.address ?? body?.destination_address ?? "");
+    const id = String(body?.id ?? crypto.randomUUID());
+    const now = new Date().toISOString();
+    const record = { id, email, verified: body?.verified !== false, created: now, modified: now };
+    emailRoutingAddresses.set(id, record);
+    return c.json(cloudflareEnvelope(record));
+  });
+  app.get?.("/client/v4/accounts/:accountId/email/routing/addresses/:destination_address_identifier", (c: any) => {
+    const id = c.req.param("destination_address_identifier");
+    return c.json(cloudflareEnvelope(emailRoutingAddresses.get(id) ?? Array.from(emailRoutingAddresses.values()).find((item) => item.email === id) ?? null));
+  });
+  app.delete?.("/client/v4/accounts/:accountId/email/routing/addresses/:destination_address_identifier", (c: any) => {
+    const id = c.req.param("destination_address_identifier");
+    const record = emailRoutingAddresses.get(id) ?? Array.from(emailRoutingAddresses.values()).find((item) => item.email === id);
+    if (record) emailRoutingAddresses.delete(record.id);
+    return c.json(cloudflareEnvelope({ id, deleted: true }));
+  });
+
+  app.post("/cdn-cgi/handler/email", async (c: any) => {
+    const url = new URL(c.req.url);
+    const raw = await contextText(c);
+    const parsed = parseRawEmail(raw);
+    const record: InboundEmailRecord = {
+      id: crypto.randomUUID(),
+      from: url.searchParams.get("from") ?? String(parsed.from ?? ""),
+      to: url.searchParams.get("to") ?? String(parsed.to ?? ""),
+      raw,
+      parsed,
+      forwarded: [],
+      replies: [],
+      rejected: null,
+      receivedAt: new Date().toISOString(),
+    };
+    inboundEmails.push(record);
+    return c.json({ success: true, result: record });
+  });
+
+  app.get?.("/inspect/email/inbound", (c: any) => c.json(inboundEmails));
+  app.get?.("/inspect/email/suppressions", (c: any) => c.json(Array.from(emailSuppressions.values())));
+  app.get?.("/inspect/email/routing-addresses", (c: any) => c.json(Array.from(emailRoutingAddresses.values())));
+}
+
 export const cloudflarePlugin: ServicePlugin = {
   name: "cloudflare",
   register(app: AppLike) {
@@ -2263,6 +2929,8 @@ export const cloudflarePlugin: ServicePlugin = {
     kvRoutes(app);
     queueRoutes(app);
     workflowRoutes(app);
+    realtimeKitRoutes(app);
+    emailServiceRoutes(app);
 
     app.post("/email/send", async (c: any) => {
       const input = (await c.req.json().catch(() => ({}))) as SendEmailInput;
@@ -2278,6 +2946,9 @@ export const cloudflarePlugin: ServicePlugin = {
     );
     app.post("/inspect/email/reset", (c: any) => {
       sentEmails.length = 0;
+      inboundEmails.length = 0;
+      emailSuppressions.clear();
+      emailRoutingAddresses.clear();
       return c.json({ success: true });
     });
 
@@ -2316,7 +2987,7 @@ export const cloudflarePlugin: ServicePlugin = {
 export const plugin = cloudflarePlugin;
 export const label = "Cloudflare API emulator";
 export const endpoints =
-  "Full Cloudflare OpenAPI /client/v4 generic adapter with deep Workers AI, AI Gateway logs, and Vectorize overrides, Send Email /email/send, D1, KV, R2, Queues, Workflows, Loader, Analytics Engine, Sandbox, Durable Objects";
+  "Full Cloudflare OpenAPI /client/v4 generic adapter with deep Workers AI, AI Gateway logs, and Vectorize overrides, RealtimeKit REST meetings/participants/presets/sessions/recordings, Send Email /email/send, D1, KV, R2, Queues, Workflows, Loader, Analytics Engine, Sandbox, Durable Objects";
 export const manifest = {
   name: "cloudflare",
   label,

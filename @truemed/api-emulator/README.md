@@ -2,7 +2,7 @@
 
 Truemed provides HSA/FSA payment APIs for checkout sessions, payment tokens, qualification sessions, product catalog eligibility, captures, voids, and refunds.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

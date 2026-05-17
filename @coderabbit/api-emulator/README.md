@@ -2,7 +2,7 @@
 
 CodeRabbit provides code-review automation APIs for users, seats, roles, review metrics, and audit logs.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Robinhood Crypto Trading APIs provide account, holding, order, currency pair, and market data workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Hugging Face provides Hub APIs for users, models, datasets, Spaces, repository metadata, files, OAuth, and repo creation workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

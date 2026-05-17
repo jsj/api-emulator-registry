@@ -2,7 +2,7 @@
 
 Clerk provides user authentication, sessions, organizations, OAuth, and identity-management primitives.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

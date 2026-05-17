@@ -2,7 +2,7 @@
 
 Apple Maps Server API provides map tokens, search, geocoding, and reverse geocoding for location-aware apps.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

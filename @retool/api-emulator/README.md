@@ -2,7 +2,7 @@
 
 Retool provides organization APIs for users, groups, folders, apps, resources, source control, and permissions.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

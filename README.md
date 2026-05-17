@@ -2,9 +2,20 @@
 
 # api-emulator-registry
 
-Plugin registry for [`api-emulator`](https://github.com/jsj/api-emulator): fake real APIs locally so your app can test integrations without touching production, sandboxes, or someone else's server.
+The plugin registry for [`api-emulator`](https://github.com/jsj/api-emulator): stateful local clones of the APIs your app, workflow, or agent depends on.
 
-Use this repo like an app store of provider emulators. Pick a plugin, run it on localhost with `api-emulator`, seed state, reset data, and test your app against stable fake APIs.
+If you want to know what your software will do with access to payments, tickets, source control, analytics, messages, or customer data, one way to find out is to point it at the real service. Too often, that is the only way teams get confidence.
+
+`api-emulator` moves that loop earlier. Pick a provider from this registry, run it on localhost, seed realistic state, and test against a stable API surface before touching production, burning sandbox quota, or depending on someone else's server.
+
+These plugins are more than request stubs:
+
+- they keep state across calls
+- they model object relationships and edge cases
+- they return familiar response and error shapes
+- they reset cleanly between scenarios
+
+Use this repo like an app store for API clones. Start one service for local integration work, combine several for end-to-end tests, or put them behind agent evals where mocks are too thin and real systems are too risky.
 
 ## Provider wall
 
@@ -61,7 +72,7 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@datadog/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=datadog.com&sz=64" width="36" height="36" alt=""><br>Datadog</a></td>
   </tr>
   <tr>
-    <td align="center"><a href="./@decagon/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=decagon.com&sz=64" width="36" height="36" alt=""><br>Decagon</a></td>
+    <td align="center"><a href="./@decagon/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=decagon.ai&sz=64" width="36" height="36" alt=""><br>Decagon</a></td>
     <td align="center"><a href="./@deel/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=deel.com&sz=64" width="36" height="36" alt=""><br>Deel</a></td>
     <td align="center"><a href="./@devin/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=devin.com&sz=64" width="36" height="36" alt=""><br>Devin</a></td>
     <td align="center"><a href="./@digitalocean/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=digitalocean.com&sz=64" width="36" height="36" alt=""><br>DigitalOcean</a></td>
@@ -183,14 +194,15 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
   <tr>
     <td align="center"><a href="./@ramp/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=ramp.com&sz=64" width="36" height="36" alt=""><br>Ramp</a></td>
     <td align="center"><a href="./@reddit/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=64" width="36" height="36" alt=""><br>Reddit</a></td>
+    <td align="center"><a href="./@reducto/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=reducto.com&sz=64" width="36" height="36" alt=""><br>Reducto</a></td>
     <td align="center"><a href="./@rentahuman/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=rentahuman.com&sz=64" width="36" height="36" alt=""><br>Rentahuman</a></td>
     <td align="center"><a href="./@replicate/api-emulator.mjs"><img src="https://www.google.com/s2/favicons?domain=replicate.com&sz=64" width="36" height="36" alt=""><br>Replicate</a></td>
     <td align="center"><a href="./@replit/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=replit.com&sz=64" width="36" height="36" alt=""><br>Replit</a></td>
     <td align="center"><a href="./@resend/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=resend.com&sz=64" width="36" height="36" alt=""><br>Resend</a></td>
     <td align="center"><a href="./@retool/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=retool.com&sz=64" width="36" height="36" alt=""><br>Retool</a></td>
-    <td align="center"><a href="./@rippling/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=rippling.com&sz=64" width="36" height="36" alt=""><br>Rippling</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@rippling/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=rippling.com&sz=64" width="36" height="36" alt=""><br>Rippling</a></td>
     <td align="center"><a href="./@robinhood/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=robinhood.com&sz=64" width="36" height="36" alt=""><br>Robinhood</a></td>
     <td align="center"><a href="./@salesforce/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=salesforce.com&sz=64" width="36" height="36" alt=""><br>Salesforce</a></td>
     <td align="center"><a href="./@samsara/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=samsara.com&sz=64" width="36" height="36" alt=""><br>Samsara</a></td>
@@ -198,9 +210,9 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@sec/api-emulator.mjs"><img src="https://www.google.com/s2/favicons?domain=sec.gov&sz=64" width="36" height="36" alt=""><br>SEC</a></td>
     <td align="center"><a href="./@sentry/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=sentry.com&sz=64" width="36" height="36" alt=""><br>Sentry</a></td>
     <td align="center"><a href="./@servicenow/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=servicenow.com&sz=64" width="36" height="36" alt=""><br>ServiceNow</a></td>
-    <td align="center"><a href="./@shazam/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=shazam.com&sz=64" width="36" height="36" alt=""><br>Shazam</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@shazam/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=shazam.com&sz=64" width="36" height="36" alt=""><br>Shazam</a></td>
     <td align="center"><a href="./@shipstation/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=shipstation.com&sz=64" width="36" height="36" alt=""><br>Shipstation</a></td>
     <td align="center"><a href="./@shopify/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=shopify.com&sz=64" width="36" height="36" alt=""><br>Shopify</a></td>
     <td align="center"><a href="./@sierra/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=sierra.com&sz=64" width="36" height="36" alt=""><br>Sierra</a></td>
@@ -208,9 +220,9 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@siriusxm/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=siriusxm.com&sz=64" width="36" height="36" alt=""><br>Siriusxm</a></td>
     <td align="center"><a href="./@skyscanner/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=skyscanner.com&sz=64" width="36" height="36" alt=""><br>Skyscanner</a></td>
     <td align="center"><a href="./@slack/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=slack.com&sz=64" width="36" height="36" alt=""><br>Slack</a></td>
-    <td align="center"><a href="./@snap/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=snap.com&sz=64" width="36" height="36" alt=""><br>Snap</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@snap/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=snap.com&sz=64" width="36" height="36" alt=""><br>Snap</a></td>
     <td align="center"><a href="./@sourcegraph/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=sourcegraph.com&sz=64" width="36" height="36" alt=""><br>Sourcegraph</a></td>
     <td align="center"><a href="./@spectrum/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=spectrum.com&sz=64" width="36" height="36" alt=""><br>Spectrum</a></td>
     <td align="center"><a href="./@spotify/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=spotify.com&sz=64" width="36" height="36" alt=""><br>Spotify</a></td>
@@ -218,9 +230,9 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@statefarm/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=statefarm.com&sz=64" width="36" height="36" alt=""><br>Statefarm</a></td>
     <td align="center"><a href="./@steam/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=steam.com&sz=64" width="36" height="36" alt=""><br>Steam</a></td>
     <td align="center"><a href="./@stripe/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=stripe.com&sz=64" width="36" height="36" alt=""><br>Stripe</a></td>
-    <td align="center"><a href="./@substack/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=substack.com&sz=64" width="36" height="36" alt=""><br>Substack</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@substack/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=substack.com&sz=64" width="36" height="36" alt=""><br>Substack</a></td>
     <td align="center"><a href="./@suno/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=suno.com&sz=64" width="36" height="36" alt=""><br>Suno</a></td>
     <td align="center"><a href="./@supabase/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=supabase.com&sz=64" width="36" height="36" alt=""><br>Supabase</a></td>
     <td align="center"><a href="./@surveymonkey/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=surveymonkey.com&sz=64" width="36" height="36" alt=""><br>Surveymonkey</a></td>
@@ -228,9 +240,9 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@telegram/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=telegram.org&sz=64" width="36" height="36" alt=""><br>Telegram</a></td>
     <td align="center"><a href="./@tiktok/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" width="36" height="36" alt=""><br>Tiktok</a></td>
     <td align="center"><a href="./@togetherai/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=together.ai&sz=64" width="36" height="36" alt=""><br>Togetherai</a></td>
-    <td align="center"><a href="./@truemed/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=truemed.com&sz=64" width="36" height="36" alt=""><br>Truemed</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@truemed/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=truemed.com&sz=64" width="36" height="36" alt=""><br>Truemed</a></td>
     <td align="center"><a href="./@tryprofound/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=tryprofound.com&sz=64" width="36" height="36" alt=""><br>Tryprofound</a></td>
     <td align="center"><a href="./@turbotax/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=turbotax.com&sz=64" width="36" height="36" alt=""><br>Turbotax</a></td>
     <td align="center"><a href="./@twilio/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=twilio.com&sz=64" width="36" height="36" alt=""><br>Twilio</a></td>
@@ -238,9 +250,9 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@uipath/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=uipath.com&sz=64" width="36" height="36" alt=""><br>Uipath</a></td>
     <td align="center"><a href="./@unifygtm/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=unifygtm.com&sz=64" width="36" height="36" alt=""><br>Unifygtm</a></td>
     <td align="center"><a href="./@unity-ads/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=unity.com&sz=64" width="36" height="36" alt=""><br>Unity ADS</a></td>
-    <td align="center"><a href="./@upstash/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=upstash.com&sz=64" width="36" height="36" alt=""><br>Upstash</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@upstash/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=upstash.com&sz=64" width="36" height="36" alt=""><br>Upstash</a></td>
     <td align="center"><a href="./@usaa/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=usaa.com&sz=64" width="36" height="36" alt=""><br>USAA</a></td>
     <td align="center"><a href="./@vercel/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=vercel.com&sz=64" width="36" height="36" alt=""><br>Vercel</a></td>
     <td align="center"><a href="./@weatherkit/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=developer.apple.com&sz=64" width="36" height="36" alt=""><br>Weatherkit</a></td>
@@ -248,12 +260,13 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
     <td align="center"><a href="./@whoop/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=whoop.com&sz=64" width="36" height="36" alt=""><br>Whoop</a></td>
     <td align="center"><a href="./@wikipedia/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64" width="36" height="36" alt=""><br>Wikipedia</a></td>
     <td align="center"><a href="./@wolfram/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=wolframalpha.com&sz=64" width="36" height="36" alt=""><br>Wolfram</a></td>
-    <td align="center"><a href="./@workato/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="36" height="36" alt=""><br>Workato</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@workato/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="36" height="36" alt=""><br>Workato</a></td>
     <td align="center"><a href="./@workday/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workday.com&sz=64" width="36" height="36" alt=""><br>Workday</a></td>
     <td align="center"><a href="./@x/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=x.com&sz=64" width="36" height="36" alt=""><br>X</a></td>
     <td align="center"><a href="./@xbox/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=xbox.com&sz=64" width="36" height="36" alt=""><br>Xbox</a></td>
+    <td align="center"><a href="./@yahoo-finance/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=yahoofinance.com&sz=64" width="36" height="36" alt=""><br>Yahoo Finance</a></td>
     <td align="center"><a href="./@youtube/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=64" width="36" height="36" alt=""><br>Youtube</a></td>
     <td align="center"><a href="./@youtube-music/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=music.youtube.com&sz=64" width="36" height="36" alt=""><br>Youtube Music</a></td>
     <td align="center"><a href="./@zapier/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=zapier.com&sz=64" width="36" height="36" alt=""><br>Zapier</a></td>
@@ -263,13 +276,13 @@ Use this repo like an app store of provider emulators. Pick a plugin, run it on 
 
 ## Quick start
 
-Clone this registry next to your app:
+Clone this registry next to the app or agent you want to exercise:
 
 ```bash
 git clone https://github.com/jsj/api-emulator-plugins.git
 ```
 
-Run one provider:
+Run one provider on localhost:
 
 ```bash
 npx -p api-emulator api \
@@ -277,7 +290,7 @@ npx -p api-emulator api \
   --service posthog
 ```
 
-Run multiple providers:
+Run multiple providers when the behavior crosses service boundaries:
 
 ```bash
 npx -p api-emulator api \
@@ -285,7 +298,7 @@ npx -p api-emulator api \
   --service github,apple
 ```
 
-Generate starter seed config:
+Generate starter seed config so every run starts from a known world:
 
 ```bash
 npx -p api-emulator api init \
@@ -296,7 +309,7 @@ npx -p api-emulator api init \
 ## How it fits together
 
 ```text
-Your app
+Your app, workflow, or agent
   ↓
 api-emulator on localhost
   ↓
@@ -304,6 +317,14 @@ Provider plugins from this registry
 ```
 
 `api-emulator` is the runtime. This registry keeps provider behavior in separate plugins so public, private, and internal APIs can evolve independently.
+
+The goal is not to replace production APIs. The goal is to make realistic integration behavior cheap enough to run during development, review, and CI:
+
+1. choose the service surfaces your code depends on
+2. start the matching emulator plugins locally
+3. seed the state your scenario needs
+4. run your code against the clone
+5. inspect what changed, reset, and run it again
 
 ## Provider layout
 

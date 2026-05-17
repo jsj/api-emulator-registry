@@ -2,7 +2,7 @@
 
 SunoAPI-compatible APIs provide credits, asynchronous music generation tasks, record polling, and lyrics generation workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

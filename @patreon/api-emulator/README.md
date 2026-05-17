@@ -2,7 +2,7 @@
 
 Patreon API v2 provides JSON:API resources for OAuth, identity, campaigns, members, posts, and webhooks.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

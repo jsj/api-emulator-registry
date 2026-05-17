@@ -33,7 +33,7 @@ class TestApp {
     this.routes.push({ method: "ALL", path, handler });
   }
 
-  async request(method: string, path: string, body?: unknown): Promise<Response> {
+  async request(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Response> {
     for (const route of this.routes) {
       if (route.method !== method && route.method !== "ALL") continue;
       const params = matchRoute(route.path, path);
@@ -42,6 +42,7 @@ class TestApp {
         req: {
           url: `http://emulator.test${path}`,
           param: (name: string) => params[name],
+          header: (name: string) => headers[name] ?? headers[name.toLowerCase()],
           json: async () => body ?? {},
           text: async () => String(body ?? ""),
         },
@@ -88,6 +89,27 @@ assertEqual(configValues.get("feature"), "enabled");
 assertEqual(JSON.parse(configValues.get("mode")).enabled, true);
 const configMetadata = await (env.CONFIG as any).getWithMetadata("mode", "json");
 assertEqual(configMetadata.metadata.source, "smoke");
+
+const magicLinkEmail = await (env.EMAIL as any).send({
+  to: "user@example.com",
+  from: "noreply@example.com",
+  subject: "Your login link",
+  html: "<h1>Login to your account</h1>",
+  text: "Click this link to log in",
+});
+assertEqual(typeof magicLinkEmail.messageId, "string");
+await (env.EMAIL as any).send({
+  to: "customer@example.com",
+  from: "billing@example.com",
+  subject: "Invoice #1001",
+  html: "<h1>Invoice attached</h1>",
+  attachments: [{
+    filename: "invoice-1001.pdf",
+    content: "JVBERi0xLjQK",
+    contentType: "application/pdf",
+    disposition: "attachment",
+  }],
+});
 
 await (env.DB as any).exec("CREATE TABLE smoke_items (id TEXT PRIMARY KEY, name TEXT)");
 await (env.DB as any).prepare("INSERT INTO smoke_items (id, name) VALUES (?, ?)").bind("item-1", "First").run();
@@ -177,5 +199,75 @@ await app.request("PUT", "/client/v4/accounts/test/workflows/route-workflow");
 await app.request("POST", "/client/v4/accounts/test/workflows/route-workflow/instances", { id: "route-instance" });
 const workflowRouteResponse = await app.request("PATCH", "/client/v4/accounts/test/workflows/route-workflow/instances/route-instance/status", { status: "terminated" });
 assertEqual((await workflowRouteResponse.json() as any).result.status, "terminated");
+
+const restEmailResponse = await app.request("POST", "/client/v4/accounts/test/email/sending/send", {
+  to: ["signup@example.com", "backup@example.com"],
+  cc: ["manager@example.com"],
+  bcc: ["archive@example.com"],
+  from: { address: "welcome@example.com", name: "Welcome Team" },
+  reply_to: "support@example.com",
+  subject: "Welcome to Example",
+  html: "<h1>Welcome!</h1>",
+  text: "Welcome!",
+  attachments: [{
+    filename: "logo.png",
+    content: "iVBORw0KGgo=",
+    contentType: "image/png",
+    disposition: "inline",
+    contentId: "company-logo",
+  }],
+});
+const restEmailResult = (await restEmailResponse.json() as any).result;
+assertEqual(restEmailResult.delivered.length, 2);
+const rawEmailResponse = await app.request("POST", "/client/v4/accounts/test/email/sending/send_raw", {
+  to: "raw@example.com",
+  from: "sender@example.com",
+  mime_message: "From: sender@example.com\nTo: raw@example.com\nSubject: Raw\nMessage-ID: <raw@example.com>\n\nHello",
+});
+assertEqual((await rawEmailResponse.json() as any).result.delivered[0], "raw@example.com");
+const inboundEmailResponse = await app.request(
+  "POST",
+  "/cdn-cgi/handler/email?from=sender@example.com&to=support@example.com",
+  "From: sender@example.com\nTo: support@example.com\nSubject: Routing\nMessage-ID: <route@example.com>\n\nHi there",
+);
+assertEqual((await inboundEmailResponse.json() as any).result.parsed.subject, "Routing");
+await app.request("POST", "/client/v4/accounts/test/email/routing/addresses", { email: "support@example.com" });
+const routingAddressesResponse = await app.request("GET", "/client/v4/accounts/test/email/routing/addresses");
+assertEqual((await routingAddressesResponse.json() as any).result[0].email, "support@example.com");
+
+const realtimeAppResponse = await app.request("POST", "/client/v4/accounts/test/realtime/kit/apps", { name: "Smoke RealtimeKit" });
+const realtimeAppId = (await realtimeAppResponse.json() as any).data.app.id;
+const realtimePresetsResponse = await app.request("GET", `/client/v4/accounts/test/realtime/kit/${realtimeAppId}/presets`);
+assertEqual((await realtimePresetsResponse.json() as any).data.some((preset: any) => preset.name === "participant"), true);
+const realtimeMeetingResponse = await app.request("POST", `/client/v4/accounts/test/realtime/kit/${realtimeAppId}/meetings`, {
+  title: "Smoke Meeting",
+  record_on_start: true,
+  summarize_on_end: true,
+});
+const realtimeMeeting = (await realtimeMeetingResponse.json() as any).data;
+assertEqual(realtimeMeeting.title, "Smoke Meeting");
+const realtimeParticipantResponse = await app.request("POST", `/client/v4/accounts/test/realtime/kit/${realtimeAppId}/meetings/${realtimeMeeting.id}/participants`, {
+  name: "Smoke Participant",
+  preset_name: "participant",
+  custom_participant_id: "smoke-user",
+});
+const realtimeParticipant = (await realtimeParticipantResponse.json() as any).data;
+assertEqual(realtimeParticipant.name, "Smoke Participant");
+const realtimeActiveSessionResponse = await app.request("GET", `/client/v4/accounts/test/realtime/kit/${realtimeAppId}/meetings/${realtimeMeeting.id}/active-session`);
+assertEqual((await realtimeActiveSessionResponse.json() as any).data.meeting_id, realtimeMeeting.id);
+const realtimeV2MeetingResponse = await app.request("POST", "/v2/meetings", { title: "Example Meeting" });
+const realtimeV2Meeting = (await realtimeV2MeetingResponse.json() as any).data;
+const realtimeV2ParticipantResponse = await app.request("POST", `/v2/meetings/${realtimeV2Meeting.id}/participants`, {
+  name: "Example Participant",
+  preset_name: "participant",
+});
+const realtimeV2Participant = (await realtimeV2ParticipantResponse.json() as any).data;
+assertEqual(typeof realtimeV2Participant.authToken, "string");
+const participantDetailsResponse = await app.request("GET", "/v2/internals/participant-details", undefined, {
+  authorization: `Bearer ${realtimeV2Participant.authToken}`,
+});
+assertEqual((await participantDetailsResponse.json() as any).data.participant.id, realtimeV2Participant.id);
+const realtimeInspectResponse = await app.request("GET", "/inspect/realtimekit");
+assertEqual((await realtimeInspectResponse.json() as any).apps.length >= 1, true);
 
 console.log("cloudflare smoke ok");

@@ -2,7 +2,7 @@
 
 Ramp provides finance APIs for entities, users, corporate cards, transactions, reimbursements, bills, and spend controls.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

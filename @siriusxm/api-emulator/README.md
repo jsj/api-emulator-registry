@@ -2,7 +2,7 @@
 
 SiriusXM provides channel lineup, now-playing metadata, recent track, profile, and favorite channel workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

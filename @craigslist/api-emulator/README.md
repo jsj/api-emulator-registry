@@ -2,7 +2,7 @@
 
 Craigslist provides Bulkpost OpenAPI surfaces for OAuth, billing, account messages, posting stats, post edits, images, status, RSS feeds, and classifieds search workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Google Analytics Data API provides GA4 property metadata, report execution, realtime metrics, and audience export workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

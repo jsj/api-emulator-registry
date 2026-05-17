@@ -2,7 +2,7 @@
 
 Charles Schwab Trader API provides OAuth, brokerage accounts, account hashes, orders, quotes, and option chain data.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

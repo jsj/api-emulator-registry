@@ -2,7 +2,7 @@
 
 Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, app store, device, and platform services for iOS and macOS apps.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

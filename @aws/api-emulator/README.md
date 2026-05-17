@@ -1,75 +1,36 @@
-# @emulators/aws
+# @api-emulator/aws
 
-S3, SQS, IAM, and STS emulation with AWS SDK-compatible S3 paths and query-style SQS/IAM/STS endpoints. All responses use AWS-compatible XML.
+AWS provides cloud infrastructure APIs for storage, queues, identity, compute, and managed services.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 
 ```bash
-npm install @emulators/aws
+npm install @api-emulator/aws
+```
+
+## Run
+
+```bash
+npx -p api-emulator api --plugin ./@aws/api-emulator/src/index.ts --service aws
 ```
 
 ## Endpoints
 
-### S3
-
-S3 routes use root paths matching the real AWS S3 wire format, so the official AWS SDK works out of the box with `forcePathStyle: true`. Legacy `/s3/` prefixed paths are also supported for backward compatibility.
-
-- `GET /` — list all buckets
-- `PUT /:bucket` — create bucket
-- `DELETE /:bucket` — delete bucket
-- `HEAD /:bucket` — check existence
-- `GET /:bucket` — list objects (prefix, delimiter, max-keys, continuation-token, start-after)
-- `POST /:bucket` — presigned POST upload (browser-style multipart form with policy validation)
-- `PUT /:bucket/:key` — put object (supports copy via `x-amz-copy-source`)
-- `GET /:bucket/:key` — get object
-- `HEAD /:bucket/:key` — head object
-- `DELETE /:bucket/:key` — delete object
-
-### SQS
-All operations via `POST /sqs/` with `Action` parameter:
-- `CreateQueue`, `ListQueues`, `GetQueueUrl`, `GetQueueAttributes`
-- `SendMessage`, `ReceiveMessage`, `DeleteMessage`
-- `PurgeQueue`, `DeleteQueue`
-
-### IAM
-All operations via `POST /iam/` with `Action` parameter:
-- `CreateUser`, `GetUser`, `ListUsers`, `DeleteUser`
-- `CreateAccessKey`, `ListAccessKeys`, `DeleteAccessKey`
-- `CreateRole`, `GetRole`, `ListRoles`, `DeleteRole`
-
-### STS
-All operations via `POST /sts/` with `Action` parameter:
-- `GetCallerIdentity`, `AssumeRole`
+- See the emulator source for the supported local API surface.
 
 ## Auth
 
-Bearer tokens or IAM access key credentials. Default key pair always seeded: `AKIAIOSFODNN7EXAMPLE` / `wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`.
+No production credentials are required. Use fake local credentials in client tests.
 
 ## Seed Configuration
 
 ```yaml
 aws:
-  region: us-east-1
-  s3:
-    buckets:
-      - name: my-app-bucket
-      - name: my-app-uploads
-  sqs:
-    queues:
-      - name: my-app-events
-      - name: my-app-dlq
-  iam:
-    users:
-      - user_name: developer
-        create_access_key: true
-    roles:
-      - role_name: lambda-execution-role
-        description: Role for Lambda function execution
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Full documentation](https://api-emulator.jsj.sh/aws)
-- [GitHub](https://github.com/jsj/api-emulator)
+- [api-emulator](https://github.com/jsj/api-emulator)

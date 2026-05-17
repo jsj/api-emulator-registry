@@ -91,6 +91,7 @@ import { plugin as googleMapsPlugin } from '../@google-maps/api-emulator.mjs';
 import { plugin as ociPlugin } from '../@oci/api-emulator.mjs';
 import { plugin as protonMailPlugin } from '../@proton-mail/api-emulator.mjs';
 import { plugin as imsgPlugin } from '../@imsg/api-emulator.mjs';
+import { plugin as yahooFinancePlugin } from '../@yahoo-finance/api-emulator.mjs';
 
 async function runDopplerCliSmoke(baseUrl) {
   const doppler = await commandPath('doppler');
@@ -192,6 +193,74 @@ async function runGoplacesCliSmoke(baseUrl) {
   if (!details) return null;
   assert.match(details.stdout, /One Apple Park Way/);
   return { search, details };
+}
+
+async function runYfinanceSdkSmoke(baseUrl) {
+  const python = await commandPath('python3');
+  if (!python) return null;
+  const git = await commandPath('git');
+  if (!git) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'yfinance-sdk-smoke-'));
+  try {
+    const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/ranaroussi/yfinance.git'], {
+      env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
+    }).catch(() => null);
+    if (!install) return null;
+    const smoke = join(dir, 'smoke.py');
+    await writeFile(
+      smoke,
+      [
+        'import json, sys',
+        `sys.path.insert(0, ${JSON.stringify(join(dir, 'site'))})`,
+        'from urllib.parse import urlparse',
+        'import yfinance as yf',
+        'import yfinance.data as yfdata',
+        'from curl_cffi import requests',
+        `base_url = ${JSON.stringify(baseUrl)}`,
+        'class LocalYahooSession(requests.Session):',
+        '    def request(self, method, url, *args, **kwargs):',
+        '        parsed = urlparse(url)',
+        '        if parsed.netloc in {"query1.finance.yahoo.com", "query2.finance.yahoo.com", "finance.yahoo.com", "fc.yahoo.com", "guce.yahoo.com", "consent.yahoo.com", "markets.businessinsider.com"}:',
+        '            url = base_url + parsed.path + (("?" + parsed.query) if parsed.query else "")',
+        '        return super().request(method, url, *args, **kwargs)',
+        'yfdata.YfData._get_cookie_and_crumb = lambda self, *args, **kwargs: ("yahoo_finance_emulator_crumb", "basic")',
+        'ticker = yf.Ticker("MSFT", session=LocalYahooSession())',
+        'checks = {}',
+        'history = ticker.history(period="5d", interval="1d")',
+        'info = ticker.info',
+        'fast = ticker.fast_info',
+        'checks["history_rows"] = int(len(history))',
+        'checks["longName"] = info.get("longName")',
+        'checks["last_price"] = float(fast["last_price"])',
+        'checks["currency"] = fast["currency"]',
+        'checks["recommendations"] = len(ticker.recommendations) if ticker.recommendations is not None else 0',
+        'checks["upgrades_downgrades"] = len(ticker.upgrades_downgrades) if ticker.upgrades_downgrades is not None else 0',
+        'checks["sec_filings"] = len(ticker.sec_filings) if ticker.sec_filings is not None else 0',
+        'checks["institutional_holders"] = len(ticker.institutional_holders) if ticker.institutional_holders is not None else 0',
+        'checks["mutualfund_holders"] = len(ticker.mutualfund_holders) if ticker.mutualfund_holders is not None else 0',
+        'checks["insider_transactions"] = len(ticker.insider_transactions) if ticker.insider_transactions is not None else 0',
+        'checks["insider_purchases"] = len(ticker.insider_purchases) if ticker.insider_purchases is not None else 0',
+        'checks["insider_roster"] = len(ticker.insider_roster_holders) if ticker.insider_roster_holders is not None else 0',
+        'checks["options"] = len(ticker.options)',
+        'checks["option_chain_calls"] = len(ticker.option_chain().calls)',
+        'checks["news"] = len(ticker.get_news(count=1))',
+        'checks["income_stmt_cols"] = len(ticker.get_income_stmt().columns)',
+        'checks["balance_sheet_cols"] = len(ticker.get_balance_sheet().columns)',
+        'checks["cashflow_cols"] = len(ticker.get_cashflow().columns)',
+        'checks["search"] = len(yf.Search("MSFT", session=LocalYahooSession()).quotes)',
+        'assert checks["history_rows"] >= 1, checks',
+        'assert checks["longName"] == "Microsoft Corporation", checks',
+        'assert checks["last_price"] == 420.42, checks',
+        'assert checks["currency"] == "USD", checks',
+        'assert checks["options"] >= 1 and checks["option_chain_calls"] >= 1, checks',
+        'assert checks["income_stmt_cols"] >= 1 and checks["balance_sheet_cols"] >= 1 and checks["cashflow_cols"] >= 1, checks',
+        'print(json.dumps(checks, sort_keys=True))',
+      ].join('\n'),
+    );
+    return run(python, [smoke], { env: { PYTHONPATH: join(dir, 'site') } }).catch(() => null);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 async function runBusinessProviderE2E(baseUrl) {
@@ -2681,6 +2750,7 @@ function registerCoreProviders({ app, store, webhooks, tokenMap }) {
   ociPlugin.register(app, store);
   protonMailPlugin.register(app, store);
   imsgPlugin.register(app, store);
+  yahooFinancePlugin.register(app, store);
   linkedinPlugin.register(app, store);
   xboxPlugin.register(app, store);
   playstationPlugin.register(app, store);
@@ -2985,6 +3055,14 @@ async function main() {
     const imsg = await runIMsgCliSmoke(baseUrl);
     if (!imsg) {
       console.warn('Swift/sqlite3 or /Users/james/Developer/zmirror/imsg unavailable; imsg Messages DB fixture route smoke covered');
+    }
+
+    const yahooChart = await fetch(`${baseUrl}/v8/finance/chart/MSFT?range=5d&interval=1d`);
+    assert.equal(yahooChart.status, 200);
+    assert.equal((await yahooChart.json()).chart.result[0].meta.symbol, 'MSFT');
+    const yfinance = await runYfinanceSdkSmoke(baseUrl);
+    if (!yfinance) {
+      console.warn('ranaroussi/yfinance unavailable or incompatible; Yahoo Finance REST route smoke covered');
     }
 
     const nextdoorPost = await fetch(`${baseUrl}/posts`, {

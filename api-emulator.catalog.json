@@ -1074,6 +1074,12 @@
       "specifier": "./@xbox/api-emulator.mjs",
       "description": "Xbox publishing-style Microsoft Store APIs provide app submissions, flights, package metadata, and publish status workflows."
     },
+    "yahoo-finance": {
+      "kind": "package",
+      "packageName": "@api-emulator/yahoo-finance",
+      "specifier": "./@yahoo-finance/api-emulator.mjs",
+      "description": "Yahoo Finance query APIs provide chart, quote, quote summary, and fundamentals time-series data used by yfinance."
+    },
     "youtube": {
       "kind": "package",
       "packageName": "@api-emulator/youtube",

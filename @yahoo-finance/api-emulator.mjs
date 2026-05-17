@@ -396,6 +396,8 @@ function valuationHtml(symbol) {
   return `<html><body><table><thead><tr><th>Metric</th><th>Current</th></tr></thead><tbody><tr><td>Market Cap</td><td>2.9T</td></tr><tr><td>Trailing P/E</td><td>30.0</td></tr><tr><td>Price/Sales</td><td>10.0</td></tr></tbody></table><p>${symbol}</p></body></html>`;
 }
 
+const queryFor = (c) => (name) => c.req.query(name);
+
 export const contract = {
   provider: 'yahoo-finance',
   source: 'Yahoo Finance query API surfaces used by ranaroussi/yfinance',
@@ -413,17 +415,17 @@ export const plugin = {
     app.post('/v2/collectConsent', (c) => c.text('ok'));
     app.get('/copyConsent', (c) => c.text('ok'));
     app.get('/v1/test/getcrumb', (c) => c.text(state(store).crumb));
-    app.get('/v8/finance/chart/:symbol', (c) => c.json(chartPayload(getQuote(store, c.req.param('symbol')), c.req.query)));
+    app.get('/v8/finance/chart/:symbol', (c) => c.json(chartPayload(getQuote(store, c.req.param('symbol')), queryFor(c))));
     app.get('/v10/finance/quoteSummary/:symbol', (c) => c.json(quoteSummaryPayload(getQuote(store, c.req.param('symbol')))));
     app.get('/v7/finance/quote', (c) => {
       const symbols = (c.req.query('symbols') ?? '').split(',').map((symbol) => symbol.trim()).filter(Boolean);
       if (symbols.length === 0) return routeError(c, 'symbols query parameter is required', 400, 'Bad Request');
       return c.json(quoteResponsePayload(store, symbols));
     });
-    app.get('/ws/fundamentals-timeseries/v1/finance/timeseries/:symbol', (c) => c.json(timeseriesPayload(getQuote(store, c.req.param('symbol')), c.req.query)));
-    app.get('/v7/finance/options/:symbol', (c) => c.json(optionsPayload(getQuote(store, c.req.param('symbol')), c.req.query)));
-    app.get('/v1/finance/search', (c) => c.json(searchPayload(store, c.req.query)));
-    app.get('/v1/finance/lookup', (c) => c.json(lookupPayload(store, c.req.query)));
+    app.get('/ws/fundamentals-timeseries/v1/finance/timeseries/:symbol', (c) => c.json(timeseriesPayload(getQuote(store, c.req.param('symbol')), queryFor(c))));
+    app.get('/v7/finance/options/:symbol', (c) => c.json(optionsPayload(getQuote(store, c.req.param('symbol')), queryFor(c))));
+    app.get('/v1/finance/search', (c) => c.json(searchPayload(store, queryFor(c))));
+    app.get('/v1/finance/lookup', (c) => c.json(lookupPayload(store, queryFor(c))));
     app.get('/v1/finance/screener/predefined/saved', (c) => c.json(screenerPayload(store, c.req.query('scrIds') ?? 'most_actives')));
     app.post('/v1/finance/screener', async (c) => {
       await readBody(c);

@@ -2,7 +2,7 @@
 
 ServiceNow provides customer-support and ITSM APIs for Table API incidents, users, groups, and workflow records.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

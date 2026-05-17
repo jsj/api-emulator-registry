@@ -2,7 +2,7 @@
 
 Brave Search provides web, news, and suggestion search APIs for agentic retrieval and SERP-style workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

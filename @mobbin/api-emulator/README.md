@@ -2,7 +2,7 @@
 
 Mobbin provides MCP and Screens Search APIs for discovering mobile and web design reference screens.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

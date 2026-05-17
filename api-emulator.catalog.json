@@ -744,6 +744,12 @@
       "specifier": "./@reddit/api-emulator.mjs",
       "description": "Reddit provides OAuth, identity, subreddit, listing, post submission, and comment APIs."
     },
+    "reducto": {
+      "kind": "package",
+      "packageName": "@api-emulator/reducto",
+      "specifier": "./@reducto/api-emulator.mjs",
+      "description": "Reducto provides document parsing, extraction, splitting, upload, pipeline, webhook, and asynchronous job APIs."
+    },
     "replit": {
       "kind": "package",
       "packageName": "@api-emulator/replit",

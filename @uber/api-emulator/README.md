@@ -2,7 +2,7 @@
 
 Uber provides Rides, Direct, and Eats APIs for profiles, products, estimates, ride requests, history, payment methods, places, deliveries, stores, menus, orders, reports, and webhooks.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

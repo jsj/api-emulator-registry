@@ -2,7 +2,7 @@
 
 SurveyMonkey provides API v3 surfaces for users, surveys, collectors, and bulk survey response workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Deel provides workforce APIs for people, legal entities, contracts, invoices, roles, and organization structures.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

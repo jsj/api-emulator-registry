@@ -1,84 +1,36 @@
-# @emulators/stripe
+# @api-emulator/stripe
 
-Stripe API emulation with customers, payment methods, customer sessions, payment intents, charges, products, prices, and checkout sessions. Includes a hosted checkout page and webhook delivery.
+Stripe provides payments and billing APIs for customers, checkout, payment intents, invoices, and subscriptions.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 
 ```bash
-npm install @emulators/stripe
+npm install @api-emulator/stripe
+```
+
+## Run
+
+```bash
+npx -p api-emulator api --plugin ./@stripe/api-emulator/src/index.ts --service stripe
 ```
 
 ## Endpoints
 
-### Customers
-- `POST /v1/customers` — create customer
-- `GET /v1/customers/:id` — retrieve customer
-- `POST /v1/customers/:id` — update customer
-- `DELETE /v1/customers/:id` — delete customer
-- `GET /v1/customers` — list customers
+- See the emulator source for the supported local API surface.
 
-### Payment Methods
-- `GET /v1/payment_methods` — list payment methods
+## Auth
 
-### Customer Sessions
-- `POST /v1/customer_sessions` — create customer session
-
-### Payment Intents
-- `POST /v1/payment_intents` — create payment intent
-- `GET /v1/payment_intents/:id` — retrieve payment intent
-- `POST /v1/payment_intents/:id` — update payment intent
-- `POST /v1/payment_intents/:id/confirm` — confirm payment intent
-- `POST /v1/payment_intents/:id/cancel` — cancel payment intent
-- `GET /v1/payment_intents` — list payment intents
-
-### Charges
-- `GET /v1/charges/:id` — retrieve charge
-- `GET /v1/charges` — list charges
-
-### Products
-- `POST /v1/products` — create product
-- `GET /v1/products/:id` — retrieve product
-- `GET /v1/products` — list products
-
-### Prices
-- `POST /v1/prices` — create price
-- `GET /v1/prices/:id` — retrieve price
-- `GET /v1/prices` — list prices
-
-### Checkout Sessions
-- `POST /v1/checkout/sessions` — create checkout session
-- `GET /v1/checkout/sessions/:id` — retrieve session
-- `POST /v1/checkout/sessions/:id/expire` — expire session
-- `GET /v1/checkout/sessions` — list sessions (filter by `customer`, `status`, `payment_status`)
-- `GET /checkout/:id` — hosted checkout page (HTML)
-- `POST /checkout/:id/complete` — complete payment flow
-
-## Webhooks
-
-Events are delivered to configured webhook URLs:
-- `checkout.session.completed` — when a checkout session is completed
-- `checkout.session.expired` — when a checkout session expires
+No production credentials are required. Use fake local credentials in client tests.
 
 ## Seed Configuration
 
 ```yaml
 stripe:
-  customers:
-    - name: Test Customer
-      email: test@example.com
-  products:
-    - name: Pro Plan
-  prices:
-    - product: Pro Plan
-      unit_amount: 2000
-      currency: usd
-      recurring:
-        interval: month
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Full documentation](https://api-emulator.jsj.sh)
-- [GitHub](https://github.com/jsj/api-emulator)
+- [api-emulator](https://github.com/jsj/api-emulator)

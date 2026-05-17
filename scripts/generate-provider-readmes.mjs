@@ -63,7 +63,7 @@ function readmeFor(slug, entry) {
   const officialDocs = source.match(/docs:\s*['"`]([^'"`]+)['"`]/)?.[1];
   const docsLink = officialDocs ? `- [Official API docs](${officialDocs})\n` : '';
 
-  return `# ${title}\n\n${entry.description ?? `${label} API emulator.`}\n\nPart of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Endpoints\n\n${endpoints}\n\n## Auth\n\n${authLine(source)}\n\n## Seed Configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
+  return `# ${title}\n\n${entry.description ?? `${label} API emulator.`}\n\nPart of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Endpoints\n\n${endpoints}\n\n## Auth\n\n${authLine(source)}\n\n## Seed Configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
 }
 
 const stale = [];

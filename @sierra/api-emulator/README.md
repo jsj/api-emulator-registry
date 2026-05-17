@@ -2,7 +2,7 @@
 
 Sierra provides AI customer-service agent SDK surfaces for mobile chat embeds, voice SVP transport probes, and conversation fixtures.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

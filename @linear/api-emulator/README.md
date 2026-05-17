@@ -2,7 +2,7 @@
 
 Linear provides issue tracking, teams, projects, cycles, workflow states, and product planning APIs.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

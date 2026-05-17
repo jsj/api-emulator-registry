@@ -2,7 +2,7 @@
 
 Oculus and Meta Horizon provide Graph API surfaces for app builds, release channels, redists, and platform utility workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

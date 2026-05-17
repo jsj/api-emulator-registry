@@ -2,7 +2,7 @@
 
 UiPath Orchestrator APIs provide OData workflows for folders, users, releases, jobs, queues, robots, and assets.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Gusto provides payroll and HR APIs for companies, employees, contractors, payrolls, benefits, and onboarding.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

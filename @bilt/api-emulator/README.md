@@ -2,7 +2,7 @@
 
 Bilt Rewards-style APIs provide member profiles, rewards accounts, points ledger, and rent payment workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

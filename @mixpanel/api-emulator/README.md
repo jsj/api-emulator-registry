@@ -2,7 +2,7 @@
 
 Mixpanel provides product analytics APIs for event ingestion, user profiles, exports, and reporting.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 E*TRADE provides brokerage APIs for OAuth 1.0a authorization, accounts, balances, portfolios, market quotes, orders, and order previews.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

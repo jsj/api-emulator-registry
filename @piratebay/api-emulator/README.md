@@ -2,7 +2,7 @@
 
 Pirate Bay provides generic media index fixtures for search, item metadata, playback, and library-style workflows.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 WhatsApp Cloud API provides Graph API surfaces for business phone numbers, messages, media, templates, and webhooks.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

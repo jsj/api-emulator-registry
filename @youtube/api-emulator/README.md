@@ -2,7 +2,7 @@
 
 YouTube provides Data API, Upload API, and Analytics API surfaces for creator posting, video management, comments, playlists, reports, and groups.
 
-Part of [emulate](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 

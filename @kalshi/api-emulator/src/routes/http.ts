@@ -20,6 +20,8 @@ type RequestLike = {
   header(name: string): string | undefined;
   param(name: string): string;
   query(name: string): string | undefined;
+  method?: string;
+  url?: string;
   json(): Promise<Record<string, unknown>>;
 };
 
@@ -253,11 +255,45 @@ async function jsonBody(context: ContextLike): Promise<JsonObject> {
   }
 }
 
-function requireAuth(context: ContextLike): boolean {
-  return Boolean(
-    context.req.header("KALSHI-ACCESS-KEY") ||
-    context.req.header("KALSHI-ACCESS-SIGNATURE") ||
-    context.req.header("Authorization"),
+function authFailure(context: ContextLike): Response | undefined {
+  const key = context.req.header("KALSHI-ACCESS-KEY");
+  const signature = context.req.header("KALSHI-ACCESS-SIGNATURE");
+  const timestamp = context.req.header("KALSHI-ACCESS-TIMESTAMP");
+  if (!key) {
+    return context.json({ error: { code: "token_authentication_failure", message: "token authentication failure" } }, 401);
+  }
+  if (!signature) {
+    return context.json({ error: { code: "signature_is_missing_from_headers", message: "signature is missing from headers" } }, 401);
+  }
+  if (!timestamp) {
+    return context.json({ error: { code: "timestamp_is_missing_from_headers", message: "timestamp is missing from headers" } }, 401);
+  }
+  return undefined;
+}
+
+function requestPath(context: ContextLike): string {
+  if (!context.req.url) return "";
+  try {
+    const path = new URL(context.req.url, "http://kalshi-emulator.local").pathname;
+    return path.startsWith("/trade-api/v2") ? path.slice("/trade-api/v2".length) || "/" : path;
+  } catch {
+    return "";
+  }
+}
+
+function allowsUnauthenticatedRead(context: ContextLike): boolean {
+  if ((context.req.method ?? "GET").toUpperCase() !== "GET") return false;
+  const path = requestPath(context);
+  return (
+    path === "/markets" ||
+    path.startsWith("/markets/") ||
+    path === "/events" ||
+    path.startsWith("/events/") ||
+    path === "/series" ||
+    path.startsWith("/series/") ||
+    path === "/exchange/status" ||
+    path === "/exchange/announcements" ||
+    path === "/exchange/schedule"
   );
 }
 
@@ -890,7 +926,12 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   const kalshi = getKalshiStore(store);
 
   app.use("/trade-api/v2/*", async (context, next) => {
-    if (!requireAuth(context)) return context.json({ error: { code: "unauthorized", message: "missing Kalshi API headers" } }, 401);
+    if (allowsUnauthenticatedRead(context)) {
+      await next();
+      return;
+    }
+    const failure = authFailure(context);
+    if (failure) return failure;
     await next();
   });
 

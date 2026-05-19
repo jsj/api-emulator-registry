@@ -222,6 +222,12 @@
       "specifier": "./@datadog/api-emulator.mjs",
       "description": "Datadog provides observability APIs for metrics, monitors, logs, traces, hosts, dashboards, and events."
     },
+    "databricks": {
+      "kind": "package",
+      "packageName": "@api-emulator/databricks",
+      "specifier": "./@databricks/api-emulator.mjs",
+      "description": "Databricks provides workspace, cluster, job, run, SQL warehouse, and SQL statement APIs for lakehouse automation."
+    },
     "doppler": {
       "kind": "package",
       "packageName": "@api-emulator/doppler",
@@ -834,6 +840,12 @@
       "specifier": "./@sierra/api-emulator.mjs",
       "description": "Sierra provides AI customer-service agent SDK surfaces for mobile chat embeds, voice SVP transport probes, and conversation fixtures."
     },
+    "signal-messaging": {
+      "kind": "package",
+      "packageName": "@api-emulator/signal-messaging",
+      "specifier": "./@signal-messaging/api-emulator.mjs",
+      "description": "Signal Messaging provides signal-cli-rest-api-compatible local messaging routes for registration, sending, receiving, and groups."
+    },
     "silurian": {
       "kind": "package",
       "packageName": "@api-emulator/silurian",
@@ -870,11 +882,23 @@
       "specifier": "./@snap/api-emulator.mjs",
       "description": "Snap Ads provides Marketing API surfaces for OAuth, organizations, ad accounts, campaigns, ads, and reporting."
     },
+    "snowflake": {
+      "kind": "package",
+      "packageName": "@api-emulator/snowflake",
+      "specifier": "./@snowflake/api-emulator.mjs",
+      "description": "Snowflake provides SQL API statement execution and REST resources for databases, schemas, warehouses, and users."
+    },
     "sourcegraph": {
       "kind": "package",
       "packageName": "@api-emulator/sourcegraph",
       "specifier": "./@sourcegraph/api-emulator.mjs",
       "description": "Sourcegraph provides code search, GraphQL, Cody context, and LLM model APIs for developer tooling workflows."
+    },
+    "spark": {
+      "kind": "package",
+      "packageName": "@api-emulator/spark",
+      "specifier": "./@spark/api-emulator.mjs",
+      "description": "Apache Spark provides monitoring and standalone submission REST APIs for applications, jobs, stages, executors, and drivers."
     },
     "spotify": {
       "kind": "package",

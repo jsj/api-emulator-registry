@@ -1,4 +1,5 @@
 import { branch, deleteBranch, diffBranch, execSql, exportBranch, listBranches, promoteBranch } from '../../local-postgres/branch.mjs';
+import { cloneWorkspace, disposeWorkspace, inspectWorkspace } from '../../local-postgres/workspace.mjs';
 
 function now() { return new Date().toISOString(); }
 function id(prefix) { return prefix + '_' + crypto.randomUUID().replaceAll('-', '').slice(0, 20); }
@@ -221,4 +222,11 @@ export function registerRoutes(app, store, contract) {
   app.get('/_emu/db/supabase/databases/:id/branches/:branch/export', async (c) => c.json({ sql: await exportBranch(c.req.param('branch')) }));
   app.get('/_emu/db/supabase/databases/:id/branches/:branch/diff', async (c) => c.json(await diffBranch(c.req.param('branch'), c.req.param('id'))));
   app.post('/_emu/db/supabase/databases/:id/branches/:branch/promote', async (c) => { await promoteBranch(c.req.param('branch'), c.req.param('id')); return c.json({ ok: true }); });
+  app.post('/_emu/db/supabase/workspaces', async (c) => {
+    const input = await body(c);
+    const name = input.name ?? input.workspace ?? `agent_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`;
+    return c.json(await cloneWorkspace(name, { requireCopyOnWrite: input.require_copy_on_write === true }), 201);
+  });
+  app.get('/_emu/db/supabase/workspaces/:workspace', async (c) => c.json(await inspectWorkspace(c.req.param('workspace'))));
+  app.delete('/_emu/db/supabase/workspaces/:workspace', async (c) => { await disposeWorkspace(c.req.param('workspace')); return c.json({ ok: true }); });
 }

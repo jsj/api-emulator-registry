@@ -37,13 +37,13 @@ async function commandWorks(command, args) {
 
 async function resolveRuntime() {
   if (selectedRuntime) return selectedRuntime;
-  const requested = process.env.PLANETSCALE_MYSQL_RUNTIME ?? 'auto';
+  const requested = process.env.API_EMULATOR_DB_RUNTIME ?? process.env.PLANETSCALE_MYSQL_RUNTIME ?? 'auto';
   if (requested !== 'auto') {
-    selectedRuntime = requested;
+    selectedRuntime = requested === 'apple-containers' ? 'container' : requested;
     return selectedRuntime;
   }
-  if (await commandWorks('container', ['ls', '--all', '--format', 'json'])) selectedRuntime = 'container';
-  else if (await commandWorks('docker', ['info'])) selectedRuntime = 'docker';
+  if (await commandWorks('docker', ['info'])) selectedRuntime = 'docker';
+  else if (await commandWorks('container', ['ls', '--all', '--format', 'json'])) selectedRuntime = 'container';
   else if (await commandWorks('which', ['container'])) selectedRuntime = 'container';
   else selectedRuntime = 'docker';
   return selectedRuntime;

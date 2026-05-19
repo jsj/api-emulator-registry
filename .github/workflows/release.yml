@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       providers:
-        description: Comma-separated provider slugs
-        required: true
-        default: databricks,signal-messaging,snowflake,spark
+        description: Comma-separated provider slugs; leave blank to publish all catalog package providers
+        required: false
+        default: ""
         type: string
       dry_run:
         description: Pack and publish with --dry-run
@@ -24,7 +24,7 @@ on:
         type: boolean
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.version }}-${{ inputs.providers }}
+  group: ${{ github.workflow }}-${{ inputs.version }}-${{ inputs.providers || 'all' }}
   cancel-in-progress: false
 
 permissions:

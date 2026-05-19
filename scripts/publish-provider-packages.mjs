@@ -21,6 +21,13 @@ function listArg(name, fallback = '') {
     .filter(Boolean);
 }
 
+function allPackageProviders() {
+  return Object.entries(catalog)
+    .filter(([, entry]) => entry.kind === 'package')
+    .map(([slug]) => slug)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 function run(command, args, options = {}) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, args, { stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit', cwd: root, ...options });
@@ -82,10 +89,13 @@ async function prepareProvider(slug, entry, version, outRoot) {
 const dryRun = process.argv.includes('--dry-run') || process.env.DRY_RUN === 'true';
 const force = process.argv.includes('--force') || process.env.FORCE === 'true';
 const version = arg('version') ?? process.env.PROVIDER_VERSION;
-const providers = listArg('providers', process.env.PROVIDERS ?? '');
+const requestedProviders = listArg('providers', process.env.PROVIDERS ?? '');
+const providers = requestedProviders.length > 0 ? requestedProviders : allPackageProviders();
 
 if (!version) throw new Error('Missing provider package version. Pass --version=<semver> or PROVIDER_VERSION.');
-if (providers.length === 0) throw new Error('Missing providers. Pass --providers=databricks,snowflake,... or PROVIDERS.');
+if (providers.length === 0) throw new Error('No catalog package providers found.');
+
+console.log(`Preparing ${providers.length} provider package${providers.length === 1 ? '' : 's'}: ${providers.join(', ')}`);
 
 const outRoot = await mkdtemp(join(tmpdir(), 'api-emulator-provider-packages-'));
 const failures = [];

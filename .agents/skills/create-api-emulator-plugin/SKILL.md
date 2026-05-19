@@ -7,6 +7,8 @@ description: Create a new api-emulator provider plugin by deriving routes from o
 
 Use this skill when adding a new provider under `@provider/` in this repository. The goal is not just route coverage; the goal is a local emulator that real tools can use without touching production APIs.
 
+Use the database-hardening guidance when a provider, SDK, CLI, or smoke test needs a real database dependency such as PostgreSQL, MySQL/MariaDB, SQLite-compatible services, Redis, or similar stateful backing services. API emulation remains the default, but DB-backed compatibility must support local agents and CI without production credentials or slow full-size copies.
+
 ## Outcome
 
 Create a provider plugin that:
@@ -16,6 +18,8 @@ Create a provider plugin that:
 - Adds the provider to `api-emulator.catalog.json`.
 - Adds or updates the provider package README when the provider uses the package layout.
 - Adds route smoke coverage, and when possible CLI-backed smoke coverage in `scripts/cli-verification-smoke.mjs`.
+- For DB-backed providers, exposes deterministic database fixtures through a runtime abstraction that supports Docker first and Apple Containers where available.
+- For PostgreSQL-sized datasets, supports instant branch/clone workflows using copy-on-write storage rather than logical dumps or full file copies.
 - Keeps all external CLI config, cloned repos, credentials, and patches in temporary directories.
 
 ## Discovery order
@@ -39,6 +43,12 @@ Create a provider plugin that:
    - Good: SDK constructor or per-call URL override.
    - Acceptable for smoke tests: clone/build in a temp dir and patch centralized base URL constants.
    - Last resort: closed binary DNS/TLS interception. Keep this manual/gated only; never add default automation that edits `/etc/hosts`, trusts a CA, or binds privileged ports.
+
+4. **Classify database dependencies**
+   - Identify whether the provider can use in-memory state, a lightweight embedded store, or a real database service.
+   - Prefer real DB services when compatibility depends on wire protocol behavior, SQL dialects, driver quirks, migrations, transaction semantics, extensions, collations, or connection pooling.
+   - Capture required engine, version, extensions, seed data, credentials, migration commands, and connection URL shape.
+   - Never point smoke tests at production or shared staging databases.
 
 ## Implementation workflow
 
@@ -112,6 +122,23 @@ Describe accepted fake tokens, headers, workspace/team scoping, and pagination c
    - Add CLI smoke behind availability/build checks so local development remains ergonomic.
    - For OSS CLIs, clone/build/patch in temp dirs and avoid mutating user config.
    - Inject dummy credentials and base URLs through env vars or temp config files.
+
+7. **Harden database-backed compatibility**
+   - Add a DB runtime layer with a stable interface: `start`, `stop`, `reset`, `seed`, `clone`, `inspect`, and `connectionUrl`.
+   - Support Docker as the portable default for local development and CI.
+   - Support Apple Containers as a macOS-native runtime when installed and explicitly selected or auto-detected as preferred locally.
+   - Keep runtime selection explicit and overrideable with env/config, for example `API_EMULATOR_DB_RUNTIME=docker|apple-containers|auto`.
+   - Emit consistent connection details regardless of runtime: host, port, username, password, database, and URL.
+   - Reuse the same contract and smoke assertions across runtimes.
+
+8. **Use instant PostgreSQL cloning for agent test loops**
+   - Treat "clone any Postgres DB in seconds" as database branching, not physical copying.
+   - Maintain a base Postgres data image, physical replica, or restored fixture on copy-on-write storage.
+   - Create per-agent or per-test thin clones using ZFS, LVM snapshots, XFS reflinks, btrfs, APFS clones where safe, or a cloud/provider snapshot layer.
+   - Start isolated Postgres containers/processes against cloned `PGDATA` directories.
+   - Charge clone cost to metadata creation plus Postgres startup; changed blocks consume additional disk.
+   - Fall back to dump/restore only for small fixtures or when CoW support is unavailable, and report the slower mode clearly.
+   - Include cleanup/TTL for clones so failed agent runs do not leak disks, containers, or ports.
 
 ## CLI smoke playbook
 

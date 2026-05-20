@@ -348,6 +348,12 @@
       "specifier": "./@github/api-emulator/src/index.ts",
       "description": "GitHub provides source hosting, repositories, issues, pull requests, Actions, checks, and git data."
     },
+    "gitlab": {
+      "kind": "package",
+      "packageName": "@api-emulator/gitlab",
+      "specifier": "./@gitlab/api-emulator/src/index.js",
+      "description": "GitLab provides source hosting APIs for users, projects, issues, merge requests, discussions, notes, and iterations."
+    },
     "gong": {
       "kind": "package",
       "packageName": "@api-emulator/gong",
@@ -791,6 +797,12 @@
       "packageName": "@api-emulator/robinhood",
       "specifier": "./@robinhood/api-emulator.mjs",
       "description": "Robinhood Crypto Trading APIs provide account, holding, order, currency pair, and market data workflows."
+    },
+    "rocketchat": {
+      "kind": "package",
+      "packageName": "@api-emulator/rocketchat",
+      "specifier": "./@rocketchat/api-emulator/src/index.js",
+      "description": "Rocket.Chat provides team chat APIs for rooms, direct messages, group and channel history, room metadata, and message posting."
     },
     "salesforce": {
       "kind": "package",

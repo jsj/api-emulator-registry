@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { DatabaseSync } from 'node:sqlite';
 
 import { createHarness } from '../scripts/provider-smoke-harness.mjs';
 import { plugin } from './api-emulator.mjs';
 
-const execFileP = promisify(execFile);
 const harness = createHarness(plugin);
 
 const contract = await harness.call('GET', '/anotes/inspect/contract');
@@ -69,18 +64,15 @@ assert.equal(fixture.status, 200);
 assert.match(fixture.payload, /Welcome to anotes/);
 assert.match(fixture.payload, /ZICCLOUDSYNCINGOBJECT/);
 
-const dir = await mkdtemp(join(tmpdir(), 'anotes-smoke-'));
+const db = new DatabaseSync(':memory:');
 try {
-  const sqlPath = join(dir, 'note-store.sql');
-  const dbPath = join(dir, 'NoteStore.sqlite');
-  await writeFile(sqlPath, fixture.payload);
-  await execFileP('sqlite3', [dbPath, `.read ${sqlPath}`]);
-  const { stdout } = await execFileP('sqlite3', [dbPath, 'select count(*) from ZICCLOUDSYNCINGOBJECT where Z_ENT = 12;']);
-  assert.equal(stdout.trim(), '4');
-  const body = await execFileP('sqlite3', [dbPath, 'select cast(ZDATA as text) from ZICNOTEDATA where ZNOTE = 100;']);
-  assert.equal(body.stdout.trim(), 'Seed Apple Notes content from the emulator.');
+  db.exec(fixture.payload);
+  const count = db.prepare('select count(*) as count from ZICCLOUDSYNCINGOBJECT where Z_ENT = 12;').get();
+  assert.equal(count.count, 4);
+  const body = db.prepare('select cast(ZDATA as text) as body from ZICNOTEDATA where ZNOTE = 100;').get();
+  assert.equal(body.body, 'Seed Apple Notes content from the emulator.');
 } finally {
-  await rm(dir, { recursive: true, force: true });
+  db.close();
 }
 
 console.log('anotes smoke ok');

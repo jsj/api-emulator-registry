@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { DatabaseSync } from 'node:sqlite';
 
 import { createHarness } from '../scripts/provider-smoke-harness.mjs';
 import { plugin } from './api-emulator.mjs';
 
-const execFileP = promisify(execFile);
 const harness = createHarness(plugin);
 
 const contract = await harness.call('GET', '/imsg/inspect/contract');
@@ -77,16 +72,13 @@ assert.equal(fixture.status, 200);
 assert.match(fixture.payload, /hello from emulator/);
 assert.match(fixture.payload, /photo.jpg/);
 
-const dir = await mkdtemp(join(tmpdir(), 'imsg-smoke-'));
+const db = new DatabaseSync(':memory:');
 try {
-  const sqlPath = join(dir, 'chat-db.sql');
-  const dbPath = join(dir, 'chat.db');
-  await writeFile(sqlPath, fixture.payload);
-  await execFileP('sqlite3', [dbPath, `.read ${sqlPath}`]);
-  const { stdout } = await execFileP('sqlite3', [dbPath, 'select count(*) from message;']);
-  assert.equal(stdout.trim(), '5');
+  db.exec(fixture.payload);
+  const count = db.prepare('select count(*) as count from message;').get();
+  assert.equal(count.count, 5);
 } finally {
-  await rm(dir, { recursive: true, force: true });
+  db.close();
 }
 
 console.log('imsg smoke ok');

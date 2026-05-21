@@ -22,6 +22,11 @@ on:
         required: false
         default: false
         type: boolean
+      publish_concurrency:
+        description: Number of provider packages to pack/publish in parallel
+        required: false
+        default: 4
+        type: number
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.version }}-${{ inputs.providers || 'all' }}
@@ -64,7 +69,12 @@ jobs:
           PROVIDERS: ${{ inputs.providers }}
           DRY_RUN: ${{ inputs.dry_run }}
           FORCE: ${{ inputs.force }}
+          PUBLISH_CONCURRENCY: ${{ inputs.publish_concurrency }}
         run: |
+          cleanup() {
+            npm config delete //registry.npmjs.org/:_authToken >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           if [ "$DRY_RUN" != "true" ] && [ -n "${NPM_TOKEN:-}" ]; then
             npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
           fi

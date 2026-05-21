@@ -143,6 +143,46 @@ async function runNpmPackageNodeSmoke(packageName, script, env = {}) {
   return run(npm, ['exec', '--yes', '--package', packageName, '--', 'node', '--input-type=module', '-e', script], { env }).catch(() => null);
 }
 
+async function runAudibleSdkSmoke(baseUrl) {
+  const python = await commandPath('python3');
+  if (!python) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'audible-sdk-smoke-'));
+  try {
+    const site = join(dir, 'site');
+    const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', site, 'audible'], {
+      env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
+      timeout: 120_000,
+    }).catch(() => null);
+    if (!install) return null;
+
+    const smoke = join(dir, 'smoke.py');
+    await writeFile(
+      smoke,
+      [
+        'import json',
+        'import audible',
+        'import httpx',
+        `base_url = ${JSON.stringify(baseUrl)}`,
+        'auth = audible.Authenticator.from_dict({"locale_code": "us", "access_token": "Atna|audible_emulator_token", "expires": 4102444800})',
+        'client = audible.Client(auth)',
+        'client._api_url = httpx.URL(base_url)',
+        'catalog = client.get("catalog/products", keywords="localhost", num_results=1)',
+        'detail = client.get("catalog/products/B0EMU00001")',
+        'library = client.get("library")',
+        'wishlist = client.post("wishlist", {"asin": "B0EMU00001"})',
+        'assert catalog["products"]["items"][0]["asin"] == "B0EMU00001"',
+        'assert detail["product"]["title"] == "Localhost Listening"',
+        'assert library["items"]["items"][0]["asin"] == "B0EMU00001"',
+        'assert wishlist["status"] == "ADDED"',
+        'print(json.dumps({"catalog": catalog["products"]["items"][0]["asin"], "wishlist": wishlist["status"]}))',
+      ].join('\n'),
+    );
+    return run(python, [smoke], { env: { PYTHONPATH: site }, timeout: 120_000 }).catch(() => null);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 
 async function runIMsgCliSmoke(baseUrl) {
   const sqlite3 = await commandPath('sqlite3');
@@ -572,6 +612,50 @@ async function runJiraCliSmoke(baseUrl) {
     assert.match(listed.stdout, /EMU-1/);
     const viewed = await run(jira, ['issue', 'view', 'EMU-1', '--raw'], { env });
     assert.match(viewed.stdout, /Emulator issue/);
+    return { ok: true };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function runMercuryCliSmoke(baseUrl) {
+  const git = await commandPath('git');
+  const go = await commandPath('go');
+  if (!git || !go) return null;
+
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-mercury-cli-'));
+  try {
+    const source = join(dir, 'mercury-cli');
+    await run(git, ['clone', '--depth', '1', 'https://github.com/MercuryTechnologies/mercury-cli.git', source]);
+    const mercury = join(dir, 'mercury');
+    await run(go, ['build', '-o', mercury, './cmd/mercury'], { cwd: source });
+    const env = {
+      HOME: dir,
+      XDG_CONFIG_HOME: join(dir, '.config'),
+      XDG_CACHE_HOME: join(dir, '.cache'),
+      MERCURY_API_KEY: 'secret-token:mercury_emulator',
+      MERCURY_BASE_URL: `${baseUrl}/api/v1`,
+      MERCURY_NO_UPDATE_CHECK: '1',
+    };
+
+    const account = await run(mercury, ['--format', 'json', 'accounts', 'get', '--account-id', 'mercury-account-1'], { env });
+    assert.equal(JSON.parse(account.stdout).id, 'mercury-account-1');
+    const transactions = await run(mercury, ['--format', 'json', 'transactions', 'list', '--account-id', 'mercury-account-1', '--max-items', '1'], { env });
+    assert.equal(JSON.parse(transactions.stdout).id, 'mercury-transaction-1');
+    const recipient = await run(mercury, ['--format', 'json', 'recipients', 'create', '--email', 'smoke@example.com', '--name', 'Smoke Vendor'], { env });
+    assert.equal(JSON.parse(recipient.stdout).name, 'Smoke Vendor');
+    const approval = await run(
+      mercury,
+      ['--format', 'json', '--yes', 'payments', 'request', '--account-id', 'mercury-account-1', '--recipient-id', 'mercury-recipient-1', '--amount', '25', '--payment-method', 'ach', '--idempotency-key', 'smoke-request-1'],
+      { env },
+    );
+    assert.equal(JSON.parse(approval.stdout).status, 'pendingApproval');
+    const payment = await run(
+      mercury,
+      ['--format', 'json', '--yes', 'payments', 'create', '--account-id', 'mercury-account-1', '--recipient-id', 'mercury-recipient-1', '--amount', '25', '--payment-method', 'ach', '--idempotency-key', 'smoke-create-1'],
+      { env },
+    );
+    assert.equal(JSON.parse(payment.stdout).status, 'pending');
     return { ok: true };
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -2874,6 +2958,10 @@ async function main() {
     if (!rippling) {
       console.warn('Rippling/rippling-cli unavailable or incompatible; Rippling direct e2e route coverage passed');
     }
+    const mercury = await runMercuryCliSmoke(baseUrl);
+    if (!mercury) {
+      console.warn('MercuryTechnologies/mercury-cli unavailable; Mercury direct e2e route coverage passed');
+    }
     const workday = await runWorkdayRaasCliSmoke(baseUrl);
     if (!workday) {
       console.warn('Workday/raas-python unavailable; Workday direct e2e route coverage passed');
@@ -2979,7 +3067,10 @@ async function main() {
     const audibleCatalog = await fetch(`${baseUrl}/1.0/catalog/products?keywords=localhost`);
     assert.equal(audibleCatalog.status, 200);
     assert.equal((await audibleCatalog.json()).products.items[0].asin, 'B0EMU00001');
-    console.warn('Audible has no official public CLI/API; unofficial SDK/CLI base URL override is not safely assumed, direct route smoke covered');
+    const audibleSdk = await runAudibleSdkSmoke(baseUrl);
+    if (!audibleSdk) {
+      console.warn('mkb79/audible SDK unavailable or incompatible; Audible direct route smoke covered');
+    }
 
     const goodreadsSearch = await fetch(`${baseUrl}/search/index.xml?key=goodreads_emulator_key&q=localhost`);
     assert.equal(goodreadsSearch.status, 200);

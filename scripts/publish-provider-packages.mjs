@@ -49,6 +49,24 @@ function run(command, args, options = {}) {
   });
 }
 
+const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
+
+async function runWithRetry(command, args, options = {}) {
+  const attempts = options.attempts ?? 5;
+  const retryDelayMs = options.retryDelayMs ?? 60_000;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await run(command, args, options);
+    } catch (error) {
+      const rateLimited = /E429|Too Many Requests|rate limited/i.test(error.message);
+      if (!rateLimited || attempt === attempts) throw error;
+      const delay = retryDelayMs * attempt;
+      console.warn(`${command} ${args.join(' ')} rate limited; retrying in ${Math.round(delay / 1000)}s (${attempt}/${attempts})`);
+      await sleep(delay);
+    }
+  }
+}
+
 async function registryVersion(name) {
   try {
     return await run('npm', ['view', name, 'version'], { capture: true });
@@ -97,7 +115,7 @@ const force = process.argv.includes('--force') || process.env.FORCE === 'true';
 const version = arg('version') ?? process.env.PROVIDER_VERSION;
 const requestedProviders = listArg('providers', process.env.PROVIDERS ?? '');
 const providers = requestedProviders.length > 0 ? requestedProviders : allPackageProviders();
-const publishConcurrency = Math.min(numberArg('publish-concurrency', process.env.PUBLISH_CONCURRENCY ?? '4'), providers.length);
+const publishConcurrency = Math.min(numberArg('publish-concurrency', process.env.PUBLISH_CONCURRENCY ?? '2'), providers.length);
 
 if (!version) throw new Error('Missing provider package version. Pass --version=<semver> or PROVIDER_VERSION.');
 if (providers.length === 0) throw new Error('No catalog package providers found.');
@@ -124,7 +142,7 @@ async function publishProvider(slug) {
   const tarball = join(outRoot, JSON.parse(packJson)[0].filename);
   const publishArgs = dryRun ? ['publish', tarball, '--dry-run', '--access', 'public'] : ['publish', tarball, '--provenance', '--access', 'public'];
   try {
-    await run('npm', publishArgs);
+    await runWithRetry('npm', publishArgs);
   } catch (error) {
     failures.push(name);
     console.error(error.message);

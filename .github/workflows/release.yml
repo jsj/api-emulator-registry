@@ -23,9 +23,9 @@ on:
         default: false
         type: boolean
       publish_concurrency:
-        description: Number of provider packages to pack/publish in parallel
+        description: Number of provider packages to pack/publish in parallel; keep low to avoid npm rate limits
         required: false
-        default: 4
+        default: 2
         type: number
 
 concurrency:

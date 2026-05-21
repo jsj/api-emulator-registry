@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const catalog = JSON.parse(await readFile(join(root, 'api-emulator.catalog.json'), 'utf8')).plugins ?? {};
@@ -98,6 +99,40 @@ async function registryVersion(name) {
   }
 }
 
+async function packageHash(packageDir) {
+  const hash = createHash('sha256');
+  const files = (await readdir(packageDir, { recursive: true, withFileTypes: true }))
+    .filter((item) => item.isFile())
+    .map((item) => join(item.parentPath, item.name))
+    .sort((a, b) => a.localeCompare(b));
+
+  for (const file of files) {
+    const relativePath = file.slice(packageDir.length + 1);
+    hash.update(relativePath);
+    if (relativePath === 'package.json') {
+      const pkg = JSON.parse(await readFile(file, 'utf8'));
+      delete pkg.version;
+      hash.update(JSON.stringify(pkg));
+    } else {
+      hash.update(await readFile(file));
+    }
+  }
+  return hash.digest('hex');
+}
+
+async function publishedPackageHash(name, outRoot) {
+  const dir = await mkdtemp(join(outRoot, 'published-'));
+  try {
+    const packJson = await run('npm', ['pack', `${name}@latest`, '--json', '--pack-destination', dir], { capture: true }).catch(() => null);
+    if (!packJson) return null;
+    const tarball = join(dir, JSON.parse(packJson)[0].filename);
+    await run('tar', ['-xzf', tarball, '-C', dir], { capture: true });
+    return await packageHash(join(dir, 'package'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 function providerPackageJson(slug, entry, version) {
   return {
     name: entry.packageName ?? `@api-emulator/${slug}`,
@@ -166,6 +201,13 @@ async function publishProvider(slug) {
   }
 
   const packageDir = await prepareProvider(slug, entry, version, outRoot);
+  const localHash = await packageHash(packageDir);
+  const remoteHash = await publishedPackageHash(name, outRoot);
+  if (!force && remoteHash === localHash) {
+    console.log(`${name} package content unchanged (${localHash.slice(0, 12)}), skipping`);
+    return;
+  }
+
   const packJson = await run('npm', ['pack', '--json', '--pack-destination', outRoot], { cwd: packageDir, capture: true });
   const tarball = join(outRoot, JSON.parse(packJson)[0].filename);
   const publishArgs = dryRun ? ['publish', tarball, '--dry-run', '--access', 'public'] : ['publish', tarball, '--provenance', '--access', 'public'];

@@ -34,6 +34,29 @@ function allPackageProviders() {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function providerPathPrefixes(slug, entry) {
+  const specifier = entry.specifier ?? `./@${slug}/api-emulator.mjs`;
+  return [`@${slug}/`, specifier.replace(/^\.\//, '')];
+}
+
+async function changedFiles(baseRef) {
+  const diffBase = baseRef || (await run('git', ['describe', '--tags', '--abbrev=0'], { capture: true }).catch(() => 'HEAD~1'));
+  return (await run('git', ['diff', '--name-only', `${diffBase}..HEAD`], { capture: true }))
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+async function changedPackageProviders(baseRef) {
+  const files = await changedFiles(baseRef);
+  if (files.includes('api-emulator.catalog.json')) return allPackageProviders();
+  return Object.entries(catalog)
+    .filter(([, entry]) => entry.kind === 'package')
+    .filter(([slug, entry]) => providerPathPrefixes(slug, entry).some((prefix) => files.some((file) => file === prefix || file.startsWith(prefix))))
+    .map(([slug]) => slug)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 function run(command, args, options = {}) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, args, { stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit', cwd: root, ...options });
@@ -114,11 +137,16 @@ const dryRun = process.argv.includes('--dry-run') || process.env.DRY_RUN === 'tr
 const force = process.argv.includes('--force') || process.env.FORCE === 'true';
 const version = arg('version') ?? process.env.PROVIDER_VERSION;
 const requestedProviders = listArg('providers', process.env.PROVIDERS ?? '');
-const providers = requestedProviders.length > 0 ? requestedProviders : allPackageProviders();
+const changedOnly = process.argv.includes('--changed-only') || process.env.CHANGED_ONLY === 'true';
+const changedBase = arg('changed-base') ?? process.env.CHANGED_BASE ?? '';
+const providers = requestedProviders.length > 0 ? requestedProviders : changedOnly ? await changedPackageProviders(changedBase) : allPackageProviders();
 const publishConcurrency = Math.min(numberArg('publish-concurrency', process.env.PUBLISH_CONCURRENCY ?? '2'), providers.length);
 
 if (!version) throw new Error('Missing provider package version. Pass --version=<semver> or PROVIDER_VERSION.');
-if (providers.length === 0) throw new Error('No catalog package providers found.');
+if (providers.length === 0) {
+  console.log(changedOnly ? 'No changed package providers found; nothing to publish.' : 'No catalog package providers found.');
+  process.exit(0);
+}
 
 console.log(`Preparing ${providers.length} provider package${providers.length === 1 ? '' : 's'}: ${providers.join(', ')}`);
 console.log(`Publishing with concurrency ${publishConcurrency}`);

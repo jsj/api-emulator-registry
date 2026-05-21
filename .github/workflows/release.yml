@@ -8,7 +8,17 @@ on:
         required: true
         type: string
       providers:
-        description: Comma-separated provider slugs; leave blank to publish all catalog package providers
+        description: Comma-separated provider slugs; leave blank to publish changed providers unless changed_only is false
+        required: false
+        default: ""
+        type: string
+      changed_only:
+        description: When providers is blank, publish only package providers changed since changed_base/latest tag
+        required: false
+        default: true
+        type: boolean
+      changed_base:
+        description: Optional git ref for changed-only detection; defaults to latest tag, then HEAD~1
         required: false
         default: ""
         type: string
@@ -47,6 +57,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -67,6 +79,8 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           PROVIDER_VERSION: ${{ inputs.version }}
           PROVIDERS: ${{ inputs.providers }}
+          CHANGED_ONLY: ${{ inputs.changed_only }}
+          CHANGED_BASE: ${{ inputs.changed_base }}
           DRY_RUN: ${{ inputs.dry_run }}
           FORCE: ${{ inputs.force }}
           PUBLISH_CONCURRENCY: ${{ inputs.publish_concurrency }}

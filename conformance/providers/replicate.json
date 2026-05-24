@@ -1,0 +1,36 @@
+{
+  "provider": "replicate",
+  "catalog": {
+    "slug": "replicate",
+    "specifier": "./@replicate/api-emulator.mjs"
+  },
+  "sources": {
+    "docs": ["https://replicate.com/docs/reference/http"],
+    "cli": "replicate",
+    "sdk": "replicate"
+  },
+  "validation": {
+    "directSmoke": "node @replicate/smoke.mjs",
+    "cliSmoke": "bun scripts/cli-verification-smoke.mjs",
+    "contractChecks": [],
+    "baseUrlEnv": "REPLICATE_BASE_URL"
+  },
+  "coverage": {
+    "deepRoutes": 9,
+    "genericFallback": false,
+    "unsupported": ["real model execution", "streaming prediction output"]
+  },
+  "fidelity": {
+    "routes": 0.76,
+    "schemas": 0.62,
+    "auth": 0.55,
+    "errors": 0.5,
+    "pagination": 0.55,
+    "state": 0.7,
+    "officialClient": 0.8
+  },
+  "notes": [
+    "Replicate CLI smoke builds and points the official CLI at the emulator with REPLICATE_BASE_URL.",
+    "Model execution is deterministic emulator state, not real inference."
+  ]
+}

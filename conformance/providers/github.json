@@ -1,0 +1,37 @@
+{
+  "provider": "github",
+  "catalog": {
+    "slug": "github",
+    "specifier": "./@github/api-emulator/src/index.ts"
+  },
+  "sources": {
+    "docs": ["https://docs.github.com/rest"],
+    "openapi": "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json",
+    "cli": "gh"
+  },
+  "validation": {
+    "directSmoke": "node @github/smoke.mjs",
+    "contractChecks": ["node scripts/check-github-openapi-coverage.mjs"],
+    "baseUrlEnv": "GITHUB_API_URL",
+    "skipReason": "Official gh CLI coverage is not yet wired into smoke:cli."
+  },
+  "coverage": {
+    "declaredOperations": 1186,
+    "deepRoutes": 6,
+    "genericFallback": true,
+    "unsupported": ["webhooks delivery semantics", "Git LFS batch behavior"]
+  },
+  "fidelity": {
+    "routes": 1,
+    "schemas": 0.72,
+    "auth": 0.45,
+    "errors": 0.45,
+    "pagination": 0.5,
+    "state": 0.7,
+    "officialClient": 0.35
+  },
+  "notes": [
+    "OpenAPI route count is checked against the live or overridden GitHub REST description.",
+    "The emulator combines deep stateful routes with a generic OpenAPI-compatible fallback."
+  ]
+}

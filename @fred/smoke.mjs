@@ -35,5 +35,9 @@ const series = await harness.call('/series', { series_id: search.seriess[0].id }
 assert.equal(series.seriess[0].id, search.seriess[0].id);
 const observations = await harness.call('/series/observations', { series_id: search.seriess[0].id, limit: '2' });
 assert.equal(observations.observations.length, 2);
+const treasury = await harness.call('/series/observations', { series_id: 'DGS10', limit: '1' });
+assert.equal(treasury.observations[0].value, '4.10');
+const spread = await harness.call('/series/observations', { series_id: 'T10Y2Y', limit: '1' });
+assert.equal(spread.observations[0].value, '-0.65');
 
 console.log('fred smoke ok');

@@ -42,6 +42,7 @@ function defaultState(baseUrl = QUERY2_BASE_URL) {
     quotes: {
       AAPL: quote('AAPL', { price: 189.98, previousClose: 188.52, marketCap: 2_915_000_000_000, shortName: 'Apple Inc.', longName: 'Apple Inc.', industry: 'Consumer Electronics' }),
       MSFT: quote('MSFT', { price: 420.42, previousClose: 418.07, marketCap: 3_124_000_000_000, shortName: 'Microsoft Corporation', longName: 'Microsoft Corporation' }),
+      NVDA: quote('NVDA', { price: 138.0, previousClose: 132.5, marketCap: 3_394_000_000_000, shortName: 'NVIDIA Corporation', longName: 'NVIDIA Corporation', industry: 'Semiconductors', sector: 'Technology' }),
       SPY: quote('SPY', { price: 589.5, previousClose: 586.5, marketCap: 540_000_000_000, shortName: 'SPDR S&P 500 ETF Trust', longName: 'SPDR S&P 500 ETF Trust', quoteType: 'ETF', industry: 'Exchange Traded Fund', sector: 'Financial Services' }),
     },
   };
@@ -456,6 +457,6 @@ export const plugin = {
 
 export const label = 'Yahoo Finance query API emulator';
 export const endpoints = contract.scope.join(', ');
-export const initConfig = { yahooFinance: { symbols: ['MSFT', 'AAPL', 'SPY'], crumb: 'yahoo_finance_emulator_crumb' } };
+export const initConfig = { yahooFinance: { symbols: ['MSFT', 'AAPL', 'NVDA', 'SPY'], crumb: 'yahoo_finance_emulator_crumb' } };
 
 export default plugin;

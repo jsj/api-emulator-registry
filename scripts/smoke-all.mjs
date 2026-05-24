@@ -3,6 +3,7 @@ import { readdir } from 'node:fs/promises';
 import { availableParallelism } from 'node:os';
 
 const checkFiles = [
+  'scripts/check-conformance.mjs',
   'scripts/check-cloudflare-openapi-coverage.mjs',
   'scripts/check-github-openapi-coverage.mjs',
   'scripts/check-google-workspace-coverage.mjs',

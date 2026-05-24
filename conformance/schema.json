@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "api-emulator registry conformance manifest",
+  "type": "object",
+  "required": ["provider", "catalog", "sources", "validation", "fidelity"],
+  "additionalProperties": false,
+  "properties": {
+    "provider": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "catalog": {
+      "type": "object",
+      "required": ["slug", "specifier"],
+      "additionalProperties": false,
+      "properties": {
+        "slug": { "type": "string" },
+        "specifier": { "type": "string" }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "required": ["docs"],
+      "additionalProperties": false,
+      "properties": {
+        "docs": { "type": "array", "items": { "type": "string" } },
+        "openapi": { "type": "string" },
+        "sdk": { "type": "string" },
+        "cli": { "type": "string" },
+        "internal": { "type": "string" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["directSmoke", "contractChecks"],
+      "additionalProperties": false,
+      "properties": {
+        "directSmoke": { "type": "string" },
+        "cliSmoke": { "type": "string" },
+        "contractChecks": { "type": "array", "items": { "type": "string" } },
+        "baseUrlEnv": { "type": "string" },
+        "skipReason": { "type": "string" }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "declaredOperations": { "type": "number" },
+        "deepRoutes": { "type": "number" },
+        "genericFallback": { "type": "boolean" },
+        "unsupported": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "fidelity": {
+      "type": "object",
+      "required": ["routes", "schemas", "auth", "errors", "pagination", "state", "officialClient"],
+      "additionalProperties": false,
+      "properties": {
+        "routes": { "type": "number", "minimum": 0, "maximum": 1 },
+        "schemas": { "type": "number", "minimum": 0, "maximum": 1 },
+        "auth": { "type": "number", "minimum": 0, "maximum": 1 },
+        "errors": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pagination": { "type": "number", "minimum": 0, "maximum": 1 },
+        "state": { "type": "number", "minimum": 0, "maximum": 1 },
+        "officialClient": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

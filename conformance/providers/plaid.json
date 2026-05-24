@@ -1,0 +1,37 @@
+{
+  "provider": "plaid",
+  "catalog": {
+    "slug": "plaid",
+    "specifier": "./@plaid/api-emulator/src/index.ts"
+  },
+  "sources": {
+    "docs": ["https://plaid.com/docs/api/"],
+    "openapi": "https://raw.githubusercontent.com/plaid/plaid-openapi/master/2020-09-14.yml",
+    "sdk": "plaid"
+  },
+  "validation": {
+    "directSmoke": "node @plaid/smoke.mjs",
+    "contractChecks": ["node scripts/check-plaid-openapi-coverage.mjs"],
+    "baseUrlEnv": "PLAID_API_HOST",
+    "skipReason": "Official SDK conformance is represented by OpenAPI coverage and direct smoke today."
+  },
+  "coverage": {
+    "declaredOperations": 330,
+    "deepRoutes": 16,
+    "genericFallback": true,
+    "unsupported": ["webhook retry delivery timing", "institution-specific error edge cases"]
+  },
+  "fidelity": {
+    "routes": 1,
+    "schemas": 0.68,
+    "auth": 0.55,
+    "errors": 0.5,
+    "pagination": 0.5,
+    "state": 0.72,
+    "officialClient": 0.45
+  },
+  "notes": [
+    "Plaid uses a deep sandbox-style core plus generic fallback for POST and GET operations.",
+    "OpenAPI operation count is verified by the contract check."
+  ]
+}

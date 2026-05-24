@@ -1,0 +1,36 @@
+{
+  "provider": "modal",
+  "catalog": {
+    "slug": "modal",
+    "specifier": "./@modal/api-emulator.mjs"
+  },
+  "sources": {
+    "docs": ["https://modal.com/docs"],
+    "cli": "modal",
+    "sdk": "modal"
+  },
+  "validation": {
+    "directSmoke": "node @modal/smoke.mjs",
+    "cliSmoke": "bun scripts/cli-verification-smoke.mjs",
+    "contractChecks": [],
+    "baseUrlEnv": "MODAL_SERVER_URL"
+  },
+  "coverage": {
+    "deepRoutes": 8,
+    "genericFallback": false,
+    "unsupported": ["full gRPC service surface", "container execution semantics"]
+  },
+  "fidelity": {
+    "routes": 0.62,
+    "schemas": 0.55,
+    "auth": 0.6,
+    "errors": 0.45,
+    "pagination": 0.4,
+    "state": 0.65,
+    "officialClient": 0.8
+  },
+  "notes": [
+    "Modal is validated with the installed official CLI using MODAL_SERVER_URL.",
+    "Current conformance focuses on token info and app listing flows."
+  ]
+}

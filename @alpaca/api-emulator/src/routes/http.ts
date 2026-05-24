@@ -21,6 +21,7 @@ type RequestLike = {
   param(name: string): string;
   query(name: string): string | undefined;
   json(): Promise<Record<string, unknown>>;
+  text?(): Promise<string>;
 };
 
 interface AlpacaRealSeedData {
@@ -254,17 +255,32 @@ export function seedDefaults(store: StoreLike): void {
     });
   }
   if (!alpaca.bars.all().length) {
+    const makeBars = (
+      base: number,
+      dailyChange: number,
+      volume: number,
+    ): Array<Omit<AlpacaBar, 'id' | 'created_at' | 'updated_at' | 'symbol' | 'timeframe'>> => [
+      { timestamp: '2025-01-02T14:30:00Z', open: base - dailyChange * 2, high: base - dailyChange * 2 + 2, low: base - dailyChange * 2 - 1, close: base - dailyChange * 2, volume: Math.round(volume * 0.82) },
+      { timestamp: '2025-01-03T14:30:00Z', open: base - dailyChange * 2, high: base - dailyChange + 2, low: base - dailyChange * 2 - 1, close: base - dailyChange, volume: Math.round(volume * 0.94) },
+      { timestamp: '2025-01-06T14:30:00Z', open: base - dailyChange, high: base + Math.abs(dailyChange) + 2, low: base - dailyChange - 1, close: base, volume },
+    ];
     const defaults: Record<string, Array<Omit<AlpacaBar, 'id' | 'created_at' | 'updated_at' | 'symbol' | 'timeframe'>>> = {
-      SPY: [
-        { timestamp: '2025-01-02T14:30:00Z', open: 585, high: 587, low: 584.5, close: 586.5, volume: 1000000 },
-        { timestamp: '2025-01-03T14:30:00Z', open: 586.5, high: 589, low: 586, close: 588, volume: 1100000 },
-        { timestamp: '2025-01-06T14:30:00Z', open: 588, high: 590, low: 587, close: 589.5, volume: 1200000 },
-      ],
-      MSFT: [
-        { timestamp: '2025-01-02T14:30:00Z', open: 420, high: 423, low: 419.5, close: 422, volume: 900000 },
-        { timestamp: '2025-01-03T14:30:00Z', open: 422, high: 425, low: 421, close: 424.5, volume: 950000 },
-        { timestamp: '2025-01-06T14:30:00Z', open: 424.5, high: 426.5, low: 423.5, close: 425.5, volume: 975000 },
-      ],
+      SPY: makeBars(589.5, 1.5, 1200000),
+      QQQ: makeBars(520, 2.4, 980000),
+      IWM: makeBars(216, -1.6, 760000),
+      DIA: makeBars(430, 0.8, 540000),
+      AAPL: makeBars(226, 3.2, 1500000),
+      MSFT: makeBars(425.5, 1, 975000),
+      NVDA: makeBars(138, 5.5, 2200000),
+      TSLA: makeBars(250, -7.5, 1800000),
+      AMZN: makeBars(188, 2.1, 1350000),
+      META: makeBars(590, -4.7, 890000),
+      GOOGL: makeBars(175, 1.8, 1100000),
+      AMD: makeBars(158, 4.2, 1250000),
+      INTC: makeBars(31, -0.9, 1120000),
+      SOXL: makeBars(52, 2.8, 940000),
+      TQQQ: makeBars(71, 3.6, 1300000),
+      SQQQ: makeBars(18, -1.2, 1010000),
     };
     for (const [symbol, bars] of Object.entries(defaults)) {
       for (const bar of bars) {
@@ -340,6 +356,9 @@ export function seedFromConfig(store: StoreLike, _baseUrl: string, config: Alpac
 }
 
 function requireAuth(context: ContextLike): boolean {
+  const authorization = context.req.header('authorization');
+  if (authorization?.toLowerCase().startsWith('bearer ')) return true;
+
   const key = context.req.header('APCA-API-KEY-ID');
   const secret = context.req.header('APCA-API-SECRET-KEY');
   return Boolean(key && secret);
@@ -413,6 +432,23 @@ function snapshotPayload(symbol: string, bars: AlpacaBar[]) {
 
 function symbolMap<T>(symbols: string[], build: (symbol: string) => T): Record<string, T> {
   return Object.fromEntries(symbols.map((symbol) => [symbol, build(symbol)]));
+}
+
+function positiveIntQuery(context: ContextLike, name: string, fallback: number): number {
+  const parsed = Number.parseInt(context.req.query(name) ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function screenerRows(bars: AlpacaBar[]) {
+  return [...new Set(bars.map((bar) => bar.symbol))]
+    .map((symbol) => {
+      const sorted = bars.filter((bar) => bar.symbol === symbol).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+      const latest = sorted.at(-1) ?? latestBar(symbol, bars);
+      const previous = sorted.at(-2) ?? latest;
+      const change = latest.close - previous.close;
+      const percentChange = previous.close === 0 ? 0 : (change / previous.close) * 100;
+      return { symbol, latest, previous, change, percentChange };
+    });
 }
 
 function alpacaAsset(symbol = 'SPY') {
@@ -547,6 +583,15 @@ async function jsonBody(context: ContextLike): Promise<Record<string, unknown>> 
   }
 }
 
+async function tokenBody(context: ContextLike): Promise<Record<string, string>> {
+  const contentType = context.req.header('content-type') ?? '';
+  if (contentType.includes('application/x-www-form-urlencoded') && context.req.text) {
+    return Object.fromEntries(new URLSearchParams(await context.req.text()));
+  }
+  const body = await jsonBody(context);
+  return Object.fromEntries(Object.entries(body).map(([key, value]) => [key, String(value)]));
+}
+
 function accountPayload(account: AlpacaAccount | undefined): Record<string, unknown> {
   if (!account) return {};
   return {
@@ -583,6 +628,47 @@ function marketClock() {
 
 export function registerRoutes(app: AppLike, store: StoreLike): void {
   const alpaca = getAlpacaStore(store);
+
+  app.get('/oauth/authorize', (context: ContextLike) => {
+    const redirectUri = context.req.query('redirect_uri');
+    const state = context.req.query('state') ?? '';
+    const clientId = context.req.query('client_id') ?? 'alpaca-emulator-client';
+    const scope = context.req.query('scope') ?? 'account:write trading';
+    if (!redirectUri) return context.json({ error: 'invalid_request', message: 'redirect_uri is required' }, 400);
+
+    const callback = new URL(redirectUri);
+    callback.searchParams.set('code', `alpaca-emulator-code-${Date.now()}`);
+    if (state) callback.searchParams.set('state', state);
+
+    return new Response(`<!doctype html>
+<html>
+  <head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connect Alpaca</title></head>
+  <body style="margin:0;background:#111;color:white;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:grid;min-height:100vh;place-items:center">
+    <main style="width:min(360px,calc(100vw - 48px));background:#242426;border-radius:28px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35)">
+      <p style="margin:0 0 8px;color:#aaa;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Alpaca OAuth Emulator</p>
+      <h1 style="font-size:30px;line-height:1.05;margin:0 0 12px">Connect Alpaca</h1>
+      <p style="color:#c9c9ce;line-height:1.45">Authorize ${clientId} for scopes: ${scope}.</p>
+      <a href="${callback.toString()}" style="display:block;text-align:center;text-decoration:none;background:#4d4d52;color:white;border-radius:999px;padding:14px 18px;font-weight:800;margin-top:24px">Authorize Alpaca</a>
+    </main>
+  </body>
+</html>`, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+  });
+
+  app.post('/oauth/token', async (context: ContextLike) => {
+    const body = await tokenBody(context);
+    if (body.grant_type !== 'authorization_code') return context.json({ error: 'unsupported_grant_type' }, 400);
+    if (!body.code || !body.redirect_uri || !body.client_id) return context.json({ error: 'invalid_request' }, 400);
+
+    const account = alpaca.accounts.all()[0];
+    return context.json({
+      access_token: 'alpaca-emulator-oauth-access-token',
+      refresh_token: 'alpaca-emulator-oauth-refresh-token',
+      token_type: 'Bearer',
+      scope: 'account:write trading',
+      expires_in: 3600,
+      account_id: account?.account_number ?? 'PA-EMULATE-001',
+    }, 200);
+  });
 
   app.use('/v2/*', async (context: ContextLike, next: NextLike) => {
     if (!requireAuth(context)) {
@@ -848,8 +934,35 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   });
   app.get('/v1beta1/news', (context: ContextLike) => context.json({ news: [newsItem()], next_page_token: null }, 200));
   app.get('/v1beta1/corporate-actions', (context: ContextLike) => context.json({ corporate_actions: { cash_dividends: [corporateAction()] }, next_page_token: null }, 200));
-  app.get('/v1beta1/screener/stocks/most-actives', (context: ContextLike) => context.json({ last_updated: new Date().toISOString(), most_actives: [{ symbol: 'SPY', volume: 1000000, trade_count: 1000 }] }, 200));
-  app.get('/v1beta1/screener/stocks/movers', (context: ContextLike) => context.json({ last_updated: new Date().toISOString(), market_type: 'stocks', gainers: [{ symbol: 'SPY', price: 586.5, change: 1, percent_change: 0.1 }], losers: [] }, 200));
+  app.get('/v1beta1/screener/stocks/most-actives', (context: ContextLike) => {
+    const top = positiveIntQuery(context, 'top', 20);
+    const by = context.req.query('by') === 'trades' ? 'trades' : 'volume';
+    const mostActives = screenerRows(alpaca.bars.all())
+      .sort((a, b) => b.latest.volume - a.latest.volume)
+      .slice(0, top)
+      .map((row) => ({
+        symbol: row.symbol,
+        volume: row.latest.volume,
+        trade_count: Math.max(1, Math.round(row.latest.volume / (by === 'trades' ? 75 : 100))),
+      }));
+    return context.json({ last_updated: new Date().toISOString(), most_actives: mostActives }, 200);
+  });
+  app.get('/v1beta1/screener/stocks/movers', (context: ContextLike) => {
+    const top = positiveIntQuery(context, 'top', 20);
+    const rows = screenerRows(alpaca.bars.all());
+    const toMover = (row: ReturnType<typeof screenerRows>[number]) => ({
+      symbol: row.symbol,
+      price: row.latest.close,
+      change: row.change,
+      percent_change: row.percentChange,
+    });
+    return context.json({
+      last_updated: new Date().toISOString(),
+      market_type: 'stocks',
+      gainers: rows.filter((row) => row.change >= 0).sort((a, b) => b.percentChange - a.percentChange).slice(0, top).map(toMover),
+      losers: rows.filter((row) => row.change < 0).sort((a, b) => a.percentChange - b.percentChange).slice(0, top).map(toMover),
+    }, 200);
+  });
   app.get('/v1beta1/screener/crypto/movers', (context: ContextLike) => context.json({ last_updated: new Date().toISOString(), market_type: 'crypto', gainers: [{ symbol: 'BTC/USD', price: 100000, change: 1, percent_change: 0.1 }], losers: [] }, 200));
 
   app.get('/v1/accounts', (context: ContextLike) => context.json([alpaca.accounts.all()[0] ?? {}], 200));

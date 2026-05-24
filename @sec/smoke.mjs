@@ -41,6 +41,13 @@ const tickers = await harness.call('GET', '/files/company_tickers.json');
 assert.equal(tickers.payload['0'].ticker, 'EXRB');
 const company = await harness.call('GET', '/submissions/:filename', {}, { filename: 'CIK0000001001.json' });
 assert.equal(company.payload.name, 'Example Robotics Inc.');
+const facts = await harness.call('GET', '/api/xbrl/companyfacts/:filename', {}, { filename: 'CIK0000001001.json' });
+assert.equal(facts.payload.entityName, 'Example Robotics Inc.');
+assert.equal(facts.payload.facts['us-gaap'].RevenueFromContractWithCustomerExcludingAssessedTax.units.USD[0].val, 100000000000);
+const apple = await harness.call('GET', '/submissions/:filename', {}, { filename: 'CIK0000320193.json' });
+assert.equal(apple.payload.tickers[0], 'AAPL');
+const nvidiaFacts = await harness.call('GET', '/api/xbrl/companyfacts/:filename', {}, { filename: 'CIK0001045810.json' });
+assert.equal(nvidiaFacts.payload.entityName, 'NVIDIA Corporation');
 const created = await harness.call('POST', '/control/companies', { cik: '2001', name: 'Example Energy LLC', tickers: ['EXEN'] });
 assert.equal(created.status, 201);
 

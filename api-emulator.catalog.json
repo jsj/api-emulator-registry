@@ -6,11 +6,29 @@
       "specifier": "./@adp/api-emulator.mjs",
       "description": "ADP provides Human Capital Management APIs for workers, payroll events, organizations, time, and pay data."
     },
+    "agentmail": {
+      "kind": "package",
+      "packageName": "@api-emulator/agentmail",
+      "specifier": "./@agentmail/api-emulator.mjs",
+      "description": "AgentMail provides email inbox APIs for agent inbox provisioning, message listing, sending, and threaded replies."
+    },
     "adyen": {
       "kind": "package",
       "packageName": "@api-emulator/adyen",
       "specifier": "./@adyen/api-emulator.mjs",
       "description": "Adyen is a payments platform for checkout, payment methods, transaction processing, and payouts."
+    },
+    "akamai": {
+      "kind": "package",
+      "packageName": "@api-emulator/akamai",
+      "specifier": "./@akamai/api-emulator.mjs",
+      "description": "Akamai provides edge delivery, security, DNS, and Akamai Cloud Manager infrastructure APIs."
+    },
+    "alibaba-cloud": {
+      "kind": "package",
+      "packageName": "@api-emulator/alibaba-cloud",
+      "specifier": "./@alibaba-cloud/api-emulator.mjs",
+      "description": "Alibaba Cloud provides ECS RPC APIs for regions, zones, VPCs, compute instances, and lifecycle actions."
     },
     "anotes": {
       "kind": "package",
@@ -149,6 +167,12 @@
       "packageName": "@api-emulator/browserbase",
       "specifier": "./@browserbase/api-emulator.mjs",
       "description": "Browserbase provides hosted browser sessions for web automation, scraping, and agent workflows."
+    },
+    "bunny": {
+      "kind": "package",
+      "packageName": "@api-emulator/bunny",
+      "specifier": "./@bunny/api-emulator.mjs",
+      "description": "Bunny.net provides CDN, edge storage, pull zone, DNS, and edge delivery APIs."
     },
     "canva": {
       "kind": "package",
@@ -312,6 +336,12 @@
       "specifier": "./@facebook-messenger/api-emulator.mjs",
       "description": "Facebook Messenger Platform provides Graph API surfaces for pages, conversations, Send API messages, user profiles, and webhooks."
     },
+    "fastly": {
+      "kind": "package",
+      "packageName": "@api-emulator/fastly",
+      "specifier": "./@fastly/api-emulator.mjs",
+      "description": "Fastly provides edge cloud APIs for services, versions, domains, backends, compute, and purge workflows."
+    },
     "figma": {
       "kind": "package",
       "packageName": "@api-emulator/figma",
@@ -335,6 +365,12 @@
       "packageName": "@api-emulator/fireworks",
       "specifier": "./@fireworks/api-emulator.mjs",
       "description": "Fireworks AI provides OpenAI-compatible inference APIs for model listing, chat completions, completions, and embeddings."
+    },
+    "gcp": {
+      "kind": "package",
+      "packageName": "@api-emulator/gcp",
+      "specifier": "./@gcp/api-emulator.mjs",
+      "description": "Google Cloud Platform provides cloud resource, compute, service usage, billing, IAM, and gcloud-oriented infrastructure APIs."
     },
     "geico": {
       "kind": "package",
@@ -462,6 +498,12 @@
       "specifier": "./@intuit/api-emulator.mjs",
       "description": "Intuit QuickBooks Online provides accounting APIs for OAuth, company info, query, customers, invoices, payments, and accounts."
     },
+    "ionos": {
+      "kind": "package",
+      "packageName": "@api-emulator/ionos",
+      "specifier": "./@ionos/api-emulator.mjs",
+      "description": "IONOS Cloud provides European cloud APIs for datacenters, servers, LANs, IP blocks, and edge services."
+    },
     "imsg": {
       "kind": "package",
       "packageName": "@api-emulator/imsg",
@@ -486,6 +528,18 @@
       "specifier": "./@hashicorp-vault/api-emulator.mjs",
       "description": "HashiCorp Vault provides secrets-management APIs for health checks, mounts, and KV v2 secret read/write/list workflows."
     },
+    "hetzner": {
+      "kind": "package",
+      "packageName": "@api-emulator/hetzner",
+      "specifier": "./@hetzner/api-emulator.mjs",
+      "description": "Hetzner Cloud provides European cloud APIs for locations, datacenters, servers, networks, volumes, and firewalls."
+    },
+    "hostinger": {
+      "kind": "package",
+      "packageName": "@api-emulator/hostinger",
+      "specifier": "./@hostinger/api-emulator.mjs",
+      "description": "Hostinger provides VPS, DNS, domain, account, and hosting infrastructure APIs."
+    },
     "harvey": {
       "kind": "package",
       "packageName": "@api-emulator/harvey",
@@ -503,6 +557,12 @@
       "packageName": "@api-emulator/joinwarp-payroll",
       "specifier": "./@joinwarp-payroll/api-emulator.mjs",
       "description": "JoinWarp Payroll provides workforce APIs for departments, workplaces, workers, invitations, and time-off records."
+    },
+    "leaseweb": {
+      "kind": "package",
+      "packageName": "@api-emulator/leaseweb",
+      "specifier": "./@leaseweb/api-emulator.mjs",
+      "description": "Leaseweb provides public cloud, dedicated server, network, load balancer, and CDN APIs."
     },
     "legalzoom": {
       "kind": "package",
@@ -539,6 +599,12 @@
       "packageName": "@api-emulator/linear",
       "specifier": "./@linear/api-emulator/src/index.ts",
       "description": "Linear provides issue tracking, teams, projects, cycles, workflow states, and product planning APIs."
+    },
+    "linode": {
+      "kind": "package",
+      "packageName": "@api-emulator/linode",
+      "specifier": "./@linode/api-emulator.mjs",
+      "description": "Linode provides cloud APIs for instances, regions, VPCs, images, volumes, and node balancers."
     },
     "linkedin": {
       "kind": "package",
@@ -648,6 +714,12 @@
       "specifier": "./@oci/api-emulator.mjs",
       "description": "Oracle Cloud Infrastructure provides cloud APIs for identity, regions, availability domains, compute instances, and networking."
     },
+    "ovhcloud": {
+      "kind": "package",
+      "packageName": "@api-emulator/ovhcloud",
+      "specifier": "./@ovhcloud/api-emulator.mjs",
+      "description": "OVHcloud provides European public cloud APIs for projects, regions, instances, networks, and vRack-style resources."
+    },
     "oura": {
       "kind": "package",
       "packageName": "@api-emulator/oura",
@@ -750,6 +822,12 @@
       "specifier": "./@quizlet/api-emulator.mjs",
       "description": "Quizlet API 2.0 provides education APIs for users, study sets, terms, and flashcard creation workflows."
     },
+    "rackspace": {
+      "kind": "package",
+      "packageName": "@api-emulator/rackspace",
+      "specifier": "./@rackspace/api-emulator.mjs",
+      "description": "Rackspace provides cloud identity, servers, networks, object storage, and CDN/OpenStack-compatible APIs."
+    },
     "reddit": {
       "kind": "package",
       "packageName": "@api-emulator/reddit",
@@ -780,6 +858,12 @@
       "specifier": "./@rentahuman/api-emulator.mjs",
       "description": "RentAHuman provides REST and MCP APIs for agents, humans, bookings, bounties, applications, escrow, conversations, transfers, wallet operations, services, API keys, reviews, and webhooks."
     },
+    "render": {
+      "kind": "package",
+      "packageName": "@api-emulator/render",
+      "specifier": "./@render/api-emulator.mjs",
+      "description": "Render provides hosting control-plane APIs for users, workspaces, services, and blueprint validation."
+    },
     "resend": {
       "kind": "package",
       "packageName": "@api-emulator/resend",
@@ -792,11 +876,11 @@
       "specifier": "./@rippling/api-emulator.mjs",
       "description": "Rippling provides workforce platform APIs for employees, groups, departments, devices, payroll, and identity data."
     },
-    "robinhood": {
+    "robinhood-trading": {
       "kind": "package",
-      "packageName": "@api-emulator/robinhood",
-      "specifier": "./@robinhood/api-emulator.mjs",
-      "description": "Robinhood Crypto Trading APIs provide account, holding, order, currency pair, and market data workflows."
+      "packageName": "@api-emulator/robinhood-trading",
+      "specifier": "./@robinhood-trading/api-emulator.mjs",
+      "description": "Robinhood Agentic Trading MCP provides a documentation-informed subset for accounts, portfolios, positions, quotes, order review, placement, cancellation, and symbol search while fuller access is pending from Robinhood."
     },
     "rocketchat": {
       "kind": "package",
@@ -827,6 +911,12 @@
       "packageName": "@api-emulator/sentry",
       "specifier": "./@sentry/api-emulator.mjs",
       "description": "Sentry provides error tracking, projects, issues, events, releases, organizations, and alerting APIs."
+    },
+    "scaleway": {
+      "kind": "package",
+      "packageName": "@api-emulator/scaleway",
+      "specifier": "./@scaleway/api-emulator.mjs",
+      "description": "Scaleway provides European cloud APIs for regions, zones, instances, private networks, volumes, and edge services."
     },
     "servicenow": {
       "kind": "package",
@@ -1044,6 +1134,12 @@
       "specifier": "./@unifygtm/api-emulator.mjs",
       "description": "Unify GTM provides data APIs for GTM objects, attributes, records, enrichment, and workflow automation."
     },
+    "upcloud": {
+      "kind": "package",
+      "packageName": "@api-emulator/upcloud",
+      "specifier": "./@upcloud/api-emulator.mjs",
+      "description": "UpCloud provides European cloud APIs for zones, servers, networks, storage, and account workflows."
+    },
     "upstash": {
       "kind": "package",
       "packageName": "@api-emulator/upstash",
@@ -1061,6 +1157,12 @@
       "packageName": "@api-emulator/vercel",
       "specifier": "./@vercel/api-emulator/src/index.ts",
       "description": "Vercel provides deployment platform APIs for projects, builds, domains, environment variables, teams, and accounts."
+    },
+    "vultr": {
+      "kind": "package",
+      "packageName": "@api-emulator/vultr",
+      "specifier": "./@vultr/api-emulator.mjs",
+      "description": "Vultr provides cloud APIs for account, regions, instances, VPCs, images, DNS, and load balancers."
     },
     "weatherkit": {
       "kind": "package",

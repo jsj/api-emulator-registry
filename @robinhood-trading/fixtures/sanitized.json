@@ -1,0 +1,94 @@
+{
+  "accounts": [
+    {
+      "id": "acct_1",
+      "account_number": "RHACCOUNT001",
+      "status": "active",
+      "type": "margin",
+      "brokerage_account_type": "individual",
+      "is_default": true,
+      "agentic_allowed": false,
+      "management_type": "self_directed"
+    },
+    {
+      "id": "acct_2",
+      "account_number": "RHACCOUNT002",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "ira_roth",
+      "is_default": false,
+      "agentic_allowed": false,
+      "management_type": "self_directed"
+    },
+    {
+      "id": "acct_3",
+      "account_number": "RHACCOUNT003",
+      "status": "active",
+      "type": "margin",
+      "brokerage_account_type": "individual",
+      "is_default": false,
+      "agentic_allowed": false,
+      "management_type": "managed"
+    },
+    {
+      "id": "acct_4",
+      "account_number": "RHACCOUNT004",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "individual",
+      "nickname": "Account 4",
+      "is_default": false,
+      "agentic_allowed": false,
+      "management_type": "self_directed"
+    },
+    {
+      "id": "acct_5",
+      "account_number": "RHACCOUNT005",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "ira_traditional",
+      "is_default": false,
+      "agentic_allowed": false,
+      "management_type": "self_directed"
+    },
+    {
+      "id": "acct_6",
+      "account_number": "RHAGENTIC001",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "individual",
+      "nickname": "Agentic",
+      "is_default": false,
+      "agentic_allowed": true,
+      "management_type": "self_directed"
+    }
+  ],
+  "portfolio": {
+    "total_value": "0.00",
+    "buying_power": "0.00",
+    "values_by_asset_class": {
+      "equities": "0.00",
+      "options": "0.00",
+      "cash": "0.00"
+    },
+    "series": [
+      24750,
+      25200,
+      26000
+    ],
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  },
+  "positions": [],
+  "quotes": [
+    {
+      "symbol": "AAPL",
+      "price": "312.51",
+      "bid": "312.20",
+      "ask": "312.46",
+      "prior_close": "310.85",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "orders": [],
+  "nextId": 1
+}

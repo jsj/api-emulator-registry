@@ -29,6 +29,7 @@ interface AlpacaRealSeedData {
   clock?: Partial<AlpacaClock>;
   positions?: Array<Partial<AlpacaPosition> & { symbol: string }>;
   orders?: Array<Partial<AlpacaOrder> & { symbol: string; qty: string; side: "buy" | "sell" }>;
+  activities?: Array<Partial<AlpacaActivity> & { activity_type: string }>;
   bars?: Record<string, Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume: number; timeframe?: string }>>;
 }
 
@@ -97,6 +98,18 @@ interface AlpacaOrder extends Entity {
   submitted_at_alpaca: string;
   filled_at?: string | null;
   filled_qty: string;
+}
+
+interface AlpacaActivity extends Entity {
+  activity_id: string;
+  activity_type: string;
+  transaction_time: string;
+  symbol?: string;
+  qty?: string;
+  price?: string;
+  side?: "buy" | "sell";
+  order_id?: string;
+  net_amount?: string;
 }
 
 interface AlpacaBar extends Entity {
@@ -208,6 +221,7 @@ function getAlpacaStore(store: StoreLike) {
     clocks: store.collection<AlpacaClock>('alpaca.clocks', []),
     positions: store.collection<AlpacaPosition>('alpaca.positions', ['symbol']),
     orders: store.collection<AlpacaOrder>('alpaca.orders', ['order_id', 'symbol', 'status']),
+    activities: store.collection<AlpacaActivity>('alpaca.activities', ['activity_id', 'activity_type', 'symbol']),
     bars: store.collection<AlpacaBar>('alpaca.bars', ['symbol', 'timeframe', 'timestamp']),
   };
 }
@@ -252,6 +266,35 @@ export function seedDefaults(store: StoreLike): void {
       avg_entry_price: '580',
       current_price: '589.5',
       unrealized_pl: '95',
+    });
+  }
+  if (!alpaca.activities.all().length) {
+    alpaca.activities.insert({
+      activity_id: 'activity-buy-spy',
+      activity_type: 'FILL',
+      transaction_time: isoOffset(-30),
+      symbol: 'SPY',
+      qty: '10',
+      price: '580',
+      side: 'buy',
+      order_id: 'order-buy-spy',
+    });
+    alpaca.activities.insert({
+      activity_id: 'activity-sell-spy',
+      activity_type: 'FILL',
+      transaction_time: isoOffset(-5),
+      symbol: 'SPY',
+      qty: '2',
+      price: '589.5',
+      side: 'sell',
+      order_id: 'order-sell-spy',
+    });
+    alpaca.activities.insert({
+      activity_id: 'activity-div-spy',
+      activity_type: 'DIV',
+      transaction_time: isoOffset(-3),
+      symbol: 'SPY',
+      net_amount: '4.28',
     });
   }
   if (!alpaca.bars.all().length) {
@@ -333,6 +376,17 @@ export function seedFromConfig(store: StoreLike, _baseUrl: string, config: Alpac
         filled_qty: order.qty,
         ...order,
       } as Omit<AlpacaOrder, 'id' | 'created_at' | 'updated_at'>);
+    }
+  }
+
+  if (seed.activities) {
+    alpaca.activities.clear();
+    for (const activity of seed.activities) {
+      alpaca.activities.insert({
+        activity_id: crypto.randomUUID(),
+        transaction_time: new Date().toISOString(),
+        ...activity,
+      } as Omit<AlpacaActivity, 'id' | 'created_at' | 'updated_at'>);
     }
   }
 
@@ -678,8 +732,20 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   });
 
   app.get('/v2/account', (context: ContextLike) => context.json(accountPayload(alpaca.accounts.all()[0]), 200));
-  app.get('/v2/account/activities', (context: ContextLike) => context.json([{ id: 'activity-1', activity_type: 'FILL', transaction_time: new Date().toISOString(), type: 'fill', symbol: 'SPY', qty: '1', price: '586.5', side: 'buy' }], 200));
-  app.get('/v2/account/activities/:activityType', (context: ContextLike) => context.json([{ id: 'activity-1', activity_type: context.req.param('activityType'), transaction_time: new Date().toISOString(), symbol: 'SPY', qty: '1', price: '586.5', side: 'buy' }], 200));
+  app.get('/v2/account/activities', (context: ContextLike) => {
+    const activityTypes = new Set((context.req.query('activity_types') ?? '').split(',').map((item) => item.trim()).filter(Boolean));
+    const activities = alpaca.activities.all()
+      .filter((activity) => !activityTypes.size || activityTypes.has(activity.activity_type))
+      .map(({ activity_id, id: _id, created_at: _createdAt, updated_at: _updatedAt, ...activity }) => ({ id: activity_id, ...activity }));
+    return context.json(activities, 200);
+  });
+  app.get('/v2/account/activities/:activityType', (context: ContextLike) => {
+    const activityType = context.req.param('activityType').toUpperCase();
+    const activities = alpaca.activities.all()
+      .filter((activity) => activity.activity_type === activityType)
+      .map(({ activity_id, id: _id, created_at: _createdAt, updated_at: _updatedAt, ...activity }) => ({ id: activity_id, ...activity }));
+    return context.json(activities, 200);
+  });
   app.get('/v2/clock', (context: ContextLike) => context.json(alpaca.clocks.all()[0] ?? {}, 200));
   app.get('/v2/positions', (context: ContextLike) => context.json(alpaca.positions.all(), 200));
   app.get('/v2/positions/:symbol', (context: ContextLike) => {
@@ -728,6 +794,16 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
       submitted_at_alpaca: new Date().toISOString(),
       filled_at: new Date().toISOString(),
       filled_qty: String(body.qty ?? '1'),
+    });
+    alpaca.activities.insert({
+      activity_id: crypto.randomUUID(),
+      activity_type: 'FILL',
+      transaction_time: new Date().toISOString(),
+      symbol: order.symbol,
+      qty: order.qty,
+      price: String(body.limit_price ?? body.stop_price ?? '1'),
+      side: order.side,
+      order_id: order.order_id,
     });
     return context.json(orderPayload(order), 200);
   });

@@ -7,10 +7,28 @@ import { spawn } from 'node:child_process';
 import { commandPath, createApp, run, Store, withServer } from './cli-smoke-runtime.mjs';
 import { generateKeyPairSync } from 'node:crypto';
 
+const cliSmokeSkips = [];
+const originalConsoleWarn = console.warn.bind(console);
+
+console.warn = (...args) => {
+  const message = args.map(String).join(' ');
+  cliSmokeSkips.push(message);
+  if (process.env.CLI_SMOKE_VERBOSE_SKIPS === '1') originalConsoleWarn(...args);
+};
+
+process.on('exit', () => {
+  if (cliSmokeSkips.length === 0 || process.env.CLI_SMOKE_SKIP_SUMMARY === '0') return;
+  const uniqueSkips = [...new Set(cliSmokeSkips)];
+  originalConsoleWarn(`CLI smoke blocked/skipped inventory (${uniqueSkips.length} unique, ${cliSmokeSkips.length} total):`);
+  for (const message of uniqueSkips) originalConsoleWarn(`- ${message}`);
+});
+
 import { customerRoutes } from '../@stripe/api-emulator/src/routes/customers.ts';
 import { s3Routes } from '../@aws/api-emulator/src/routes/s3.ts';
 import { plugin as appStoreConnectPlugin } from '../@app-store-connect/api-emulator.mjs';
 import { plugin as adyenPlugin } from '../@adyen/api-emulator.mjs';
+import { plugin as akamaiPlugin } from '../@akamai/api-emulator.mjs';
+import { plugin as alibabaCloudPlugin } from '../@alibaba-cloud/api-emulator.mjs';
 import { plugin as alpacaPlugin } from '../@alpaca/api-emulator/src/index.ts';
 import { developerToken as appleMusicDeveloperToken, plugin as appleMusicPlugin } from '../@apple-music/api-emulator.mjs';
 import { plugin as audiblePlugin } from '../@audible/api-emulator.mjs';
@@ -44,6 +62,7 @@ import { plugin as elevenLabsPlugin } from '../@elevenlabs/api-emulator.mjs';
 import { plugin as falPlugin } from '../@fal/api-emulator.mjs';
 import { plugin as flightradar24Plugin } from '../@flightradar24/api-emulator.mjs';
 import { plugin as fireworksPlugin } from '../@fireworks/api-emulator.mjs';
+import { plugin as gcpPlugin } from '../@gcp/api-emulator.mjs';
 import { plugin as modalPlugin } from '../@modal/api-emulator.mjs';
 import { plugin as togetherAiPlugin } from '../@togetherai/api-emulator.mjs';
 import { plugin as sunoPlugin } from '../@suno/api-emulator.mjs';
@@ -57,6 +76,7 @@ import { plugin as twilioPlugin, seedFromConfig as seedTwilio } from '../@twilio
 import { plugin as youtubePlugin } from '../@youtube/api-emulator.mjs';
 import { plugin as youtubeMusicPlugin } from '../@youtube-music/api-emulator.mjs';
 import { plugin as adpPlugin } from '../@adp/api-emulator.mjs';
+import { plugin as agentmailPlugin } from '../@agentmail/api-emulator.mjs';
 import { plugin as brexPlugin } from '../@brex/api-emulator.mjs';
 import { plugin as concurPlugin } from '../@concur/api-emulator.mjs';
 import { plugin as coinbasePlugin } from '../@coinbase/api-emulator.mjs';
@@ -73,7 +93,7 @@ import { plugin as joinwarpPayrollPlugin } from '../@joinwarp-payroll/api-emulat
 import { plugin as mercuryPlugin } from '../@mercury/api-emulator.mjs';
 import { plugin as rampPlugin, seedFromConfig as seedRamp } from '../@ramp/api-emulator.mjs';
 import { plugin as ripplingPlugin } from '../@rippling/api-emulator.mjs';
-import { plugin as robinhoodPlugin } from '../@robinhood/api-emulator.mjs';
+import { plugin as robinhoodTradingPlugin } from '../@robinhood-trading/api-emulator.mjs';
 import { plugin as samsaraPlugin } from '../@samsara/api-emulator.mjs';
 import { plugin as schwabPlugin } from '../@schwab/api-emulator.mjs';
 import { plugin as stainlessPlugin } from '../@stainless/api-emulator.mjs';
@@ -86,12 +106,48 @@ import { plugin as qualtricsPlugin } from '../@qualtrics/api-emulator.mjs';
 import { plugin as surveyMonkeyPlugin } from '../@surveymonkey/api-emulator.mjs';
 import { plugin as azurePlugin } from '../@azure/api-emulator.mjs';
 import { plugin as backblazePlugin } from '../@backblaze/api-emulator.mjs';
+import { plugin as bunnyPlugin } from '../@bunny/api-emulator.mjs';
 import { plugin as digitalOceanPlugin } from '../@digitalocean/api-emulator.mjs';
+import { plugin as fastlyPlugin } from '../@fastly/api-emulator.mjs';
 import { plugin as googleMapsPlugin } from '../@google-maps/api-emulator.mjs';
+import { plugin as hetznerPlugin } from '../@hetzner/api-emulator.mjs';
+import { plugin as hostingerPlugin } from '../@hostinger/api-emulator.mjs';
+import { plugin as ionosPlugin } from '../@ionos/api-emulator.mjs';
+import { plugin as leasewebPlugin } from '../@leaseweb/api-emulator.mjs';
+import { plugin as linodePlugin } from '../@linode/api-emulator.mjs';
 import { plugin as ociPlugin } from '../@oci/api-emulator.mjs';
+import { plugin as ovhcloudPlugin } from '../@ovhcloud/api-emulator.mjs';
 import { plugin as protonMailPlugin } from '../@proton-mail/api-emulator.mjs';
+import { plugin as rackspacePlugin } from '../@rackspace/api-emulator.mjs';
+import { plugin as scalewayPlugin } from '../@scaleway/api-emulator.mjs';
+import { plugin as renderPlugin } from '../@render/api-emulator.mjs';
+import { plugin as upcloudPlugin } from '../@upcloud/api-emulator.mjs';
+import { plugin as vultrPlugin } from '../@vultr/api-emulator.mjs';
 import { plugin as imsgPlugin } from '../@imsg/api-emulator.mjs';
 import { plugin as yahooFinancePlugin } from '../@yahoo-finance/api-emulator.mjs';
+
+async function runAzureCliSmoke(baseUrl) {
+  const az = await commandPath('az');
+  if (!az) return null;
+  const configDir = await mkdtemp(join(tmpdir(), 'api-emulator-azure-cli-'));
+  try {
+    const env = {
+      AZURE_CONFIG_DIR: configDir,
+      AZURE_CORE_COLLECT_TELEMETRY: '0',
+      AZURE_CORE_NO_COLOR: '1',
+      AZURE_EXTENSION_USE_DYNAMIC_INSTALL: 'no',
+    };
+    const subscriptions = await run(az, ['rest', '--method', 'get', '--url', `${baseUrl}/subscriptions?api-version=2020-01-01`, '--skip-authorization-header'], { env }).catch(() => null);
+    if (!subscriptions) return null;
+    assert.match(subscriptions.stdout, /Azure Emulator Subscription/);
+    const groups = await run(az, ['rest', '--method', 'get', '--url', `${baseUrl}/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups?api-version=2021-04-01`, '--skip-authorization-header'], { env }).catch(() => null);
+    if (!groups) return null;
+    assert.match(groups.stdout, /emulator-rg/);
+    return { subscriptions, groups };
+  } finally {
+    await rm(configDir, { recursive: true, force: true });
+  }
+}
 
 async function runDopplerCliSmoke(baseUrl) {
   const doppler = await commandPath('doppler');
@@ -141,6 +197,14 @@ async function runNpmPackageNodeSmoke(packageName, script, env = {}) {
   const npm = await commandPath('npm');
   if (!npm) return null;
   return run(npm, ['exec', '--yes', '--package', packageName, '--', 'node', '--input-type=module', '-e', script], { env }).catch(() => null);
+}
+
+async function runAgentMailSdkSmoke(baseUrl) {
+  return runNpmPackageNodeSmoke(
+    'agentmail',
+    "const mod = await import('agentmail'); const Client = mod.AgentMailClient ?? mod.AgentMail ?? mod.default; const client = new Client({ apiKey: 'agentmail_emulator_key', baseUrl: process.env.API_EMULATOR_BASE_URL }); const inbox = await client.inboxes.create({ username: 'sdk-smoke', domain: 'agentmail.to', displayName: 'SDK Smoke' }); const listed = await client.inboxes.list(); if (!listed.inboxes?.some((item) => item.email === inbox.email)) throw new Error('AgentMail inbox missing from SDK list'); const sent = await client.inboxes.messages.send(inbox.inboxId ?? inbox.inbox_id, { to: ['recipient@example.com'], subject: 'SDK smoke', text: 'Hello from SDK smoke' }); if (!(sent.messageId ?? sent.message_id)) throw new Error('AgentMail SDK send missing message id'); console.log('agentmail sdk ok');",
+    { API_EMULATOR_BASE_URL: baseUrl },
+  );
 }
 
 async function runAudibleSdkSmoke(baseUrl) {
@@ -237,15 +301,14 @@ async function runGoplacesCliSmoke(baseUrl) {
 
 async function runYfinanceSdkSmoke(baseUrl) {
   const python = await commandPath('python3');
-  if (!python) return null;
+  if (!python) return { skipped: true, reason: 'python3 unavailable' };
   const git = await commandPath('git');
-  if (!git) return null;
+  if (!git) return { skipped: true, reason: 'git unavailable' };
   const dir = await mkdtemp(join(tmpdir(), 'yfinance-sdk-smoke-'));
   try {
-    const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/ranaroussi/yfinance.git'], {
+    await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/ranaroussi/yfinance.git'], {
       env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
-    }).catch(() => null);
-    if (!install) return null;
+    });
     const smoke = join(dir, 'smoke.py');
     await writeFile(
       smoke,
@@ -297,7 +360,7 @@ async function runYfinanceSdkSmoke(baseUrl) {
         'print(json.dumps(checks, sort_keys=True))',
       ].join('\n'),
     );
-    return run(python, [smoke], { env: { PYTHONPATH: join(dir, 'site') } }).catch(() => null);
+    return run(python, [smoke], { env: { PYTHONPATH: join(dir, 'site') } });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -482,16 +545,20 @@ async function runBusinessProviderE2E(baseUrl) {
   assert.equal(mercuryApproval.status, 201);
   assert.equal((await mercuryApproval.json()).status, 'pendingApproval');
 
-  const robinhoodAccounts = await fetch(`${baseUrl}/api/v1/crypto/trading/accounts/`, { headers: { authorization: 'Bearer robinhood_emulator_token' } });
-  assert.equal(robinhoodAccounts.status, 200);
-  assert.equal((await robinhoodAccounts.json()).results[0].status, 'active');
-  const robinhoodOrder = await fetch(`${baseUrl}/api/v1/crypto/trading/orders/`, {
+  const robinhoodPortfolio = await fetch(`${baseUrl}/mcp/trading`, {
     method: 'POST',
-    headers: { authorization: 'Bearer robinhood_emulator_token', 'content-type': 'application/json' },
-    body: JSON.stringify({ currency_pair_id: 'BTC-USD', side: 'buy', quantity: '0.00100000' }),
+    headers: { authorization: 'Bearer robinhood_mcp_emulator_token', 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 'portfolio', method: 'tools/call', params: { name: 'get_portfolio', arguments: {} } }),
   });
-  assert.equal(robinhoodOrder.status, 201);
-  assert.equal((await robinhoodOrder.json()).state, 'queued');
+  assert.equal(robinhoodPortfolio.status, 200);
+  assert.equal((await robinhoodPortfolio.json()).result.structuredContent.buying_power, '10000.00');
+  const robinhoodOrder = await fetch(`${baseUrl}/mcp/trading`, {
+    method: 'POST',
+    headers: { authorization: 'Bearer robinhood_mcp_emulator_token', 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 'order', method: 'tools/call', params: { name: 'place_equity_order', arguments: { symbol: 'AAPL', side: 'buy', quantity: 1 } } }),
+  });
+  assert.equal(robinhoodOrder.status, 200);
+  assert.equal((await robinhoodOrder.json()).result.structuredContent.status, 'accepted');
 
   const schwabAccounts = await fetch(`${baseUrl}/trader/v1/accounts/accountNumbers`, { headers: { authorization: 'Bearer schwab_emulator_token' } });
   assert.equal(schwabAccounts.status, 200);
@@ -999,6 +1066,36 @@ async function runCrusoeCliSmoke(baseUrl) {
     return { ok: true };
   } finally {
     await rm(configDir, { recursive: true, force: true });
+  }
+}
+
+async function runRenderCliSmoke(baseUrl) {
+  const render = await commandPath('render');
+  if (!render) return null;
+  const home = await mkdtemp(join(tmpdir(), 'api-emulator-render-home-'));
+  try {
+    const env = {
+      HOME: home,
+      XDG_CONFIG_HOME: join(home, '.config'),
+      XDG_CACHE_HOME: join(home, '.cache'),
+      RENDER_HOST: `${baseUrl}/v1/`,
+      RENDER_API_KEY: 'render_emulator_token',
+      RENDER_WORKSPACE: 'tea-emulator',
+    };
+    const whoami = await run(render, ['whoami', '--output', 'json'], { env }).catch(() => null);
+    if (!whoami) return null;
+    assert.match(whoami.stdout, /ada@example\.com|Ada Lovelace/);
+
+    const workspaces = await run(render, ['workspaces', '--output', 'json'], { env }).catch(() => null);
+    if (!workspaces) return null;
+    assert.match(workspaces.stdout, /tea-emulator|Emulator Team/);
+
+    const services = await run(render, ['services', '--output', 'json'], { env }).catch(() => null);
+    if (!services) return null;
+    assert.match(services.stdout, /emulator-web/);
+    return { ok: true };
+  } finally {
+    await rm(home, { recursive: true, force: true });
   }
 }
 
@@ -2829,10 +2926,24 @@ function registerCoreProviders({ app, store, webhooks, tokenMap }) {
   listenLabsPlugin.register(app, store);
   qualtricsPlugin.register(app, store);
   surveyMonkeyPlugin.register(app, store);
+  akamaiPlugin.register(app, store);
   azurePlugin.register(app, store);
+  alibabaCloudPlugin.register(app, store);
   backblazePlugin.register(app, store);
+  bunnyPlugin.register(app, store);
+  fastlyPlugin.register(app, store);
+  hetznerPlugin.register(app, store);
+  hostingerPlugin.register(app, store);
+  ionosPlugin.register(app, store);
+  leasewebPlugin.register(app, store);
+  linodePlugin.register(app, store);
   ociPlugin.register(app, store);
+  ovhcloudPlugin.register(app, store);
   protonMailPlugin.register(app, store);
+  rackspacePlugin.register(app, store);
+  scalewayPlugin.register(app, store);
+  upcloudPlugin.register(app, store);
+  vultrPlugin.register(app, store);
   imsgPlugin.register(app, store);
   yahooFinancePlugin.register(app, store);
   linkedinPlugin.register(app, store);
@@ -2923,7 +3034,7 @@ function registerBusinessProviders(app, store) {
   coinbasePlugin.register(app, store);
   brexPlugin.register(app, store);
   mercuryPlugin.register(app, store);
-  robinhoodPlugin.register(app, store);
+  robinhoodTradingPlugin.register(app, store);
   schwabPlugin.register(app, store);
   eTradePlugin.register(app, store);
   usaaPlugin.register(app, store);
@@ -2997,6 +3108,30 @@ async function main() {
     console.warn(`health CLI smoke skipped: ${reason}; direct route smoke covers the emulator slice`);
   }
 
+  const agentmailApp = createApp();
+  agentmailPlugin.register(agentmailApp, new Store());
+  await withServer(agentmailApp, async (baseUrl) => {
+    const created = await fetch(`${baseUrl}/v0/inboxes`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer agentmail_emulator_key', 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'cli-smoke', domain: 'agentmail.to', display_name: 'CLI Smoke' }),
+    });
+    assert.equal(created.status, 200);
+    const inbox = await created.json();
+    assert.equal(inbox.email, 'cli-smoke@agentmail.to');
+    const sent = await fetch(`${baseUrl}/v0/inboxes/${inbox.inbox_id}/messages/send`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer agentmail_emulator_key', 'content-type': 'application/json' },
+      body: JSON.stringify({ to: ['recipient@example.com'], subject: 'CLI smoke', text: 'Hello from CLI smoke' }),
+    });
+    assert.equal(sent.status, 200);
+    assert.match((await sent.json()).message_id, /^msg_/);
+    const sdk = await runAgentMailSdkSmoke(baseUrl);
+    if (!sdk) {
+      console.warn('agentmail SDK unavailable or incompatible; AgentMail direct route smoke covered');
+    }
+  });
+
   const digitalOceanApp = createApp();
   digitalOceanPlugin.register(digitalOceanApp, new Store());
   await withServer(digitalOceanApp, async (baseUrl) => {
@@ -3004,6 +3139,33 @@ async function main() {
     assert.equal(doAccount.status, 200);
     assert.equal((await doAccount.json()).account.email, 'ada@example.com');
     console.warn('DigitalOcean doctl supports --api-url for local smoke; direct route smoke covered when doctl is unavailable');
+  });
+
+  const renderApp = createApp();
+  renderPlugin.register(renderApp, new Store());
+  await withServer(renderApp, async (baseUrl) => {
+    const renderUser = await fetch(`${baseUrl}/v1/users`, { headers: { authorization: 'Bearer render_emulator_token' } });
+    assert.equal(renderUser.status, 200);
+    assert.equal((await renderUser.json()).email, 'ada@example.com');
+    const renderCli = await runRenderCliSmoke(baseUrl);
+    if (!renderCli) {
+      console.warn('Render CLI unavailable or incompatible; Render direct route smoke covered');
+    }
+  });
+
+  const gcpApp = createApp();
+  gcpPlugin.register(gcpApp, new Store());
+  await withServer(gcpApp, async (baseUrl) => {
+    const gcpProjects = await fetch(`${baseUrl}/v1/projects`, { headers: { authorization: 'Bearer gcp_emulator_token' } });
+    assert.equal(gcpProjects.status, 200);
+    assert.equal((await gcpProjects.json()).projects[0].projectId, 'emulator-project');
+    const gcpZones = await fetch(`${baseUrl}/compute/v1/projects/emulator-project/zones`, { headers: { authorization: 'Bearer gcp_emulator_token' } });
+    assert.equal(gcpZones.status, 200);
+    assert.equal((await gcpZones.json()).items[0].name, 'us-central1-a');
+    const gcpServices = await fetch(`${baseUrl}/v1/projects/emulator-project/services`, { headers: { authorization: 'Bearer gcp_emulator_token' } });
+    assert.equal(gcpServices.status, 200);
+    assert.equal((await gcpServices.json()).services[0].state, 'ENABLED');
+    console.warn('gcloud API endpoint overrides are service-specific and auth-coupled; GCP REST route smoke covers the emulator slice');
   });
 
   await withServer(app, async (baseUrl) => {
@@ -3095,7 +3257,13 @@ async function main() {
     const azureGroups = await fetch(`${baseUrl}/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups?api-version=2021-04-01`, { headers: { authorization: 'Bearer azure_emulator_token' } });
     assert.equal(azureGroups.status, 200);
     assert.equal((await azureGroups.json()).value[0].name, 'emulator-rg');
-    console.warn('Azure CLI full cloud login requires subscription context; az rest can target the emulator URL directly, ARM route smoke covered');
+    const azureProviders = await fetch(`${baseUrl}/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Resources?api-version=2021-04-01`, { headers: { authorization: 'Bearer azure_emulator_token' } });
+    assert.equal(azureProviders.status, 200);
+    assert.equal((await azureProviders.json()).namespace, 'Microsoft.Resources');
+    const azure = await runAzureCliSmoke(baseUrl);
+    if (!azure) {
+      console.warn('Azure CLI unavailable or az rest skip-auth unsupported; ARM route smoke covered');
+    }
 
     const b2Auth = await fetch(`${baseUrl}/b2api/v4/b2_authorize_account`, { headers: { authorization: 'Basic YXBwS2V5SWQ6YXBwS2V5' } });
     assert.equal(b2Auth.status, 200);
@@ -3118,6 +3286,32 @@ async function main() {
     assert.equal(ociInstances.status, 200);
     assert.equal((await ociInstances.json())[0].displayName, 'emulator-instance');
     console.warn('OCI CLI raw-request can target the emulator URI directly; OCI route smoke covered');
+
+    const alibabaInstances = await fetch(`${baseUrl}/ecs?Action=DescribeInstances&Version=2014-05-26&RegionId=cn-hangzhou`, { headers: { authorization: 'acs alibaba_cloud_emulator_signature' } });
+    assert.equal(alibabaInstances.status, 200);
+    assert.equal((await alibabaInstances.json()).Instances.Instance[0].InstanceName, 'emulator-instance');
+    console.warn('Alibaba Cloud CLI supports --endpoint for localhost; ECS RPC route smoke covered');
+
+    for (const [name, path] of [
+      ['Fastly', '/fastly/cdn/services'],
+      ['Akamai', '/akamai/cdn/services'],
+      ['Bunny.net', '/bunny/cdn/services'],
+      ['Hetzner', '/hetzner/v1/servers'],
+      ['OVHcloud', '/ovhcloud/1.0/servers'],
+      ['Scaleway', '/scaleway/servers'],
+      ['IONOS', '/ionos/cloudapi/v6/servers'],
+      ['Leaseweb', '/leaseweb/servers'],
+      ['UpCloud', '/upcloud/1.3/servers'],
+      ['Rackspace', '/rackspace/servers'],
+      ['Hostinger', '/hostinger/api/servers'],
+      ['Vultr', '/vultr/v2/servers'],
+      ['Linode', '/linode/v4/servers'],
+    ]) {
+      const response = await fetch(`${baseUrl}${path}`, { headers: { authorization: `Bearer ${name.toLowerCase().replaceAll(/[^a-z0-9]+/g, '_')}_emulator_token` } });
+      assert.equal(response.status, 200);
+      assert.ok(await response.json());
+    }
+    console.warn('Additional cloud and CDN providers have direct route smoke coverage; provider CLIs vary in localhost endpoint support');
 
     const protonMessages = await fetch(`${baseUrl}/mail/v4/messages?Page=0&PageSize=10`, { headers: { authorization: 'Bearer proton_emulator_token', 'x-pm-appversion': 'go-proton-api', 'x-pm-uid': 'uid_emulator' } });
     assert.equal(protonMessages.status, 200);
@@ -3152,8 +3346,10 @@ async function main() {
     assert.equal(yahooChart.status, 200);
     assert.equal((await yahooChart.json()).chart.result[0].meta.symbol, 'MSFT');
     const yfinance = await runYfinanceSdkSmoke(baseUrl);
-    if (!yfinance) {
-      console.warn('ranaroussi/yfinance unavailable or incompatible; Yahoo Finance REST route smoke covered');
+    if (yfinance.skipped) {
+      console.warn(`ranaroussi/yfinance SDK smoke skipped: ${yfinance.reason}; Yahoo Finance REST route smoke covered`);
+    } else {
+      assert.equal(JSON.parse(yfinance.stdout).longName, 'Microsoft Corporation');
     }
 
     const nextdoorPost = await fetch(`${baseUrl}/posts`, {

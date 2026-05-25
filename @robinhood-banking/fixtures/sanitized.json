@@ -1,0 +1,35 @@
+{
+  "cards": [
+    {
+      "id": "card_agentic_001",
+      "status": "active",
+      "network": "visa",
+      "last4": "4242",
+      "card_number": "4242424242424242",
+      "expiration_month": "12",
+      "expiration_year": "2030",
+      "cvv": "123",
+      "billing_zip": "94105"
+    }
+  ],
+  "settings": {
+    "card_id": "card_agentic_001",
+    "approval_required": true,
+    "monthly_limit": "500.00",
+    "currency": "USD",
+    "merchant_allowlist": [],
+    "merchant_blocklist": []
+  },
+  "transactions": [
+    {
+      "id": "txn_agentic_001",
+      "card_id": "card_agentic_001",
+      "merchant_name": "Example Merchant",
+      "amount": "42.50",
+      "currency": "USD",
+      "status": "approved",
+      "authorized_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "nextId": 2
+}

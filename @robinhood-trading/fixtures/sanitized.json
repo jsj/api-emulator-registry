@@ -1,0 +1,60 @@
+{
+  "accounts": [
+    {
+      "id": "acct_example",
+      "account_number": "RHACCOUNT001",
+      "rhs_account_number": "900000001",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "individual",
+      "is_default": true,
+      "agentic_allowed": false,
+      "management_type": "self_directed",
+      "nickname": "Example brokerage"
+    },
+    {
+      "id": "acct_example_agentic",
+      "account_number": "RHAGENTIC001",
+      "rhs_account_number": "900000006",
+      "rhc_account_number": "RHCEMULATOR006",
+      "status": "active",
+      "type": "cash",
+      "brokerage_account_type": "individual",
+      "is_default": false,
+      "agentic_allowed": true,
+      "management_type": "self_directed",
+      "nickname": "Example agent account"
+    }
+  ],
+  "portfolio": {
+    "total_value": "50000.00",
+    "buying_power": "50000.00",
+    "values_by_asset_class": {
+      "equities": "0.00",
+      "options": "0.00",
+      "cash": "50000.00"
+    },
+    "series": [
+      50000,
+      50000,
+      50000
+    ],
+    "updated_at": "2026-01-01T00:00:00.000Z"
+  },
+  "positions": [],
+  "orders": [],
+  "watchlists": [
+    {
+      "id": "watchlist_example",
+      "name": "Example watchlist",
+      "display_name": "Example watchlist",
+      "symbols": [
+        "AAPL",
+        "SPY"
+      ],
+      "option_ids": [],
+      "followed": false
+    }
+  ],
+  "nextId": 1
+}

@@ -416,11 +416,26 @@ function generateAiText(userText: string): string {
   const sleepResponse = generateSleepCoachResponse(userText);
   if (sleepResponse) return JSON.stringify(sleepResponse);
 
+  const jsonResponse = generateJsonResponse(userText);
+  if (jsonResponse) return JSON.stringify(jsonResponse);
+
   if (userText.includes("Excalidraw") || userText.includes("canvas")) {
     return "This diagram appears to show a structured technical sketch. The emulator identified shapes, labels, and relationships from the supplied scene data.";
   }
 
   return `Cloudflare emulator response: ${userText || "ready"}`;
+}
+
+function generateJsonResponse(userText: string) {
+  if (userText.includes("Answer the user as JSON")) {
+    return {
+      text: "This is a deterministic JSON response from the Cloudflare emulator.",
+      note: null,
+      source: "foundationModel",
+    };
+  }
+
+  return null;
 }
 
 function generateSleepCoachResponse(userText: string) {

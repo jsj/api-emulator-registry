@@ -1,0 +1,51 @@
+{
+  "source": {
+    "provider": "robinhood-banking",
+    "sanitizedAt": "2026-05-27T23:32:12.129Z"
+  },
+  "tools": {
+    "banking_get_agent_card_balance": {
+      "availableBalance": null,
+      "monthlyLimit": 42.5,
+      "totalSpendMicro": 0
+    },
+    "banking_get_agent_card_creds": {
+      "billing": {
+        "address": {
+          "streetAddress": "1 Market St",
+          "locality": "San Francisco",
+          "subdivision": "CA",
+          "zip": "94105",
+          "zip4": null,
+          "countryCode": "US"
+        },
+        "email": "agent@example.com",
+        "fullName": "Example User",
+        "phoneNumber": "+15555550100"
+      },
+      "cardNumber": "4242424242424242",
+      "cvv": "123",
+      "embossedName": "Example User",
+      "expirationDate": "2031-03-31",
+      "id": "id_001"
+    },
+    "banking_get_agent_card_policy": {
+      "availableBalance": null,
+      "monthlyLimit": 42.5,
+      "totalSpendMicro": 0
+    },
+    "banking_get_agent_card_status": {
+      "cardStatus": "NORMAL",
+      "status": "UNSET"
+    },
+    "banking_get_agent_card_transactions": {
+      "data": {
+        "transactionSearch": {
+          "cursor": "",
+          "items": [],
+          "total": 0
+        }
+      }
+    }
+  }
+}

@@ -79,6 +79,7 @@ import { plugin as adpPlugin } from '../@adp/api-emulator.mjs';
 import { plugin as agentmailPlugin } from '../@agentmail/api-emulator.mjs';
 import { plugin as brexPlugin } from '../@brex/api-emulator.mjs';
 import { plugin as concurPlugin } from '../@concur/api-emulator.mjs';
+import { plugin as contextPlugin } from '../@context/api-emulator.mjs';
 import { plugin as coinbasePlugin } from '../@coinbase/api-emulator.mjs';
 import { plugin as datadogPlugin } from '../@datadog/api-emulator.mjs';
 import { plugin as dopplerPlugin } from '../@doppler/api-emulator.mjs';
@@ -204,6 +205,14 @@ async function runAgentMailSdkSmoke(baseUrl) {
     'agentmail',
     "const mod = await import('agentmail'); const Client = mod.AgentMailClient ?? mod.AgentMail ?? mod.default; const client = new Client({ apiKey: 'agentmail_emulator_key', baseUrl: process.env.API_EMULATOR_BASE_URL }); const inbox = await client.inboxes.create({ username: 'sdk-smoke', domain: 'agentmail.to', displayName: 'SDK Smoke' }); const listed = await client.inboxes.list(); if (!listed.inboxes?.some((item) => item.email === inbox.email)) throw new Error('AgentMail inbox missing from SDK list'); const sent = await client.inboxes.messages.send(inbox.inboxId ?? inbox.inbox_id, { to: ['recipient@example.com'], subject: 'SDK smoke', text: 'Hello from SDK smoke' }); if (!(sent.messageId ?? sent.message_id)) throw new Error('AgentMail SDK send missing message id'); console.log('agentmail sdk ok');",
     { API_EMULATOR_BASE_URL: baseUrl },
+  );
+}
+
+async function runContextSdkSmoke(baseUrl) {
+  return runNpmPackageNodeSmoke(
+    'context.dev',
+    "const mod = await import('context.dev'); const Client = mod.ContextDev ?? mod.default; const client = new Client({ apiKey: 'context_emulator_key', baseURL: process.env.CONTEXT_DEV_BASE_URL }); const brand = await client.brand.retrieve({ domain: 'stripe.com' }); if ((brand.brand?.domain ?? brand.domain) !== 'stripe.com') throw new Error('Context.dev SDK brand domain mismatch'); console.log('context sdk ok');",
+    { CONTEXT_DEV_BASE_URL: baseUrl, CONTEXT_DEV_API_KEY: 'context_emulator_key' },
   );
 }
 
@@ -3021,6 +3030,7 @@ function registerBusinessProviders(app, store) {
   ripplingPlugin.register(app, store);
   gustoPlugin.register(app, store);
   deelPlugin.register(app, store);
+  contextPlugin.register(app, store);
   joinwarpPayrollPlugin.register(app, store);
   adpPlugin.register(app, store);
   workdayPlugin.register(app, store);
@@ -3172,6 +3182,13 @@ async function main() {
     const ramp = await runRampCliSmoke(baseUrl);
     if (!ramp) {
       console.warn('ramp-public/ramp-cli unavailable; Ramp REST and agent-tool route smoke covered');
+    }
+    const contextBrand = await fetch(`${baseUrl}/v1/brand/retrieve?domain=stripe.com`, { headers: { authorization: 'Bearer context_emulator_key' } });
+    assert.equal(contextBrand.status, 200);
+    assert.equal((await contextBrand.json()).brand.domain, 'stripe.com');
+    const contextSdk = await runContextSdkSmoke(baseUrl);
+    if (!contextSdk) {
+      console.warn('Context.dev official SDK unavailable or incompatible; Context.dev REST route smoke covered');
     }
     const aiCli = await runOpenAiCompatibleCliSmoke(baseUrl);
     if (!aiCli) {

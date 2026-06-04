@@ -222,6 +222,12 @@
       "specifier": "./@concur/api-emulator.mjs",
       "description": "SAP Concur provides travel and expense APIs for users, expense reports, entries, receipts, and travel requests."
     },
+    "context": {
+      "kind": "package",
+      "packageName": "@api-emulator/context",
+      "specifier": "./@context/api-emulator.mjs",
+      "description": "Context.dev provides brand intelligence, web scraping, extraction, industry classification, and transaction enrichment APIs."
+    },
     "coreweave": {
       "kind": "package",
       "packageName": "@api-emulator/coreweave",

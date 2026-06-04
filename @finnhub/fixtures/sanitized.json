@@ -1,0 +1,361 @@
+{
+  "marketNews": {
+    "crypto": [
+      {
+        "category": "crypto",
+        "datetime": 1714374000,
+        "headline": "Professional investors dumped 52K BTC worth of ETFs in Q1, filings show",
+        "id": 8025599,
+        "image": "https://static2.finnhub.io/file/publicdatany/hmpimage/cointelegraph.webp",
+        "related": "",
+        "source": "Cointelegraph",
+        "summary": "US spot Bitcoin ETF ownership shifted during the market downturn as hedge funds exited positions, while banks and long-term allocators continued building exposure.",
+        "url": "https://cointelegraph.com/news/bitcoin-etf-ownership-shifts-hedge-funds-sell-banks-buy-coinshares"
+      },
+      {
+        "category": "crypto",
+        "datetime": 1714370400,
+        "headline": "Crypto Clarity Act in spotlight for bad-actor provisions as Senate process grinds forward",
+        "id": 8025598,
+        "image": "https://cdn.sanity.io/images/s3y3vcno/production/fdf7f5a1bfc3ea1d7708ef0c24ddb8c1297cbb2f-3480x1958.jpg",
+        "related": "",
+        "source": "CoinDesk",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://www.coindesk.com/policy/2026/06/04/crypto-clarity-act-in-spotlight-for-bad-actor-provisions-as-senate-process-grinds-forward"
+      },
+      {
+        "category": "crypto",
+        "datetime": 1714366800,
+        "headline": "Coinbase to launch token-backed mortgage down payments this summer",
+        "id": 8025388,
+        "image": "https://static2.finnhub.io/file/publicdatany/hmpimage/cointelegraph.webp",
+        "related": "",
+        "source": "Cointelegraph",
+        "summary": "A Coinbase-Better Home & Finance initiative will allow qualified borrowers to use Bitcoin and USDC as collateral for home loan down payments.",
+        "url": "https://cointelegraph.com/news/coinbase-token-backed-mortgages-fannie-mae-summer"
+      },
+      {
+        "category": "crypto",
+        "datetime": 1714363200,
+        "headline": "OCC chief says Democrats applying sole political pressure in World Liberty charter choice",
+        "id": 8025380,
+        "image": "https://cdn.sanity.io/images/s3y3vcno/production/26bc7ac9cd7444c2c14bec14b2e397a0fb35c8aa-6000x3376.jpg",
+        "related": "",
+        "source": "CoinDesk",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://www.coindesk.com/policy/2026/06/04/occ-chief-says-democrats-applying-sole-political-pressure-in-world-liberty-charter-choice"
+      },
+      {
+        "category": "crypto",
+        "datetime": 1714359600,
+        "headline": "'Dr. Doom'-backed Atlas Capital CEO says bitcoin could crash 70% before reaching $500,000",
+        "id": 8025381,
+        "image": "https://cdn.sanity.io/images/s3y3vcno/production/5d79b1cd9eee02aa6cd06cdd54807c1c05a5caa3-1280x960.jpg",
+        "related": "",
+        "source": "CoinDesk",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://www.coindesk.com/markets/2026/06/04/dr-doom-backed-atlas-capital-ceo-says-bitcoin-could-crash-70-before-reaching-usd500-000"
+      }
+    ],
+    "forex": [
+      {
+        "category": "forex",
+        "datetime": 1714374000,
+        "headline": "investingLive Americas market news wrap: Another comeback for stocks as Trump talks peace",
+        "id": 8025700,
+        "image": "https://images.investinglive.com/images/wrap%20tired%20trader_id_12e1c139-03cf-4b88-9ba6-097d034e004c_size975.jpeg",
+        "related": "",
+        "source": "Forexlive",
+        "summary": "Trump: The US is in the middle of final negotiations to end the Iran war Putin: We are ready to make a deal with Ukraine peacefully Ukraine Zelensky to Putin: Enough of war. Ukraine proposes to end the war Fed's Schmid: Biggest risk facing the US economy is now inflation Treas Sec Bessent: \"I wish job market had come out today\". BOE Bailey: Markets have been orderly but stressed at times. Fed's Daly: Policy is in a good place and we are prepared to respond either way US Initial jobless claims…",
+        "url": "https://investinglive.com/news/investinglive-americas-market-news-wrap-another-comeback-for-stocks-as-trump-talks-peace-20260604/"
+      }
+    ],
+    "general": [
+      {
+        "category": "business",
+        "datetime": 1714374000,
+        "headline": "Lululemon cuts annual outlook and issues weak Q2 guidance, citing undisclosed 'headwinds'",
+        "id": 8025597,
+        "image": "https://image.cnbcfm.com/api/v1/image/108312422-1779883666534-gettyimages-2277913349-img_7422.jpeg",
+        "related": "",
+        "source": "CNBC",
+        "summary": "Lululemon is expecting its situation to get a lot worse before it gets better, as it issued weak guidance for the full year.",
+        "url": "https://www.cnbc.com/2026/06/04/lululemon-lulu-earnings-q1-2026.html"
+      },
+      {
+        "category": "business",
+        "datetime": 1714370400,
+        "headline": "Hezbollah rejection clouds Lebanon ceasefire and prospects for ending Iran war - Reuters",
+        "id": 8024420,
+        "image": "https://static2.finnhub.io/file/finnhub/logo/reuters_logo.jpeg",
+        "related": "",
+        "source": "Reuters",
+        "summary": "Hezbollah rejection clouds Lebanon ceasefire and prospects for ending Iran war Reuters",
+        "url": "https://news.google.com/rss/articles/CBMipAFBVV95cUxQaC1FUm1UYy1rOVFvcUI1MGY3T1U2VVQtMkVKandMNGZ1WHIxSC00blRhLWhtdDFUellNNXBJTWpMOUV5SmlfbkRmV0FGYkptYnBUZ3pndldld2VvYnF5TGtUN2cxLVhsVG9kcXlLaGRwbThxdTIzS1pOOEZLT2NJTV9WaG9GMG5aWEJTSGhfcXJGeUpic1VQY0Q2bGM0YWQyYVRtYg"
+      },
+      {
+        "category": "top news",
+        "datetime": 1714366800,
+        "headline": "Slighted market sectors get their time to shine — plus, Costco keeps packing them in",
+        "id": 8025385,
+        "image": "https://image.cnbcfm.com/api/v1/image/108226885-1763397102961-gettyimages-2246608610-US_STOCKS.jpeg",
+        "related": "",
+        "source": "CNBC",
+        "summary": "Every weekday, the Investing Club releases the Homestretch; an actionable afternoon update just in time for the last hour of trading.",
+        "url": "https://www.cnbc.com/2026/06/04/slighted-market-sectors-get-their-time-to-shine-plus-costco-keeps-packing-them-in.html"
+      },
+      {
+        "category": "business",
+        "datetime": 1714363200,
+        "headline": "Iranian oil exports fall to lowest level in six years, data shows - Reuters",
+        "id": 8025389,
+        "image": "https://static2.finnhub.io/file/finnhub/logo/reuters_logo.jpeg",
+        "related": "",
+        "source": "Reuters",
+        "summary": "Iranian oil exports fall to lowest level in six years, data shows Reuters",
+        "url": "https://news.google.com/rss/articles/CBMirwFBVV95cUxQU2VqZ2NBazBCTU1xMDhFRDY0RnI3ZXBuVV9kV2hfQm1QWlgybzRWVEdRZUJPQWt1RFdVcWZuNkpIUW96R2xiQTI0bV9nZWJTOXNQMWUxQnhIUTRlckpYZGNsZEtGSHZqcVhFbjFjdzhxNGR6eVpJNjRPaXlWdzdfRWpMMUwxMFBiY2ttV3ZuOG50Y0VHa2oxN28zUy1MN2F0TFVMbVhxdG9WaGo5NGZZ"
+      },
+      {
+        "category": "business",
+        "datetime": 1714359600,
+        "headline": "Explainer: How Trump's ceasefires are failing to stop Middle East violence - Reuters",
+        "id": 8025600,
+        "image": "https://static2.finnhub.io/file/finnhub/logo/reuters_logo.jpeg",
+        "related": "",
+        "source": "Reuters",
+        "summary": "Explainer: How Trump's ceasefires are failing to stop Middle East violence Reuters",
+        "url": "https://news.google.com/rss/articles/CBMitAFBVV95cUxOSmpJX19sVWJhRlNTaXliaENGNERBNml5RjhpcVNoczhXVzRYeHloci1NNElZVTExd19kb01Tcmg3bGNXTVFxczFOTjlCaHlxUmo0SmNnZExwanBsaFN2YmFROWJSNnRNZ3J0R2ttRmFBSjJZRzlDendBQmMzUVlPUUw0ZjBSQ0lkZ0l6ZDZ5czFmX1V5WEpjZU9lZ2lzS243bmpvb3FKYV8zZGhuWExCRnJ0Zkc"
+      }
+    ],
+    "merger": [
+      {
+        "category": "merger",
+        "datetime": 1714374000,
+        "headline": "PayPay to acquire 70% of T&D Financial Life Insurance",
+        "id": 8025595,
+        "image": "https://res.cloudinary.com/whirlpooldata/image/upload/v1567050932/sa_jgen9y.png",
+        "related": "",
+        "source": "SeekingAlpha",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://seekingalpha.com/news/4600823-paypay-to-acquire-70-percent-of-t-and-d-financial-life-insurance"
+      },
+      {
+        "category": "merger",
+        "datetime": 1714370400,
+        "headline": "STARTEEPO Invest、2026年第2四半期決算発表を前にゼロックス株の保有比率を6%超に引き上げ",
+        "id": 8025491,
+        "image": "https://res.cloudinary.com/whirlpooldata/image/upload/v1567047386/bw_flnhy4.jpg",
+        "related": "",
+        "source": "BusinessWire",
+        "summary": "プラハ--(BUSINESS WIRE)--（ビジネスワイヤ） -- 上場株式への投資に特化したオルタナティブ投資ファンドであるSTARTEEPO Invest（STARTEEPO）は、米国証券取引委員会（SEC）への修正届出書（Schedule 13D）において、ゼロックス・ホールディングス・コーポレーション（ゼロックス）の実質所有権を、発行済み普通株式の6%超に引き上げたことを発表しました。 今回の株式取得により、STARTEEPOはゼロックスの普通株式約800万株を実質的に保有し、さらに14万株のオプションを保有していることになります。公開されている所有権情報に基づくと、STARTEEPOは現在、ゼロックスの第3位の大株主となっています。 STARTEEPO Investの取締役会長であるフランティシェク・ボストルは、「当社は引き続き、ゼロックスを確信度の高い投資対象とし、ポートフォリオにおける最大規模のポジションの1つと位置付けています。当社は、ゼロックスの公開情報、戦略的イニシアチブ、および変革への取り組みを継続的に分析する中で、確信を深めています」と述べています。 202",
+        "url": "http://www.businesswire.com/news/home/20260601359075/ja/"
+      },
+      {
+        "category": "merger",
+        "datetime": 1714366800,
+        "headline": "Union Pacific CEO says he hasn't spoken to Trump about possible government investment",
+        "id": 8025166,
+        "image": "https://res.cloudinary.com/whirlpooldata/image/upload/v1567050932/sa_jgen9y.png",
+        "related": "",
+        "source": "SeekingAlpha",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://seekingalpha.com/news/4600754-union-pacific-ceo-says-he-hasnt-spoke-to-trump-about-possible-governnment-investment"
+      },
+      {
+        "category": "merger",
+        "datetime": 1714363200,
+        "headline": "DiaSorin jumps amid takeover speculation",
+        "id": 8025167,
+        "image": "https://res.cloudinary.com/whirlpooldata/image/upload/v1567050932/sa_jgen9y.png",
+        "related": "",
+        "source": "SeekingAlpha",
+        "summary": "Sanitized Finnhub news fixture.",
+        "url": "https://seekingalpha.com/news/4600749-diasorin-jumps-amid-takeover-speculation"
+      },
+      {
+        "category": "merger",
+        "datetime": 1714359600,
+        "headline": "Benedict Roth joins SEDA’s Risk Management & Regulatory Compliance Practice",
+        "id": 8024625,
+        "image": "https://res.cloudinary.com/whirlpooldata/image/upload/v1567047094/gnw_ngwqnq.png",
+        "related": "",
+        "source": "GlobalNewswire",
+        "summary": "SEDA Experts LLC, a leading expert witness firm providing world-class financial expert witness services, announced today that Benedict Roth joined the firm as Managing Director. SEDA Experts LLC, a leading expert witness firm providing world-class financial expert witness services, announced today that Benedict Roth joined the firm as Managing Director.",
+        "url": "https://www.globenewswire.com/news-release/2026/06/04/3306944/0/en/Benedict-Roth-joins-SEDA-s-Risk-Management-Regulatory-Compliance-Practice.html"
+      }
+    ]
+  },
+  "companyNews": {
+    "AAPL": [
+      {
+        "category": "company",
+        "datetime": 1714374000,
+        "headline": "Huge News For Apple and Nvidia Stock Investors",
+        "id": 140527155,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "AAPL",
+        "source": "Yahoo",
+        "summary": "Apple's Next Siri May Run on Nvidia Chips via Google Cloud Deal",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714370400,
+        "headline": "Apple Stock And The Intelligence Test",
+        "id": 140527171,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "AAPL",
+        "source": "Yahoo",
+        "summary": "Before the big run, the most important clues about Apple’s future weren’t in the spreadsheets but in how the company described its own AI rollout.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714366800,
+        "headline": "Apple closing 3 stores in these 3 states in June. See locations",
+        "id": 140525194,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "AAPL",
+        "source": "Yahoo",
+        "summary": "The three stores will close on Saturday, June 20. See the soon-to-be shuttered locations.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714363200,
+        "headline": "TSMC Forecasts Sustained AI Chip Demand",
+        "id": 140525175,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "AAPL",
+        "source": "Yahoo",
+        "summary": "TSM stock rose on Thursday after the company's annual shareholders' meeting. At the meeting, Chief Executive C.C. Wei said the contract chipmaker, better known as TSMC, won't be able to fulfill demand over the next few years, even as more manufacturing capacity comes online, Bloomberg reported. \"It will be a long time before we can meet customer demand,\" Wei said.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714359600,
+        "headline": "Apple: Decelerating AppStore growth could hold back Services upside, UBS says",
+        "id": 140525196,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "AAPL",
+        "source": "Yahoo",
+        "summary": "Investing.com -- UBS said decelerating App Store revenue growth could limit upside to Apple's Services segment, after data showed May growth slowing to the low single digits for the first time this year.",
+        "url": "https://finnhub.io/api/news"
+      }
+    ],
+    "BOOT": [
+      {
+        "category": "company",
+        "datetime": 1714374000,
+        "headline": "BOOT BARN HOLDINGS INC (NYSE:BOOT): A Peter Lynch Growth Stock Checked All the Right Boxes",
+        "id": 140468732,
+        "image": "https://www.chartmill.com/images/uploads/lynch_news_067b1bafe9.webp",
+        "related": "BOOT",
+        "source": "ChartMill",
+        "summary": "Boot Barn (BOOT) fits Peter Lynch’s GARP strategy with 29.73% EPS growth, a PEG ratio of 0.78, and strong financial health—ideal for long-term investors.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714370400,
+        "headline": "Diamond Hill Long-Short Strategy Q1 2026 Portfolio Movers: Gains, Drags, And Trades",
+        "id": 140353011,
+        "image": "https://static.seekingalpha.com/cdn/s3/uploads/getty_images/1952157073/image_1952157073.jpg",
+        "related": "BOOT",
+        "source": "SeekingAlpha",
+        "summary": "Diamond Hill's Q1 report discusses market volatility and performance impacts from AI on software holdings. Read the full analysis for more details.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714366800,
+        "headline": "Boot Barn Holdings, Inc. 2026 Q4 - Results - Earnings Call Presentation",
+        "id": 140329329,
+        "image": "https://static.seekingalpha.com/assets/og_image_1200-29b2bfe1a595477db6826bd2126c63ac2091efb7ec76347a8e7f81ba17e3de6c.png",
+        "related": "BOOT",
+        "source": "SeekingAlpha",
+        "summary": "2026-05-16. The following slide deck was published by Boot Barn Holdings, Inc.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714363200,
+        "headline": "UBS Maintains Buy on Boot Barn Holdings, Raises Price Target to $272",
+        "id": 140327157,
+        "image": "https://static.finnhub.io/emulator/news/140327157.jpg",
+        "related": "BOOT",
+        "source": "Benzinga",
+        "summary": "UBS analyst Jay Sole maintains Boot Barn Holdings (NYSE:BOOT) with a Buy and raises the price target from $270 to $272.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714359600,
+        "headline": "B of A Securities Maintains Buy on Boot Barn Holdings, Lowers Price Target to $206",
+        "id": 140327158,
+        "image": "https://static.finnhub.io/emulator/news/140327158.jpg",
+        "related": "BOOT",
+        "source": "Benzinga",
+        "summary": "B of A Securities analyst Jason Haas maintains Boot Barn Holdings (NYSE:BOOT) with a Buy and lowers the price target from $224 to $206.",
+        "url": "https://finnhub.io/api/news"
+      }
+    ],
+    "MSFT": [
+      {
+        "category": "company",
+        "datetime": 1714374000,
+        "headline": "Microsoft’s model-agnostic AI strategy earns praise from Jefferies",
+        "id": 140527172,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "MSFT",
+        "source": "Yahoo",
+        "summary": "Microsoft Corp (NASDAQ:MSFT)'s enterprise artificial intelligence strategy received a positive assessment from Jefferies following the company's annual Build developer conference, with the analysts writing that the competitive focus in AI is increasingly shifting beyond foundation models toward...",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714370400,
+        "headline": "Dell’s Early RTX Spark AI PCs Put Hot Rally Under Fresh Scrutiny",
+        "id": 140527159,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "MSFT",
+        "source": "Yahoo",
+        "summary": "Dell Technologies (NYSE:DELL) is set to be among the first PC makers to launch premium AI PCs powered by Nvidia's new RTX Spark chip starting in the fall. The company plans to introduce AI focused laptops and desktops that pair RTX Spark with Microsoft Windows on Arm. This move extends Dell's existing work in AI infrastructure into consumer and business PCs through deeper partnerships with Nvidia and Microsoft. Dell Technologies, trading at $421.08, has drawn intense attention, with the...",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714366800,
+        "headline": "AI Power Boom Revives Natural Gas as Infrastructure Bet",
+        "id": 140527174,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "MSFT",
+        "source": "Yahoo",
+        "summary": "(Bloomberg) -- A surge in electricity demand from artificial intelligence and data centers is reshaping North America’s power markets, creating a “renaissance” for natural gas after decades of limited new development, according to KKR & Co. partner Brandon Freiman.Most Read from BloombergGlazer Family Members Study Manchester United Stake SaleRepublican-Led House Votes to Stop Iran War, Rebuking TrumpTrump Begins Rebuilding His Tariff Wall, Citing Forced LaborBroadcom Slides by Most in More Than",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714363200,
+        "headline": "Helion, the Sam Altman-backed fusion startup, raises $465M to build a power plant for Microsoft",
+        "id": 140527175,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "MSFT",
+        "source": "Yahoo",
+        "summary": "Fusion startup Helion is racing to complete a power plant for Microsoft by 2028. A fresh infusion of cash should help with that.",
+        "url": "https://finnhub.io/api/news"
+      },
+      {
+        "category": "company",
+        "datetime": 1714359600,
+        "headline": "Microsoft and OpenAI's relationship continues to crumble",
+        "id": 140527176,
+        "image": "https://s.yimg.com/rz/stage/p/yahoo_finance_en-US_h_p_finance_2.png",
+        "related": "MSFT",
+        "source": "Yahoo",
+        "summary": "Microsoft and OpenAI's relationship is getting frostier.",
+        "url": "https://finnhub.io/api/news"
+      }
+    ]
+  }
+}

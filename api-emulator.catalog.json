@@ -354,6 +354,12 @@
       "specifier": "./@fidelity/api-emulator.mjs",
       "description": "Fidelity WorkplaceXchange provides workplace participant, retirement, stock-plan, HSA balance, and pay statement APIs."
     },
+    "finnhub": {
+      "kind": "package",
+      "packageName": "@api-emulator/finnhub",
+      "specifier": "./@finnhub/api-emulator.mjs",
+      "description": "Finnhub provides financial market data APIs for market news, company news, symbols, quotes, and fundamentals."
+    },
     "flightradar24": {
       "kind": "package",
       "packageName": "@api-emulator/flightradar24",

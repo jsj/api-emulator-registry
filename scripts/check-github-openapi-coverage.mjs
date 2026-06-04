@@ -30,6 +30,12 @@ const deepRoutes = [
     pluginRoute: "app.get('/search/repositories'",
   },
   {
+    name: 'Repository hash algorithm',
+    method: 'get',
+    openapiPath: '/repos/{owner}/{repo}/hash-algorithm',
+    pluginRoute: "app.get('/repos/:owner/:repo/hash-algorithm'",
+  },
+  {
     name: 'Repository contents',
     method: 'get',
     openapiPath: '/repos/{owner}/{repo}/contents/{path}',

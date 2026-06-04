@@ -415,6 +415,12 @@ export function registerRoutes(app, store, contract) {
     return c.json(ensureRepository(state, c.req.param('owner'), c.req.param('repo')));
   });
 
+  app.get('/repos/:owner/:repo/hash-algorithm', (c) => {
+    const state = githubState(store);
+    const repo = ensureRepository(state, c.req.param('owner'), c.req.param('repo'));
+    return c.json({ hash_algorithm: repo.hash_algorithm ?? repo.hashAlgorithm ?? 'sha1' });
+  });
+
   app.get('/repos/:owner/:repo/stargazers', (c) => {
     const state = githubState(store);
     const owner = c.req.param('owner');

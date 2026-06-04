@@ -14,4 +14,15 @@ assert.equal(games.payload.response.game_count, 2);
 const achievements = await harness.call('GET', '/ISteamUserStats/GetPlayerAchievements/v0001/?key=test&steamid=76561198000000000&appid=440');
 assert.equal(achievements.payload.playerstats.success, true);
 
+const appInfo = await harness.call('GET', '/v1/info/740?pretty=1');
+assert.equal(appInfo.payload.status, 'success');
+assert.equal(appInfo.payload.data['740'].common.type, 'Tool');
+
+const missingAppInfo = await harness.call('GET', '/v1/info/1');
+assert.equal(missingAppInfo.status, 404);
+assert.equal(missingAppInfo.payload.status, 'error');
+
+const version = await harness.call('GET', '/v1/version');
+assert.equal(version.payload.data.major, 1);
+
 console.log('steam smoke ok');

@@ -49,11 +49,13 @@ function createHarness() {
 
 const harness = createHarness();
 assert.equal(contract.provider, 'github');
-assert.equal(contract.openapiRouteCount, 1186);
+assert.equal(contract.openapiRouteCount, 1190);
 const user = await harness.call('GET', '/user');
 assert.equal(user.payload.login, 'jsj');
 const repos = await harness.call('GET', '/user/repos');
 assert.equal(repos.payload.length, 1);
+const hashAlgorithm = await harness.call('GET', '/repos/:owner/:repo/hash-algorithm', {}, { owner: 'octo', repo: 'hello' });
+assert.equal(hashAlgorithm.payload.hash_algorithm, 'sha1');
 seedFromConfig(harness.store, '', {
   repositories: [{
     full_name: 'octo/hello',

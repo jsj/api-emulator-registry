@@ -111,4 +111,20 @@ for (const route of requiredRoutes) {
   assert.ok(source.includes(route), `missing Alpaca route ${route}`);
 }
 
+const requiredOrderFailureSignals = [
+  'market is closed',
+  'insufficient buying power',
+  'extended hours order must be DAY or GTC limit orders',
+  'asset "${symbol}" not found',
+  'account is restricted from trading',
+  'pattern day trader protection blocks this order',
+  'too many requests',
+  'temporarily unavailable',
+  'rejectAlpacaOrderIfNeeded',
+];
+
+for (const signal of requiredOrderFailureSignals) {
+  assert.ok(source.includes(signal), `missing Alpaca order failure coverage for ${signal}`);
+}
+
 console.log('alpaca smoke ok');

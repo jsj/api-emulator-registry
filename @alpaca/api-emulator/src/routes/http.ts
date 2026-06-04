@@ -664,6 +664,60 @@ function orderPayload(order: AlpacaOrder): Record<string, unknown> {
   };
 }
 
+function alpacaError(message: string, code: number, status: number): Response {
+  return new Response(JSON.stringify({ message, code }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+function orderNotional(body: Record<string, unknown>, bars: AlpacaBar[]): number {
+  const explicitNotional = Number(body.notional);
+  if (Number.isFinite(explicitNotional) && explicitNotional > 0) return explicitNotional;
+
+  const qty = Number(body.qty ?? 1);
+  const symbol = String(body.symbol ?? 'SPY');
+  const price = Number(body.limit_price ?? body.stop_price ?? latestBar(symbol, bars).close);
+  return Math.max(0, qty) * Math.max(0, price);
+}
+
+function rejectAlpacaOrderIfNeeded(body: Record<string, unknown>, alpaca: ReturnType<typeof getAlpacaStore>): Response | null {
+  const forcedError = String(body.client_order_id ?? '').toLowerCase();
+  if (forcedError.includes('rate-limit')) return alpacaError('too many requests', 42910000, 429);
+  if (forcedError.includes('server-error')) return alpacaError('temporarily unavailable', 50010000, 503);
+  if (forcedError.includes('pdt')) return alpacaError('pattern day trader protection blocks this order', 40310001, 403);
+
+  const symbol = String(body.symbol ?? 'SPY');
+  if (symbol.toUpperCase() === 'INVALIDXYZ') {
+    return alpacaError(`asset "${symbol}" not found`, 42210000, 422);
+  }
+
+  if (body.extended_hours === true || body.extended_hours === 'true') {
+    const type = String(body.type ?? 'market');
+    const timeInForce = String(body.time_in_force ?? 'day').toLowerCase();
+    if (type !== 'limit' || (timeInForce !== 'day' && timeInForce !== 'gtc')) {
+      return alpacaError('extended hours order must be DAY or GTC limit orders', 42210000, 422);
+    }
+  }
+
+  const account = alpaca.accounts.all()[0];
+  if (account?.account_blocked || account?.trading_blocked) {
+    return alpacaError('account is restricted from trading', 40310002, 403);
+  }
+
+  const clock = alpaca.clocks.all()[0];
+  const extendedHours = body.extended_hours === true || body.extended_hours === 'true';
+  if (clock && !clock.is_open && !extendedHours) {
+    return alpacaError('market is closed', 42210000, 422);
+  }
+
+  if (body.side === 'buy' && account && orderNotional(body, alpaca.bars.all()) > Number(account.buying_power)) {
+    return alpacaError('insufficient buying power', 40310000, 403);
+  }
+
+  return null;
+}
+
 function walletPayload(id = 'wallet-transfer-1') {
   return { id, asset: 'USDC', address: '0x0000000000000000000000000000000000000000', chain: 'ethereum', created_at: new Date().toISOString(), status: 'COMPLETE', amount: '1', direction: 'OUTGOING', to_address: '0x0000000000000000000000000000000000000000', from_address: '0x1111111111111111111111111111111111111111', network_fee: '0.01', fees: '0.01', usd_value: '1.00' };
 }
@@ -782,6 +836,8 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   });
   app.post('/v2/orders', async (context: ContextLike) => {
     const body = await context.req.json();
+    const rejection = rejectAlpacaOrderIfNeeded(body, alpaca);
+    if (rejection) return rejection;
     const order = alpaca.orders.insert({
       order_id: crypto.randomUUID(),
       client_order_id: String(body.client_order_id ?? crypto.randomUUID()),
@@ -1072,7 +1128,12 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   app.post('/v1/trading/accounts/:accountId/watchlists/:watchlistId', (context: ContextLike) => context.json(watchlist(context.req.param('watchlistId')), 200));
   app.delete('/v1/trading/accounts/:accountId/watchlists/:watchlistId', (context: ContextLike) => context.json({}, 204));
   app.delete('/v1/trading/accounts/:accountId/watchlists/:watchlistId/:symbol', (context: ContextLike) => context.json({ ...watchlist(context.req.param('watchlistId')), assets: [] }, 200));
-  app.post('/v1/trading/accounts/:accountId/orders', async (context: ContextLike) => context.json({ id: crypto.randomUUID(), order_id: crypto.randomUUID(), status: 'filled', ...(await jsonBody(context)) }, 200));
+  app.post('/v1/trading/accounts/:accountId/orders', async (context: ContextLike) => {
+    const body = await jsonBody(context);
+    const rejection = rejectAlpacaOrderIfNeeded(body, alpaca);
+    if (rejection) return rejection;
+    return context.json({ id: crypto.randomUUID(), order_id: crypto.randomUUID(), status: 'filled', ...body }, 200);
+  });
   app.get('/v1/trading/accounts/:accountId/orders', (context: ContextLike) => context.json(alpaca.orders.all(), 200));
   app.get('/v1/trading/accounts/:accountId/orders:by_client_order_id', (context: ContextLike) => context.json(alpaca.orders.all()[0] ?? {}, 200));
   app.get('/v1/trading/accounts/:accountId/orders/:orderId', (context: ContextLike) => context.json(alpaca.orders.findOneBy('order_id', context.req.param('orderId')) ?? {}, 200));

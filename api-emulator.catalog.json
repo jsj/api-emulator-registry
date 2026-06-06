@@ -744,6 +744,12 @@
       "specifier": "./@okta/api-emulator/src/index.ts",
       "description": "Okta provides identity APIs for OAuth, users, groups, apps, sessions, and identity providers."
     },
+    "opentable": {
+      "kind": "package",
+      "packageName": "@api-emulator/opentable",
+      "specifier": "./@opentable/api-emulator.mjs",
+      "description": "OpenTable provides OAuth and Consumer API v2 booking APIs for availability, slot locks, reservations, modification, and cancellation."
+    },
     "paypal": {
       "kind": "package",
       "packageName": "@api-emulator/paypal",
@@ -936,6 +942,12 @@
       "specifier": "./@servicenow/api-emulator.mjs",
       "description": "ServiceNow provides customer-support and ITSM APIs for Table API incidents, users, groups, and workflow records."
     },
+    "setlistfm": {
+      "kind": "package",
+      "packageName": "@api-emulator/setlistfm",
+      "specifier": "./@setlistfm/api-emulator.mjs",
+      "description": "setlist.fm provides artist, venue, city, country, user, and setlist lookup and search APIs."
+    },
     "shipstation": {
       "kind": "package",
       "packageName": "@api-emulator/shipstation",
@@ -1085,6 +1097,12 @@
       "packageName": "@api-emulator/telegram",
       "specifier": "./@telegram/api-emulator/src/index.ts",
       "description": "Telegram provides bot APIs for updates, messages, chats, webhooks, and interactive bot workflows."
+    },
+    "ticketmaster": {
+      "kind": "package",
+      "packageName": "@api-emulator/ticketmaster",
+      "specifier": "./@ticketmaster/api-emulator.mjs",
+      "description": "Ticketmaster Discovery API v2 provides event, attraction, venue, classification, image, and suggest search APIs."
     },
     "tiktok": {
       "kind": "package",

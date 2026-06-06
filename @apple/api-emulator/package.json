@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "hono": "^4.7.0",
-    "@api-emulator/core": "^0.6.0"
+    "@api-emulator/core": "^0.7.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -25,7 +25,7 @@
     "vitest": "^3.1.0"
   },
   "peerDependencies": {
-    "api-emulator": ">=0.6.0"
+    "api-emulator": ">=0.7.0"
   },
   "private": true
 }

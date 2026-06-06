@@ -12,6 +12,12 @@
       "specifier": "./@agentmail/api-emulator.mjs",
       "description": "AgentMail provides email inbox APIs for agent inbox provisioning, message listing, sending, and threaded replies."
     },
+    "agentcard": {
+      "kind": "package",
+      "packageName": "@api-emulator/agentcard",
+      "specifier": "./@agentcard/api-emulator.mjs",
+      "description": "Agentcard provides virtual card APIs for CLI auth, payment methods, card creation, balances, transactions, plans, settings, and support chat."
+    },
     "adyen": {
       "kind": "package",
       "packageName": "@api-emulator/adyen",

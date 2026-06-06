@@ -28,7 +28,7 @@
   "dependencies": {
     "hono": "^4",
     "graphql": "^16.13.2",
-    "@api-emulator/core": "^0.6.0"
+    "@api-emulator/core": "^0.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -40,7 +40,7 @@
     "vitest": "^4.1.0"
   },
   "peerDependencies": {
-    "api-emulator": ">=0.6.0"
+    "api-emulator": ">=0.7.0"
   },
   "private": true
 }

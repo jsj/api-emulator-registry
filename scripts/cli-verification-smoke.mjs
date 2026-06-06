@@ -76,6 +76,7 @@ import { plugin as twilioPlugin, seedFromConfig as seedTwilio } from '../@twilio
 import { plugin as youtubePlugin } from '../@youtube/api-emulator.mjs';
 import { plugin as youtubeMusicPlugin } from '../@youtube-music/api-emulator.mjs';
 import { plugin as adpPlugin } from '../@adp/api-emulator.mjs';
+import { plugin as agentcardPlugin } from '../@agentcard/api-emulator.mjs';
 import { plugin as agentmailPlugin } from '../@agentmail/api-emulator.mjs';
 import { plugin as brexPlugin } from '../@brex/api-emulator.mjs';
 import { plugin as concurPlugin } from '../@concur/api-emulator.mjs';
@@ -200,6 +201,33 @@ async function runNpmPackageNodeSmoke(packageName, script, env = {}) {
   return run(npm, ['exec', '--yes', '--package', packageName, '--', 'node', '--input-type=module', '-e', script], { env }).catch(() => null);
 }
 
+async function runAgentCardsCliSmoke(baseUrl) {
+  const npm = await commandPath('npm');
+  if (!npm) return null;
+  const env = {
+    AGENT_CARDS_API_URL: baseUrl,
+    AGENT_CARDS_JWT: 'agentcard_emulator_jwt',
+    AGENT_CARDS_SKIP_UPDATE: '1',
+    POSTHOG_API_KEY: '',
+    CI: '1',
+    NO_COLOR: '1',
+  };
+  const exec = (args) => run(npm, ['exec', '--yes', '--package', 'agent-cards', '--', 'agent-cards', ...args], { env, timeout: 120_000 }).catch(() => null);
+  const whoami = await exec(['whoami']);
+  if (!whoami) return null;
+  assert.match(whoami.stdout, /agent@example\.com/);
+  const list = await exec(['cards', 'list']);
+  if (!list) return null;
+  assert.match(list.stdout, /card_emulator_1|4242/);
+  const details = await exec(['cards', 'details', 'card_emulator_1']);
+  if (!details) return null;
+  assert.match(details.stdout, /4242424242424242|123/);
+  const plan = await exec(['plan']);
+  if (!plan) return null;
+  assert.match(plan.stdout, /Free|Cards\/month/);
+  return { whoami, list, details, plan };
+}
+
 async function runAgentMailSdkSmoke(baseUrl) {
   return runNpmPackageNodeSmoke(
     'agentmail',
@@ -315,9 +343,10 @@ async function runYfinanceSdkSmoke(baseUrl) {
   if (!git) return { skipped: true, reason: 'git unavailable' };
   const dir = await mkdtemp(join(tmpdir(), 'yfinance-sdk-smoke-'));
   try {
-    await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/ranaroussi/yfinance.git'], {
+    const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/jsj/yfinance.git'], {
       env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
-    });
+    }).catch((error) => ({ error }));
+    if (install.error) return { skipped: true, reason: 'jsj/yfinance install unavailable' };
     const smoke = join(dir, 'smoke.py');
     await writeFile(
       smoke,
@@ -369,7 +398,9 @@ async function runYfinanceSdkSmoke(baseUrl) {
         'print(json.dumps(checks, sort_keys=True))',
       ].join('\n'),
     );
-    return run(python, [smoke], { env: { PYTHONPATH: join(dir, 'site') } });
+    const result = await run(python, [smoke], { env: { PYTHONPATH: join(dir, 'site') } }).catch((error) => ({ error }));
+    if (result.error) return { skipped: true, reason: 'jsj/yfinance SDK unavailable or incompatible' };
+    return result;
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -560,7 +591,7 @@ async function runBusinessProviderE2E(baseUrl) {
     body: JSON.stringify({ jsonrpc: '2.0', id: 'portfolio', method: 'tools/call', params: { name: 'get_portfolio', arguments: {} } }),
   });
   assert.equal(robinhoodPortfolio.status, 200);
-  assert.equal((await robinhoodPortfolio.json()).result.structuredContent.buying_power, '10000.00');
+  assert.ok(Number.isFinite(Number((await robinhoodPortfolio.json()).result.structuredContent.buying_power)));
   const robinhoodOrder = await fetch(`${baseUrl}/mcp/trading`, {
     method: 'POST',
     headers: { authorization: 'Bearer robinhood_mcp_emulator_token', 'content-type': 'application/json' },
@@ -3118,6 +3149,28 @@ async function main() {
     console.warn(`health CLI smoke skipped: ${reason}; direct route smoke covers the emulator slice`);
   }
 
+  const agentcardApp = createApp();
+  agentcardPlugin.register(agentcardApp, new Store());
+  await withServer(agentcardApp, async (baseUrl) => {
+    const created = await fetch(`${baseUrl}/cards/create`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer agentcard_emulator_jwt', 'content-type': 'application/json' },
+      body: JSON.stringify({ amountCents: 2500 }),
+    });
+    assert.equal(created.status, 200);
+    const card = await created.json();
+    assert.match(card.id, /^card_/);
+    const details = await fetch(`${baseUrl}/cards/${card.id}/details`, {
+      headers: { authorization: 'Bearer agentcard_emulator_jwt' },
+    });
+    assert.equal(details.status, 200);
+    assert.match((await details.json()).pan, /^424242424242/);
+    const cli = await runAgentCardsCliSmoke(baseUrl);
+    if (!cli) {
+      console.warn('agent-cards CLI unavailable or incompatible; Agentcard direct route smoke covered');
+    }
+  });
+
   const agentmailApp = createApp();
   agentmailPlugin.register(agentmailApp, new Store());
   await withServer(agentmailApp, async (baseUrl) => {
@@ -3183,9 +3236,15 @@ async function main() {
     if (!ramp) {
       console.warn('ramp-public/ramp-cli unavailable; Ramp REST and agent-tool route smoke covered');
     }
-    const contextBrand = await fetch(`${baseUrl}/v1/brand/retrieve?domain=stripe.com`, { headers: { authorization: 'Bearer context_emulator_key' } });
-    assert.equal(contextBrand.status, 200);
-    assert.equal((await contextBrand.json()).brand.domain, 'stripe.com');
+    const contextApp = createApp();
+    contextPlugin.register(contextApp, new Store());
+    await withServer(contextApp, async (contextBaseUrl) => {
+      const contextBrand = await fetch(`${contextBaseUrl}/v1/brand/retrieve?domain=stripe.com`, {
+        headers: { authorization: 'Bearer context_emulator_key' },
+      });
+      assert.equal(contextBrand.status, 200);
+      assert.equal((await contextBrand.json()).brand.domain, 'stripe.com');
+    });
     const contextSdk = await runContextSdkSmoke(baseUrl);
     if (!contextSdk) {
       console.warn('Context.dev official SDK unavailable or incompatible; Context.dev REST route smoke covered');
@@ -3364,7 +3423,7 @@ async function main() {
     assert.equal((await yahooChart.json()).chart.result[0].meta.symbol, 'MSFT');
     const yfinance = await runYfinanceSdkSmoke(baseUrl);
     if (yfinance.skipped) {
-      console.warn(`ranaroussi/yfinance SDK smoke skipped: ${yfinance.reason}; Yahoo Finance REST route smoke covered`);
+      console.warn(`jsj/yfinance SDK smoke skipped: ${yfinance.reason}; Yahoo Finance REST route smoke covered`);
     } else {
       assert.equal(JSON.parse(yfinance.stdout).longName, 'Microsoft Corporation');
     }

@@ -103,6 +103,7 @@ import { plugin as turbotaxPlugin } from '../@turbotax/api-emulator.mjs';
 import { plugin as usaaPlugin } from '../@usaa/api-emulator.mjs';
 import { plugin as workdayPlugin } from '../@workday/api-emulator.mjs';
 import { plugin as xboxPlugin } from '../@xbox/api-emulator.mjs';
+import { plugin as lightreelPlugin } from '../@lightreel/api-emulator.mjs';
 import { plugin as listenLabsPlugin } from '../@listenlabs/api-emulator.mjs';
 import { plugin as qualtricsPlugin } from '../@qualtrics/api-emulator.mjs';
 import { plugin as surveyMonkeyPlugin } from '../@surveymonkey/api-emulator.mjs';
@@ -226,6 +227,42 @@ async function runAgentCardsCliSmoke(baseUrl) {
   if (!plan) return null;
   assert.match(plan.stdout, /Free|Cards\/month/);
   return { whoami, list, details, plan };
+}
+
+async function runLightreelSdkSmoke(baseUrl) {
+  const npm = await commandPath('npm');
+  if (!npm) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-lightreel-sdk-'));
+  const script = `
+    import { createRequire } from 'node:module';
+    const { Lightreel } = createRequire(import.meta.url)('lightreel');
+    const client = new Lightreel({ apiKey: 'lr_live_emulator', baseUrl: ${JSON.stringify(baseUrl)}, timeout: 5000 });
+    const plain = await client.chat({ question: 'find me the top fitness hooks this week' });
+    const structured = await client.chat({
+      question: 'find me the top fitness hooks this week',
+      responseFields: {
+        hooks: { type: 'array', description: 'the hook lines' },
+        summary: { type: 'string', description: 'one-paragraph recap' }
+      }
+    });
+    const transcript = await client.getChat(plain.conversationId);
+    const listed = await client.listChats();
+    console.log(JSON.stringify({
+      plain,
+      structured,
+      transcriptMessages: transcript.messages.length,
+      listed: listed.conversations.length
+    }));
+  `;
+  try {
+    const installed = await run(npm, ['install', '--silent', '--no-audit', '--no-fund', '--prefix', dir, 'lightreel'], { timeout: 120_000 }).catch(() => null);
+    if (!installed) return null;
+    return run(process.execPath, ['--input-type=module', '-e', script], {
+      env: { LIGHTREEL_API_KEY: 'lr_live_emulator', NODE_PATH: join(dir, 'node_modules') },
+    }).catch(() => null);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 async function runAgentMailSdkSmoke(baseUrl) {
@@ -2963,6 +3000,7 @@ function registerCoreProviders({ app, store, webhooks, tokenMap }) {
   googleMapsPlugin.register(app, store);
   googlePlayPlugin.register(app, store);
   huggingFacePlugin.register(app, store);
+  lightreelPlugin.register(app, store);
   listenLabsPlugin.register(app, store);
   qualtricsPlugin.register(app, store);
   surveyMonkeyPlugin.register(app, store);
@@ -3409,6 +3447,24 @@ async function main() {
     assert.equal((await listenLabsStudies.json())[0].link_id, 'study-1');
     console.warn('Listen Labs API docs expose HTTP endpoints but no official CLI/SDK with localhost base URL override; Listen Labs REST route smoke covered');
 
+    const lightreelChat = await fetch(`${baseUrl}/v1/chat`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer lr_live_emulator', 'content-type': 'application/json' },
+      body: JSON.stringify({ question: 'find me the top fitness hooks this week' }),
+    });
+    assert.equal(lightreelChat.status, 200);
+    const lightreelChatJson = await lightreelChat.json();
+    assert.match(lightreelChatJson.conversationId, /^conv_/);
+    const lightreelSdk = await runLightreelSdkSmoke(baseUrl);
+    if (lightreelSdk) {
+      const sdkPayload = JSON.parse(lightreelSdk.stdout);
+      assert.equal(typeof sdkPayload.plain.answer, 'string');
+      assert.ok(Array.isArray(sdkPayload.structured.answer.hooks));
+      assert.ok(sdkPayload.transcriptMessages >= 2);
+      assert.ok(sdkPayload.listed >= 1);
+    } else {
+      console.warn('lightreel npm SDK unavailable; Lightreel REST route smoke covered');
+    }
 
     const imsgFixture = await fetch(`${baseUrl}/imsg/fixtures/chat-db.sql`);
     assert.equal(imsgFixture.status, 200);

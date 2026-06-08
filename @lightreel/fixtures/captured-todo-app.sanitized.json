@@ -1,0 +1,120 @@
+{
+  "capturedAt": "2026-06-08T17:38:27.652Z",
+  "source": "Live Lightreel API via sample LIGHTREEL_API_KEY; API key omitted and conversation IDs sanitized",
+  "observed": {
+    "chatResponseKeys": ["conversationId", "answer"],
+    "plainAnswerType": "string",
+    "structuredAnswerType": "object",
+    "conversationIdShape": "24 lowercase hex characters",
+    "transcriptKeys": ["conversationId", "createdAt", "updatedAt", "messages"],
+    "chatSummaryKeys": ["conversationId", "title", "status", "createdAt", "updatedAt"]
+  },
+  "requests": {
+    "plainChat": {
+      "method": "POST",
+      "path": "/v1/chat",
+      "body": {
+        "question": "I'm building a todo app. Check it out and tell me what to improve for launch."
+      }
+    },
+    "structuredChat": {
+      "method": "POST",
+      "path": "/v1/chat",
+      "body": {
+        "question": "I'm building a todo app. Return launch feedback as structured JSON.",
+        "response_fields": {
+          "strengths": {
+            "type": "array",
+            "description": "what is already promising"
+          },
+          "improvements": {
+            "type": "array",
+            "description": "specific product improvements before launch"
+          },
+          "summary": {
+            "type": "string",
+            "description": "one paragraph launch readiness summary"
+          }
+        }
+      }
+    }
+  },
+  "responses": {
+    "plainChat": {
+      "status": 200,
+      "json": {
+        "conversationId": "conv_live_todo_plain",
+        "answer": "Send me the app link, TestFlight/Play Store link, landing page, or screenshots/demo video and I’ll review it for launch.\n\nTo make the feedback useful, include:\n- Target user: students, founders, ADHD users, teams, parents, etc.\n- Core promise: what makes this todo app different?\n- Current launch channel: TikTok, Product Hunt, App Store, Reddit, paid ads, etc.\n- Pricing: free, freemium, subscription, one-time purchase\n- Any competitors you’re positioning against\n\nOnce you send it, I’ll break down:\n1. What the app’s hook should be\n2. What’s unclear or weak in the onboarding\n3. Which features to emphasize or cut for launch\n4. App Store / landing page positioning\n5. UGC angles and video concepts to test first"
+      }
+    },
+    "structuredChat": {
+      "status": 200,
+      "json": {
+        "conversationId": "conv_live_todo_structured",
+        "answer": {
+          "strengths": [
+            "Clear demand for reducing mental load",
+            "Strong fit with ADHD and executive dysfunction use cases",
+            "Natural expansion into calendar, habits, reminders, and focus",
+            "Relatable daily pain points are easy to demonstrate",
+            "Simple task completion can become visually satisfying"
+          ],
+          "improvements": [
+            "Add one-tap brain dump capture",
+            "Turn voice notes into tasks",
+            "Convert tasks into calendar time blocks",
+            "Create an ADHD mode with tiny next steps",
+            "Add recurring life-admin templates",
+            "Add reminders for ignored texts and small obligations",
+            "Show a monthly habit/task pattern view",
+            "Add focus mode or app-blocking integrations",
+            "Support shared household lists and calendars",
+            "Make the first task list useful within 30 seconds",
+            "Include visual progress, streaks, or gamified completion",
+            "Build import from Apple Reminders, Google Calendar, and Notion"
+          ],
+          "summary": "Launch only if the app is more than a generic checklist. The strongest market signal is for a todo app that removes executive friction: capture messy thoughts fast, organize them automatically, time-block them, remind users at the right moment, and make progress visible. A plain todo list will be hard to differentiate against Todoist, TickTick, Structured, and Apple Reminders; a focused product for ADHD, life admin, students, or households is much more launch-ready."
+        }
+      }
+    },
+    "transcript": {
+      "status": 200,
+      "json": {
+        "conversationId": "conv_live_todo_plain",
+        "createdAt": "2026-06-08T17:34:56.629Z",
+        "updatedAt": "2026-06-08T17:35:03.888Z",
+        "messages": [
+          {
+            "role": "user",
+            "question": "I'm building a todo app. Check it out and tell me what to improve for launch."
+          },
+          {
+            "role": "assistant",
+            "answer": "Send me the app link, TestFlight/Play Store link, landing page, or screenshots/demo video and I’ll review it for launch.\n\nTo make the feedback useful, include:\n- Target user: students, founders, ADHD users, teams, parents, etc.\n- Core promise: what makes this todo app different?\n- Current launch channel: TikTok, Product Hunt, App Store, Reddit, paid ads, etc.\n- Pricing: free, freemium, subscription, one-time purchase\n- Any competitors you’re positioning against\n\nOnce you send it, I’ll break down:\n1. What the app’s hook should be\n2. What’s unclear or weak in the onboarding\n3. Which features to emphasize or cut for launch\n4. App Store / landing page positioning\n5. UGC angles and video concepts to test first"
+          }
+        ]
+      }
+    },
+    "chats": {
+      "status": 200,
+      "json": {
+        "conversations": [
+          {
+            "conversationId": "conv_live_todo_structured",
+            "title": "I'm building a todo app. Return launch feedback as structured JSON.",
+            "status": "completed",
+            "createdAt": "2026-06-08T17:35:07.237Z",
+            "updatedAt": "2026-06-08T17:38:27.043Z"
+          },
+          {
+            "conversationId": "conv_live_todo_plain",
+            "title": "I'm building a todo app. Check it out and tell me what to improve for launch.",
+            "status": "completed",
+            "createdAt": "2026-06-08T17:34:56.629Z",
+            "updatedAt": "2026-06-08T17:35:03.888Z"
+          }
+        ]
+      }
+    }
+  }
+}

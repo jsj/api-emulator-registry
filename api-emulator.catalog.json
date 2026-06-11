@@ -36,6 +36,12 @@
       "specifier": "./@alibaba-cloud/api-emulator.mjs",
       "description": "Alibaba Cloud provides ECS RPC APIs for regions, zones, VPCs, compute instances, and lifecycle actions."
     },
+    "alpha-vantage": {
+      "kind": "package",
+      "packageName": "@api-emulator/alpha-vantage",
+      "specifier": "./@alpha-vantage/api-emulator.mjs",
+      "description": "Alpha Vantage provides stock quote, time series, symbol search, and market status data through a query-parameter API."
+    },
     "amazon-seller": {
       "kind": "package",
       "packageName": "@api-emulator/amazon-seller",

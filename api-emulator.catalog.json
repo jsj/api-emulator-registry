@@ -946,7 +946,7 @@
       "kind": "package",
       "packageName": "@api-emulator/robinhood-trading",
       "specifier": "./@robinhood-trading/api-emulator.mjs",
-      "description": "Robinhood Agentic Trading MCP provides a documentation-informed subset for accounts, portfolios, positions, quotes, order review, placement, cancellation, and symbol search while fuller access is pending from Robinhood."
+      "description": "Robinhood Agentic Trading MCP provides accounts, portfolios, equity and option positions, quotes with Greeks, option chains, option instruments, watchlists, order review, placement, cancellation, and symbol search."
     },
     "rocketchat": {
       "kind": "package",

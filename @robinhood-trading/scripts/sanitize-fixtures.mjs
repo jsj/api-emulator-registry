@@ -104,12 +104,84 @@ function sanitizeOrders(ordersPayload) {
   }));
 }
 
+function sanitizeOptionChains(chainsPayload, instrumentsPayload) {
+  const chains = firstArray(chainsPayload, ['chains', 'results']);
+  const instruments = firstArray(instrumentsPayload, ['instruments', 'results']);
+  if (!chains.length) return undefined;
+  return Object.fromEntries(
+    chains.slice(0, 3).map((chain, index) => {
+      const symbol = chain.underlying_symbol ?? chain.symbol ?? `OPT${index + 1}`;
+      const id = chain.id ?? `chain_${index + 1}`;
+      return [
+        symbol,
+        {
+          id,
+          underlying_symbol: symbol,
+          symbol,
+          can_open_position: Boolean(chain.can_open_position ?? true),
+          expiration_dates: (chain.expiration_dates ?? []).slice(0, 6),
+          trade_value_multiplier: String(chain.trade_value_multiplier ?? '100.0000'),
+          min_ticks: chain.min_ticks,
+          instruments: instruments.slice(0, 20).map((instrument, instrumentIndex) => ({
+            id: instrument.id ?? instrument.instrument_id ?? instrument.option_id ?? `OPT_${index + 1}_${instrumentIndex + 1}`,
+            chain_id: id,
+            symbol,
+            chain_symbol: symbol,
+            type: instrument.type ?? 'call',
+            expiration_date: instrument.expiration_date ?? chain.expiration_dates?.[0],
+            strike_price: String(instrument.strike_price ?? '200.00'),
+            state: instrument.state ?? 'active',
+            tradable: Boolean(instrument.tradable ?? true),
+          })),
+        },
+      ];
+    }),
+  );
+}
+
+function sanitizeOptionQuotes(quotesPayload) {
+  const quotes = firstArray(quotesPayload, ['quotes', 'results']);
+  return quotes.slice(0, 20).map((quote, index) => ({
+    instrument_id: quote.instrument_id ?? quote.id ?? quote.option_id ?? `OPTQUOTE_${index + 1}`,
+    symbol: quote.symbol ?? quote.chain_symbol ?? 'AAPL',
+    bid: money(quote.bid_price ?? quote.bid, '0.00'),
+    ask: money(quote.ask_price ?? quote.ask, '0.00'),
+    mark_price: money(quote.mark_price ?? quote.mark, '0.00'),
+    implied_volatility: String(quote.implied_volatility ?? quote.implied_volatility_previous_close ?? '0'),
+    delta: String(quote.delta ?? '0'),
+    gamma: String(quote.gamma ?? '0'),
+    theta: String(quote.theta ?? '0'),
+    vega: String(quote.vega ?? '0'),
+    rho: String(quote.rho ?? '0'),
+    open_interest: Number(quote.open_interest ?? 0),
+    volume: Number(quote.volume ?? 0),
+    updated_at: fixedNow,
+  }));
+}
+
+function sanitizeWatchlists(watchlistsPayload) {
+  const watchlists = firstArray(watchlistsPayload, ['watchlists', 'results']);
+  return watchlists.slice(0, 10).map((watchlist, index) => ({
+    id: `watchlist_${index + 1}`,
+    name: watchlist.display_name ?? watchlist.name ?? `Watchlist ${index + 1}`,
+    display_name: watchlist.display_name ?? watchlist.name ?? `Watchlist ${index + 1}`,
+    icon_emoji: null,
+    display_description: watchlist.display_description ? `Watchlist ${index + 1}` : null,
+    symbols: firstArray(watchlist, ['symbols', 'items']).map((item) => (typeof item === 'string' ? item : item.symbol)).filter(Boolean).slice(0, 20),
+    option_ids: [],
+    followed: Boolean(watchlist.followed),
+  }));
+}
+
 const portfolioRaw = loadTool('get_portfolio') ?? {};
 const accountsRaw = loadTool('get_accounts') ?? {};
 const positionsRaw = loadTool('get_equity_positions') ?? {};
 const ordersRaw = loadTool('get_equity_orders') ?? {};
 const quotesRaw = firstArray(loadTool('get_equity_quotes'), ['quotes', 'results']);
 const tradabilityRaw = loadTool('get_equity_tradability') ?? {};
+const optionChains = sanitizeOptionChains(loadTool('get_option_chains'), loadTool('get_option_instruments'));
+const optionQuotes = sanitizeOptionQuotes(loadTool('get_option_quotes'));
+const watchlists = sanitizeWatchlists(loadTool('get_watchlists'));
 const quote = currentQuote(quotesRaw[0]);
 const close = quotesRaw[0]?.close;
 const quoteSymbol = quote?.symbol ?? tradabilityRaw.results?.[0]?.symbol ?? tradabilityRaw.symbol ?? 'AAPL';
@@ -139,6 +211,9 @@ const sanitized = {
       updated_at: fixedNow,
     },
   ],
+  ...(optionChains ? { optionChains } : {}),
+  ...(optionQuotes.length ? { optionQuotes } : {}),
+  ...(watchlists.length ? { watchlists } : {}),
   orders: sanitizeOrders(ordersRaw),
   nextId: 1,
 };

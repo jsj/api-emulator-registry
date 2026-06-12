@@ -7,6 +7,41 @@ const STATE_KEY = 'robinhood-trading:state';
 const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sanitized.json');
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_DAYS = 7;
+const ROBINHOOD_TRADING_TOOLS = [
+  'add_option_to_watchlist',
+  'add_to_watchlist',
+  'cancel_equity_order',
+  'cancel_option_order',
+  'create_watchlist',
+  'follow_watchlist',
+  'get_accounts',
+  'get_equity_historicals',
+  'get_equity_orders',
+  'get_equity_positions',
+  'get_equity_quotes',
+  'get_equity_tradability',
+  'get_index_quotes',
+  'get_indexes',
+  'get_option_chains',
+  'get_option_instruments',
+  'get_option_orders',
+  'get_option_positions',
+  'get_option_quotes',
+  'get_option_watchlist',
+  'get_popular_watchlists',
+  'get_portfolio',
+  'get_watchlist_items',
+  'get_watchlists',
+  'place_equity_order',
+  'place_option_order',
+  'remove_from_watchlist',
+  'remove_option_from_watchlist',
+  'review_equity_order',
+  'review_option_order',
+  'search',
+  'unfollow_watchlist',
+  'update_watchlist',
+];
 
 function sanitizedFixtureState() {
   try {
@@ -42,8 +77,193 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
       },
     ],
     quotes: [{ symbol: 'AAPL', price: '200.00', bid: '199.95', ask: '200.05', prior_close: '198.00', updated_at: fixedNow }],
+    equityHistoricals: {
+      AAPL: [
+        { begins_at: '2025-12-29T14:30:00.000Z', open_price: '198.00', high_price: '201.50', low_price: '197.25', close_price: '200.00', volume: 42000000 },
+        { begins_at: '2025-12-30T14:30:00.000Z', open_price: '200.10', high_price: '202.00', low_price: '199.10', close_price: '201.20', volume: 39000000 },
+      ],
+    },
+    optionChains: {
+      AAPL: {
+        id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+        underlying_symbol: 'AAPL',
+        symbol: 'AAPL',
+        can_open_position: true,
+        expiration_dates: ['2026-01-16', '2026-02-20'],
+        trade_value_multiplier: '100.0000',
+        min_ticks: { above_tick: '0.05', below_tick: '0.01', cutoff_price: '3.00' },
+        instruments: [
+          {
+            id: 'AAPL260116C00200000',
+            chain_id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+            symbol: 'AAPL',
+            chain_symbol: 'AAPL',
+            type: 'call',
+            expiration_date: '2026-01-16',
+            strike_price: '200.00',
+            state: 'active',
+            tradable: true,
+          },
+          {
+            id: 'AAPL260116P00195000',
+            chain_id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+            symbol: 'AAPL',
+            chain_symbol: 'AAPL',
+            type: 'put',
+            expiration_date: '2026-01-16',
+            strike_price: '195.00',
+            state: 'active',
+            tradable: true,
+          },
+        ],
+      },
+    },
+    optionQuotes: [
+      {
+        instrument_id: 'AAPL260116C00200000',
+        symbol: 'AAPL',
+        bid: '6.10',
+        ask: '6.35',
+        mark_price: '6.22',
+        implied_volatility: '0.285',
+        delta: '0.54',
+        gamma: '0.036',
+        theta: '-0.071',
+        vega: '0.118',
+        rho: '0.024',
+        open_interest: 12450,
+        volume: 980,
+        updated_at: fixedNow,
+      },
+      {
+        instrument_id: 'AAPL260116P00195000',
+        symbol: 'AAPL',
+        bid: '3.35',
+        ask: '3.55',
+        mark_price: '3.45',
+        implied_volatility: '0.302',
+        delta: '-0.34',
+        gamma: '0.031',
+        theta: '-0.052',
+        vega: '0.104',
+        rho: '-0.017',
+        open_interest: 8420,
+        volume: 610,
+        updated_at: fixedNow,
+      },
+    ],
+    optionPositions: [
+      {
+        id: 'opt_pos_aapl_call',
+        option_id: 'AAPL260116C00200000',
+        instrument_id: 'AAPL260116C00200000',
+        chain_id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+        account_number: 'RHAGENTIC001',
+        symbol: 'AAPL',
+        chain_symbol: 'AAPL',
+        quantity: '1',
+        type: 'long',
+        option_type: 'call',
+        expiration_date: '2026-01-16',
+        side: 'long',
+        average_entry_price: '5.80',
+        current_price: '6.22',
+        market_value: '622.00',
+        unrealized_pl: '42.00',
+        unrealized_pl_percent: '7.24',
+      },
+    ],
+    optionOrders: [
+      {
+        id: 'rh_option_order_seed_1',
+        account_number: 'RHAGENTIC001',
+        option_id: 'AAPL260116C00200000',
+        instrument_id: 'AAPL260116C00200000',
+        chain_id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+        chain_symbol: 'AAPL',
+        symbol: 'AAPL',
+        direction: 'debit',
+        opening_strategy: 'long_call',
+        closing_strategy: null,
+        quantity: '1.00000',
+        processed_quantity: '1.00000',
+        price: '5.80000000',
+        premium: '580.00000000',
+        processed_premium: '580',
+        state: 'filled',
+        placed_agent: 'user',
+        type: 'limit',
+        created_at: '2026-01-02T15:00:00.000Z',
+        updated_at: '2026-01-02T15:00:01.000Z',
+        legs: [
+          {
+            option_id: 'AAPL260116C00200000',
+            side: 'buy',
+            position_effect: 'open',
+            ratio_quantity: 1,
+            expiration_date: '2026-01-16',
+            strike_price: '200.0000',
+            option_type: 'call',
+          },
+        ],
+      },
+      {
+        id: 'rh_option_order_seed_2',
+        account_number: 'RHAGENTIC001',
+        option_id: 'AAPL260116C00200000',
+        instrument_id: 'AAPL260116C00200000',
+        chain_id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
+        chain_symbol: 'AAPL',
+        symbol: 'AAPL',
+        direction: 'credit',
+        opening_strategy: null,
+        closing_strategy: 'long_call',
+        quantity: '1.00000',
+        processed_quantity: '1.00000',
+        price: '6.22000000',
+        premium: '622.00000000',
+        processed_premium: '622',
+        state: 'filled',
+        placed_agent: 'user',
+        type: 'limit',
+        created_at: '2026-01-05T15:00:00.000Z',
+        updated_at: '2026-01-05T15:00:01.000Z',
+        legs: [
+          {
+            option_id: 'AAPL260116C00200000',
+            side: 'sell',
+            position_effect: 'close',
+            ratio_quantity: 1,
+            expiration_date: '2026-01-16',
+            strike_price: '200.0000',
+            option_type: 'call',
+          },
+        ],
+      },
+    ],
+    watchlists: [
+      {
+        id: 'watchlist-default',
+        name: 'Agentic Watchlist',
+        display_name: 'Agentic Watchlist',
+        icon_emoji: null,
+        symbols: ['AAPL'],
+        option_ids: ['AAPL260116C00200000'],
+        followed: true,
+      },
+    ],
+    indexes: [
+      { symbol: 'SPX', name: 'S&P 500 Index', mic: 'XSP' },
+      { symbol: 'NDX', name: 'Nasdaq 100 Index', mic: 'XND' },
+    ],
+    indexQuotes: [
+      { symbol: 'SPX', price: '5150.25', bid: '5150.00', ask: '5150.50', updated_at: fixedNow },
+      { symbol: 'NDX', price: '18225.10', bid: '18224.75', ask: '18225.50', updated_at: fixedNow },
+    ],
+    followedWatchlists: ['watchlist-default'],
     orders: [],
     nextId: 1,
+    nextWatchlistId: 2,
     oauthRefreshTokens: {},
     fractionalOrderCount: 0,
     fractionalOrderLimit: 12,
@@ -118,13 +338,263 @@ function validateFractionalRateLimit(id, s, args) {
   return null;
 }
 
+function normalizeSymbol(value, fallback = 'AAPL') {
+  return String(value ?? fallback).trim().toUpperCase();
+}
+
+function requestedSymbols(args, fallback = 'AAPL') {
+  if (Array.isArray(args.symbols)) return args.symbols.map((symbol) => normalizeSymbol(symbol)).filter(Boolean);
+  return String(args.symbol ?? fallback)
+    .split(',')
+    .map((symbol) => normalizeSymbol(symbol))
+    .filter(Boolean);
+}
+
+function requestedOptionIds(args, s) {
+  if (Array.isArray(args.instrument_ids)) return args.instrument_ids.map(String);
+  if (Array.isArray(args.instrumentIds)) return args.instrumentIds.map(String);
+  if (args.instrument_id) return [String(args.instrument_id)];
+  if (args.instrumentId) return [String(args.instrumentId)];
+  if (Array.isArray(args.ids)) return args.ids.map(String);
+  if (Array.isArray(args.option_ids)) return args.option_ids.map(String);
+  if (Array.isArray(args.optionIds)) return args.optionIds.map(String);
+  if (args.option_ids) return splitList(args.option_ids);
+  if (args.option_id) return splitList(args.option_id);
+  if (args.optionId) return [String(args.optionId)];
+  const symbols = new Set(requestedSymbols(args));
+  return s.optionQuotes.filter((quote) => symbols.has(normalizeSymbol(quote.symbol))).map((quote) => quote.instrument_id ?? quote.option_id);
+}
+
+function requestedExplicitOptionIds(args) {
+  if (Array.isArray(args.instrument_ids)) return args.instrument_ids.map(String);
+  if (Array.isArray(args.instrumentIds)) return args.instrumentIds.map(String);
+  if (args.instrument_ids) return splitList(args.instrument_ids);
+  if (args.instrument_id) return splitList(args.instrument_id);
+  if (args.instrumentId) return [String(args.instrumentId)];
+  if (Array.isArray(args.option_ids)) return args.option_ids.map(String);
+  if (Array.isArray(args.optionIds)) return args.optionIds.map(String);
+  if (args.option_ids) return splitList(args.option_ids);
+  if (args.option_id) return splitList(args.option_id);
+  if (args.optionId) return [String(args.optionId)];
+  return [];
+}
+
+function splitList(value) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (value === undefined || value === null || value === '') return [];
+  return String(value).split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function allOptionChains(s) {
+  return Object.values(s.optionChains ?? {}).map(({ instruments, contracts, expirations, ...chain }) => ({
+    ...chain,
+    expiration_dates: chain.expiration_dates ?? expirations ?? [],
+  }));
+}
+
+function allOptionInstruments(s) {
+  return Object.values(s.optionChains ?? {}).flatMap((chain) => chain.instruments ?? chain.contracts ?? []);
+}
+
+function requestedExpirationDates(args) {
+  const value = args.expiration_dates ?? args.expirationDates ?? args.expiration_date ?? args.expirationDate;
+  if (Array.isArray(value)) return value.map(String);
+  if (value) return String(value).split(',').map((date) => date.trim()).filter(Boolean);
+  return [];
+}
+
+function requestedChainIds(args) {
+  if (Array.isArray(args.chain_ids)) return args.chain_ids.map(String);
+  if (Array.isArray(args.chainIds)) return args.chainIds.map(String);
+  if (Array.isArray(args.ids)) return args.ids.map(String);
+  if (args.chain_ids) return splitList(args.chain_ids);
+  if (args.chain_id) return [String(args.chain_id)];
+  if (args.chainId) return [String(args.chainId)];
+  if (args.id) return [String(args.id)];
+  return [];
+}
+
+function filteredOptionChains(s, args) {
+  const chainIds = new Set(requestedChainIds(args));
+  const symbol = args.underlying_symbol ?? args.underlyingSymbol ?? args.symbol;
+  const normalizedSymbol = symbol ? normalizeSymbol(symbol) : null;
+  return allOptionChains(s).filter(
+    (chain) =>
+      (!chainIds.size || chainIds.has(String(chain.id))) &&
+      (!normalizedSymbol || normalizeSymbol(chain.underlying_symbol ?? chain.symbol) === normalizedSymbol),
+  );
+}
+
+function filteredOptionInstruments(s, args) {
+  const chainIds = new Set(requestedChainIds(args));
+  const instrumentIds = new Set(requestedOptionIds(args, s));
+  const expirations = new Set(requestedExpirationDates(args));
+  const chainSymbol = args.chain_symbol ?? args.chainSymbol ?? args.underlying_symbol ?? args.underlyingSymbol ?? args.symbol;
+  const normalizedChainSymbol = chainSymbol ? normalizeSymbol(chainSymbol) : null;
+  const type = args.type ? String(args.type).toLowerCase() : null;
+  const state = args.state ? String(args.state).toLowerCase() : null;
+  const strikePrice = args.strike_price ?? args.strikePrice;
+  return allOptionInstruments(s).filter((instrument) => {
+    const instrumentId = String(instrument.id ?? instrument.instrument_id ?? instrument.option_id);
+    return (
+      (!chainIds.size || chainIds.has(String(instrument.chain_id))) &&
+      (!instrumentIds.size || instrumentIds.has(instrumentId)) &&
+      (!expirations.size || expirations.has(String(instrument.expiration_date))) &&
+      (!normalizedChainSymbol || normalizeSymbol(instrument.chain_symbol ?? instrument.symbol) === normalizedChainSymbol) &&
+      (!type || String(instrument.type).toLowerCase() === type) &&
+      (!state || String(instrument.state ?? 'active').toLowerCase() === state) &&
+      (strikePrice === undefined || String(instrument.strike_price) === String(strikePrice))
+    );
+  });
+}
+
+function dateMs(value) {
+  if (!value) return null;
+  const text = String(value);
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text}T00:00:00.000Z` : text;
+  const timestamp = new Date(normalized).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function optionOrderChainId(order) {
+  return String(order.chain_id ?? order.legs?.[0]?.chain_id ?? '');
+}
+
+function optionOrderOptionId(order) {
+  return String(order.option_id ?? order.instrument_id ?? order.legs?.[0]?.option_id ?? '');
+}
+
+function optionPositionOptionId(position) {
+  return String(position.option_id ?? position.instrument_id ?? '');
+}
+
+function filteredOptionOrders(s, args) {
+  const accountNumber = String(args.account_number ?? '');
+  const orderId = args.order_id ?? args.id;
+  const state = args.state ? String(args.state).toLowerCase() : null;
+  const chainIds = new Set(requestedChainIds(args));
+  const createdAtGte = dateMs(args.created_at_gte);
+  const underlyingType = args.underlying_type ? String(args.underlying_type).toLowerCase() : null;
+  const placedAgent = args.placed_agent ? String(args.placed_agent).toLowerCase() : null;
+  return (s.optionOrders ?? []).filter((order) => {
+    const createdAt = dateMs(order.created_at ?? order.submitted_at);
+    return (
+      (!accountNumber || String(order.account_number) === accountNumber) &&
+      (!orderId || String(order.id) === String(orderId)) &&
+      (!state || String(order.state ?? order.status).toLowerCase() === state) &&
+      (!chainIds.size || chainIds.has(optionOrderChainId(order))) &&
+      (createdAtGte === null || (createdAt !== null && createdAt >= createdAtGte)) &&
+      (!underlyingType || String(order.underlying_type ?? 'equity').toLowerCase() === underlyingType) &&
+      (!placedAgent || String(order.placed_agent ?? 'user').toLowerCase() === placedAgent)
+    );
+  });
+}
+
+function filteredOptionPositions(s, args) {
+  const accountNumber = String(args.account_number ?? '');
+  const chainIds = new Set(requestedChainIds(args));
+  const optionIds = new Set(requestedExplicitOptionIds(args));
+  const type = args.type ? String(args.type).toLowerCase() : null;
+  const optionType = args.option_type ? String(args.option_type).toLowerCase() : null;
+  const expirationDate = args.expiration_date ? String(args.expiration_date) : null;
+  const expirationDateGte = args.expiration_date_gte ? String(args.expiration_date_gte) : null;
+  const expirationDateLte = args.expiration_date_lte ? String(args.expiration_date_lte) : null;
+  const nonzero = args.nonzero === true || args.nonzero === 'true';
+  return (s.optionPositions ?? []).filter((position) => {
+    const quantity = Number(position.quantity ?? 0);
+    const positionType = String(position.type ?? position.side ?? '').toLowerCase();
+    return (
+      (!accountNumber || String(position.account_number) === accountNumber) &&
+      (!chainIds.size || chainIds.has(String(position.chain_id))) &&
+      (!optionIds.size || optionIds.has(optionPositionOptionId(position))) &&
+      (!type || positionType === type) &&
+      (!optionType || String(position.option_type ?? position.type).toLowerCase() === optionType) &&
+      (!expirationDate || String(position.expiration_date) === expirationDate) &&
+      (!expirationDateGte || String(position.expiration_date) >= expirationDateGte) &&
+      (!expirationDateLte || String(position.expiration_date) <= expirationDateLte) &&
+      (!nonzero || quantity !== 0)
+    );
+  });
+}
+
+function findWatchlist(s, args) {
+  const watchlistId = args.list_id ?? args.listId ?? args.watchlist_id ?? args.watchlistId ?? args.id;
+  if (watchlistId) return s.watchlists.find((watchlist) => watchlist.id === String(watchlistId));
+  const name = args.display_name ?? args.displayName ?? args.name;
+  const normalizedName = name ? String(name).toLowerCase() : '';
+  if (normalizedName) {
+    return s.watchlists.find(
+      (watchlist) =>
+        String(watchlist.display_name ?? watchlist.name).toLowerCase() === normalizedName ||
+        String(watchlist.name ?? '').toLowerCase() === normalizedName,
+    );
+  }
+  return s.watchlists[0];
+}
+
+function upsertIntoArray(values, additions) {
+  return [...new Set([...(values ?? []), ...additions])];
+}
+
+function removeFromArray(values, removals) {
+  const blocked = new Set(removals);
+  return (values ?? []).filter((value) => !blocked.has(value));
+}
+
+function optionOrder(id, s, args, status = 'accepted') {
+  const instrumentId = args.instrument_id ?? args.instrumentId ?? args.option_id ?? args.optionId ?? 'AAPL260116C00200000';
+  const chainId = args.chain_id ?? args.chainId ?? '7dd906e5-7d4b-4161-a3fe-2c3b62038482';
+  const quantity = args.quantity ?? args.qty ?? '1';
+  const side = args.side ?? 'buy';
+  const positionEffect = args.position_effect ?? args.positionEffect ?? 'open';
+  const price = args.limit_price ?? args.limitPrice ?? args.price ?? '6.25';
+  const processedPremium = (Number(quantity) * Number(price) * 100).toFixed(2);
+  return {
+    id: `rh_option_order_${String(s.nextId++).padStart(6, '0')}`,
+    account_number: args.account_number ?? 'RHAGENTIC001',
+    option_id: instrumentId,
+    instrument_id: instrumentId,
+    chain_id: chainId,
+    chain_symbol: normalizeSymbol(args.chain_symbol ?? args.chainSymbol ?? args.symbol),
+    symbol: normalizeSymbol(args.symbol),
+    direction: side === 'sell' ? 'credit' : 'debit',
+    opening_strategy: positionEffect === 'open' ? 'long_call' : null,
+    closing_strategy: positionEffect === 'close' ? 'long_call' : null,
+    quantity,
+    processed_quantity: quantity,
+    price: String(price),
+    premium: processedPremium,
+    processed_premium: processedPremium,
+    state: status,
+    placed_agent: 'agent',
+    type: args.type ?? 'limit',
+    limit_price: args.limit_price ?? args.limitPrice ?? '6.25',
+    status,
+    created_at: fixedNow,
+    updated_at: fixedNow,
+    submitted_at: fixedNow,
+    legs: [
+      {
+        option_id: instrumentId,
+        chain_id: chainId,
+        side,
+        position_effect: positionEffect,
+        ratio_quantity: 1,
+        expiration_date: args.expiration_date ?? '2026-01-16',
+        strike_price: args.strike_price ?? '200.0000',
+        option_type: args.option_type ?? args.optionType ?? 'call',
+      },
+    ],
+  };
+}
+
 export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp/trading', config = {}) {
   return save(store, { ...defaultState(baseUrl), ...config });
 }
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Robinhood Agentic Trading MCP documentation-informed subset',
+  source: 'Robinhood Agentic Trading MCP documentation-informed subset plus observed read-only Streamable HTTP MCP contract, 2026-06-12',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -132,16 +602,7 @@ export const contract = {
     tokenPath: '/oauth/token',
   },
   scope: [
-    'get_accounts',
-    'get_portfolio',
-    'get_equity_positions',
-    'get_equity_quotes',
-    'get_equity_orders',
-    'get_equity_tradability',
-    'review_equity_order',
-    'place_equity_order',
-    'cancel_equity_order',
-    'search',
+    ...ROBINHOOD_TRADING_TOOLS,
   ],
   fidelity: 'stateful-streamable-http-mcp-emulator',
 };
@@ -268,13 +729,29 @@ export const plugin = {
         case 'get_equity_positions':
           return c.json(mcpResult(id, { positions: s.positions }));
         case 'get_equity_quotes': {
-          const symbols = Array.isArray(args.symbols) ? args.symbols : String(args.symbol ?? 'AAPL').split(',');
+          const symbols = requestedSymbols(args);
           return c.json(mcpResult(id, { quotes: s.quotes.filter((quote) => symbols.includes(quote.symbol)) }));
+        }
+        case 'get_equity_historicals': {
+          const symbols = requestedSymbols(args);
+          return c.json(
+            mcpResult(id, {
+              historicals: Object.fromEntries(symbols.map((symbol) => [symbol, s.equityHistoricals?.[symbol] ?? []])),
+              interval: args.interval ?? 'day',
+              span: args.span ?? 'week',
+            }),
+          );
         }
         case 'get_equity_orders':
           return c.json(mcpResult(id, { orders: s.orders }));
         case 'get_equity_tradability':
           return c.json(mcpResult(id, { symbol: args.symbol ?? 'AAPL', tradable: true, fractionally_tradable: true }));
+        case 'get_indexes':
+          return c.json(mcpResult(id, { indexes: s.indexes ?? [] }));
+        case 'get_index_quotes': {
+          const symbols = requestedSymbols(args, 'SPX');
+          return c.json(mcpResult(id, { quotes: (s.indexQuotes ?? []).filter((quote) => symbols.includes(quote.symbol)) }));
+        }
         case 'review_equity_order': {
           const accountError = validateTradingAccount(id, s, args);
           if (accountError) return c.json(accountError.payload, accountError.status);
@@ -310,6 +787,151 @@ export const plugin = {
           if (order) order.status = 'canceled';
           save(store, s);
           return c.json(mcpResult(id, { id: args.order_id ?? args.id, status: order ? 'canceled' : 'not_found' }));
+        }
+        case 'get_option_chains':
+          return c.json(mcpResult(id, { chains: filteredOptionChains(s, args) }));
+        case 'get_option_instruments':
+          return c.json(mcpResult(id, { instruments: filteredOptionInstruments(s, args) }));
+        case 'get_option_quotes': {
+          const optionIds = new Set(requestedOptionIds(args, s));
+          return c.json(
+            mcpResult(id, {
+              quotes: s.optionQuotes.filter((quote) => optionIds.has(quote.instrument_id ?? quote.option_id)),
+            }),
+          );
+        }
+        case 'get_option_positions':
+          return c.json(mcpResult(id, { positions: filteredOptionPositions(s, args), next: null }));
+        case 'get_option_orders':
+          return c.json(mcpResult(id, { orders: filteredOptionOrders(s, args), next: null }));
+        case 'get_option_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          const optionIds = new Set(watchlist?.option_ids ?? []);
+          return c.json(
+            mcpResult(id, {
+              watchlist: watchlist ?? null,
+              options: s.optionQuotes.filter((quote) => optionIds.has(quote.instrument_id ?? quote.option_id)),
+            }),
+          );
+        }
+        case 'get_popular_watchlists':
+          return c.json(
+            mcpResult(id, {
+              watchlists: [
+                { id: 'popular-tech', display_name: 'Popular Tech', symbols: ['AAPL', 'MSFT', 'NVDA'], followed: false },
+                { id: 'popular-indexes', display_name: 'Major Indexes', symbols: ['SPX', 'NDX'], followed: false },
+              ],
+            }),
+          );
+        case 'review_option_order': {
+          const accountError = validateTradingAccount(id, s, args);
+          if (accountError) return c.json(accountError.payload, accountError.status);
+          return c.json(mcpResult(id, { accepted: true, warnings: [], estimated_price: args.limit_price ?? '6.25', estimated_notional: '625.00' }));
+        }
+        case 'place_option_order': {
+          const accountError = validateTradingAccount(id, s, args);
+          if (accountError) return c.json(accountError.payload, accountError.status);
+          const order = optionOrder(id, s, args);
+          s.optionOrders.push(order);
+          save(store, s);
+          return c.json(mcpResult(id, order));
+        }
+        case 'cancel_option_order': {
+          const order = s.optionOrders.find((row) => row.id === args.order_id || row.id === args.id);
+          if (order) order.status = 'canceled';
+          save(store, s);
+          return c.json(mcpResult(id, { id: args.order_id ?? args.id, status: order ? 'canceled' : 'not_found' }));
+        }
+        case 'get_watchlists':
+          return c.json(mcpResult(id, { watchlists: s.watchlists }));
+        case 'get_watchlist_items': {
+          const watchlist = findWatchlist(s, args);
+          return c.json(
+            mcpResult(id, {
+              watchlist: watchlist ?? null,
+              items: [
+                ...(watchlist?.symbols ?? []).map((symbol) => ({ type: 'equity', symbol })),
+                ...(watchlist?.option_ids ?? []).map((instrumentId) => ({ type: 'option', instrument_id: instrumentId })),
+              ],
+            }),
+          );
+        }
+        case 'create_watchlist': {
+          const displayName = String(args.display_name ?? args.displayName ?? args.name ?? 'New Watchlist');
+          const watchlist = {
+            id: `watchlist-${String(s.nextWatchlistId++).padStart(3, '0')}`,
+            name: displayName,
+            display_name: displayName,
+            icon_emoji: args.icon_emoji ?? args.iconEmoji ?? null,
+            display_description: args.display_description ?? args.displayDescription ?? null,
+            symbols: requestedSymbols(args, '').filter(Boolean),
+            option_ids: requestedOptionIds(args, s),
+            followed: false,
+          };
+          s.watchlists.push(watchlist);
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'update_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          const displayName = args.display_name ?? args.displayName ?? args.name;
+          if (displayName) {
+            watchlist.name = String(displayName);
+            watchlist.display_name = String(displayName);
+          }
+          if (args.icon_emoji !== undefined || args.iconEmoji !== undefined) watchlist.icon_emoji = args.icon_emoji ?? args.iconEmoji;
+          if (args.display_description !== undefined || args.displayDescription !== undefined) {
+            watchlist.display_description = args.display_description ?? args.displayDescription;
+          }
+          if (Array.isArray(args.symbols)) watchlist.symbols = requestedSymbols(args, '');
+          if (Array.isArray(args.option_ids) || Array.isArray(args.optionIds)) watchlist.option_ids = requestedOptionIds(args, s);
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'add_to_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.symbols = upsertIntoArray(watchlist.symbols, requestedSymbols(args));
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'add_option_to_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.option_ids = upsertIntoArray(watchlist.option_ids, requestedOptionIds(args, s));
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'remove_from_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.symbols = removeFromArray(watchlist.symbols, requestedSymbols(args));
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'remove_option_from_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.option_ids = removeFromArray(watchlist.option_ids, requestedOptionIds(args, s));
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'follow_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.followed = true;
+          s.followedWatchlists = upsertIntoArray(s.followedWatchlists, [watchlist.id]);
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
+        }
+        case 'unfollow_watchlist': {
+          const watchlist = findWatchlist(s, args);
+          if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
+          watchlist.followed = false;
+          s.followedWatchlists = removeFromArray(s.followedWatchlists, [watchlist.id]);
+          save(store, s);
+          return c.json(mcpResult(id, watchlist));
         }
         case 'search':
           return c.json(mcpResult(id, { results: [{ symbol: 'AAPL', name: 'Apple Inc.' }] }));

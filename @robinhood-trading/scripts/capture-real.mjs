@@ -43,6 +43,14 @@ function chooseAccount(accountsPayload) {
   return accounts.find((row) => row.agentic_allowed) ?? accounts.find((row) => row.is_default) ?? accounts[0];
 }
 
+function firstArray(payload, keys) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  return [];
+}
+
 function writeCapture(name, stdout) {
   writeFileSync(join(RAW_DIR, `${name}.json`), stdout);
   writeFileSync(join(LATEST_DIR, `${name}.json`), stdout);
@@ -84,6 +92,36 @@ for (const call of calls) {
   console.log(`capturing ${call.tool}`);
   writeCapture(call.tool, callTool(call.tool, call.args));
 }
+
+const optionSymbol = SYMBOLS[0] ?? 'AAPL';
+console.log('capturing get_option_chains');
+const optionChainsStdout = callTool('get_option_chains', [`underlying_symbol=${optionSymbol}`]);
+writeCapture('get_option_chains', optionChainsStdout);
+
+const optionChain = firstArray(readPayload(optionChainsStdout), ['chains', 'results'])[0];
+const expirationDate = optionChain?.expiration_dates?.[0];
+if (optionChain?.id && expirationDate) {
+  console.log('capturing get_option_instruments');
+  const optionInstrumentsStdout = callTool('get_option_instruments', [
+    `chain_id=${optionChain.id}`,
+    `expiration_dates=${expirationDate}`,
+    'type=call',
+    'state=active',
+  ]);
+  writeCapture('get_option_instruments', optionInstrumentsStdout);
+
+  const optionInstrument = firstArray(readPayload(optionInstrumentsStdout), ['instruments', 'results'])[0];
+  if (optionInstrument?.id) {
+    console.log('capturing get_option_quotes');
+    writeCapture('get_option_quotes', callTool('get_option_quotes', [`instrument_ids=${JSON.stringify([optionInstrument.id])}`]));
+  }
+}
+
+console.log('capturing get_watchlists');
+writeCapture('get_watchlists', callTool('get_watchlists'));
+
+console.log('capturing get_option_watchlist');
+writeCapture('get_option_watchlist', callTool('get_option_watchlist'));
 
 run('node', [join(PROVIDER_DIR, 'scripts', 'sanitize-fixtures.mjs'), LATEST_DIR, join(PROVIDER_DIR, 'fixtures', 'sanitized.json')]);
 console.log(`raw capture: ${RAW_DIR}`);

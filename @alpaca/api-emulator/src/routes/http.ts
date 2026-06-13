@@ -26,9 +26,10 @@ type RequestLike = {
 
 interface AlpacaRealSeedData {
   account?: Partial<AlpacaAccount>;
+  account_configurations?: Partial<AlpacaAccountConfiguration>;
   clock?: Partial<AlpacaClock>;
   positions?: Array<Partial<AlpacaPosition> & { symbol: string }>;
-  orders?: Array<Partial<AlpacaOrder> & { symbol: string; qty: string; side: "buy" | "sell" }>;
+  orders?: Array<Partial<AlpacaOrder> & { symbol: string; side: "buy" | "sell" }>;
   activities?: Array<Partial<AlpacaActivity> & { activity_type: string }>;
   bars?: Record<string, Array<{ timestamp: string; open: number; high: number; low: number; close: number; volume: number; timeframe?: string }>>;
 }
@@ -89,8 +90,10 @@ interface AlpacaPosition extends Entity {
 interface AlpacaOrder extends Entity {
   order_id: string;
   client_order_id?: string;
+  asset_class?: string;
   symbol: string;
   qty: string;
+  notional?: string;
   side: "buy" | "sell";
   type: string;
   time_in_force: string;
@@ -98,6 +101,19 @@ interface AlpacaOrder extends Entity {
   submitted_at_alpaca: string;
   filled_at?: string | null;
   filled_qty: string;
+}
+
+interface AlpacaAccountConfiguration extends Entity {
+  dtbp_check: string;
+  trade_confirm_email: string;
+  suspend_trade: boolean;
+  no_shorting: boolean;
+  fractional_trading: boolean;
+  max_margin_multiplier: string;
+  max_options_trading_level: number;
+  pdt_check: string;
+  ptp_no_exception_entry: boolean;
+  disable_overnight_trading: boolean;
 }
 
 interface AlpacaActivity extends Entity {
@@ -218,6 +234,7 @@ export async function buildSeedConfigFromRealAlpaca(baseUrl: string, options: {
 function getAlpacaStore(store: StoreLike) {
   return {
     accounts: store.collection<AlpacaAccount>('alpaca.accounts', ['account_number']),
+    accountConfigurations: store.collection<AlpacaAccountConfiguration>('alpaca.account_configurations', []),
     clocks: store.collection<AlpacaClock>('alpaca.clocks', []),
     positions: store.collection<AlpacaPosition>('alpaca.positions', ['symbol']),
     orders: store.collection<AlpacaOrder>('alpaca.orders', ['order_id', 'symbol', 'status']),
@@ -248,6 +265,9 @@ export function seedDefaults(store: StoreLike): void {
       account_blocked: false,
       created_at_alpaca: isoOffset(-30),
     });
+  }
+  if (!alpaca.accountConfigurations.all().length) {
+    alpaca.accountConfigurations.insert(defaultAccountConfiguration());
   }
   if (!alpaca.clocks.all().length) {
     alpaca.clocks.insert({
@@ -344,6 +364,11 @@ export function seedFromConfig(store: StoreLike, _baseUrl: string, config: Alpac
     if (current) alpaca.accounts.update(current.id, seed.account);
   }
 
+  if (seed.account_configurations) {
+    const current = accountConfiguration(alpaca);
+    alpaca.accountConfigurations.update(current.id, seed.account_configurations);
+  }
+
   if (seed.clock) {
     const current = alpaca.clocks.all()[0];
     if (current) alpaca.clocks.update(current.id, seed.clock);
@@ -369,11 +394,13 @@ export function seedFromConfig(store: StoreLike, _baseUrl: string, config: Alpac
     for (const order of seed.orders) {
       alpaca.orders.insert({
         order_id: crypto.randomUUID(),
+        asset_class: 'us_equity',
+        qty: '1',
         type: 'market',
         time_in_force: 'day',
         status: 'filled',
         submitted_at_alpaca: new Date().toISOString(),
-        filled_qty: order.qty,
+        filled_qty: order.qty ?? '0',
         ...order,
       } as Omit<AlpacaOrder, 'id' | 'created_at' | 'updated_at'>);
     }
@@ -536,7 +563,7 @@ function portfolioHistory() {
   };
 }
 
-function accountConfiguration() {
+function defaultAccountConfiguration(): Omit<AlpacaAccountConfiguration, 'id' | 'created_at' | 'updated_at'> {
   return {
     dtbp_check: 'entry',
     trade_confirm_email: 'all',
@@ -544,7 +571,20 @@ function accountConfiguration() {
     no_shorting: false,
     fractional_trading: true,
     max_margin_multiplier: '4',
+    max_options_trading_level: 3,
+    pdt_check: 'entry',
+    ptp_no_exception_entry: false,
+    disable_overnight_trading: false,
   };
+}
+
+function accountConfiguration(alpaca: ReturnType<typeof getAlpacaStore>): AlpacaAccountConfiguration {
+  return alpaca.accountConfigurations.all()[0] ?? alpaca.accountConfigurations.insert(defaultAccountConfiguration());
+}
+
+function accountConfigurationPayload(config: AlpacaAccountConfiguration): Record<string, unknown> {
+  const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...payload } = config;
+  return payload;
 }
 
 function watchlist(id = 'watchlist-1', name = 'Default') {
@@ -705,6 +745,14 @@ function rejectAlpacaOrderIfNeeded(body: Record<string, unknown>, alpaca: Return
     return alpacaError('account is restricted from trading', 40310002, 403);
   }
 
+  const config = accountConfiguration(alpaca);
+  if (config.suspend_trade) {
+    return alpacaError('account is restricted from trading', 40310002, 403);
+  }
+  if (config.no_shorting && body.side === 'sell') {
+    return alpacaError('account is configured for long-only trading', 40310003, 403);
+  }
+
   const clock = alpaca.clocks.all()[0];
   const extendedHours = body.extended_hours === true || body.extended_hours === 'true';
   if (clock && !clock.is_open && !extendedHours) {
@@ -713,6 +761,23 @@ function rejectAlpacaOrderIfNeeded(body: Record<string, unknown>, alpaca: Return
 
   if (body.side === 'buy' && account && orderNotional(body, alpaca.bars.all()) > Number(account.buying_power)) {
     return alpacaError('insufficient buying power', 40310000, 403);
+  }
+
+  return null;
+}
+
+function rejectAlpacaOrderReplaceIfNeeded(order: AlpacaOrder, body: Record<string, unknown>): Response | null {
+  if (body.qty !== undefined && body.notional !== undefined) {
+    return alpacaError('qty and notional are mutually exclusive', 42210000, 422);
+  }
+
+  const assetClass = String(order.asset_class ?? 'us_equity');
+  if (body.notional !== undefined && assetClass !== 'ipo') {
+    return alpacaError('notional replace is only supported for IPO indications of interest', 42210000, 422);
+  }
+
+  if (order.notional !== undefined && assetClass !== 'ipo') {
+    return alpacaError('non-IPO notional orders cannot be replaced; cancel and resubmit instead', 42210000, 422);
   }
 
   return null;
@@ -831,6 +896,8 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
     const order = alpaca.orders.findOneBy('order_id', context.req.param('orderId'));
     if (!order) return context.json({ message: 'order not found' }, 404);
     const body = await jsonBody(context);
+    const rejection = rejectAlpacaOrderReplaceIfNeeded(order, body);
+    if (rejection) return rejection;
     const updated = alpaca.orders.update(order.id, { ...body, status: 'replaced' } as Partial<AlpacaOrder>);
     return context.json(updated ? orderPayload(updated) : {}, 200);
   });
@@ -841,15 +908,17 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
     const order = alpaca.orders.insert({
       order_id: crypto.randomUUID(),
       client_order_id: String(body.client_order_id ?? crypto.randomUUID()),
+      asset_class: String(body.asset_class ?? (String(body.symbol ?? '').toUpperCase().startsWith('FI') ? 'ipo' : 'us_equity')),
       symbol: String(body.symbol ?? 'SPY'),
       qty: String(body.qty ?? '1'),
+      notional: body.notional === undefined ? undefined : String(body.notional),
       side: String(body.side ?? 'buy') as 'buy' | 'sell',
       type: String(body.type ?? 'market'),
       time_in_force: String(body.time_in_force ?? 'day'),
       status: 'filled',
       submitted_at_alpaca: new Date().toISOString(),
       filled_at: new Date().toISOString(),
-      filled_qty: String(body.qty ?? '1'),
+      filled_qty: String(body.qty ?? '0'),
     });
     alpaca.activities.insert({
       activity_id: crypto.randomUUID(),
@@ -895,8 +964,12 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   app.post('/v2/positions/:symbol/do-not-exercise', (context: ContextLike) => context.json({}, 204));
 
   app.get('/v2/account/portfolio/history', (context: ContextLike) => context.json(portfolioHistory(), 200));
-  app.get('/v2/account/configurations', (context: ContextLike) => context.json(accountConfiguration(), 200));
-  app.patch?.('/v2/account/configurations', async (context: ContextLike) => context.json({ ...accountConfiguration(), ...(await jsonBody(context)) }, 200));
+  app.get('/v2/account/configurations', (context: ContextLike) => context.json(accountConfigurationPayload(accountConfiguration(alpaca)), 200));
+  app.patch?.('/v2/account/configurations', async (context: ContextLike) => {
+    const current = accountConfiguration(alpaca);
+    const updated = alpaca.accountConfigurations.update(current.id, await jsonBody(context));
+    return context.json(accountConfigurationPayload(updated ?? current), 200);
+  });
   app.get('/v2/calendar', (context: ContextLike) => context.json([calendarDay()], 200));
   app.get('/v2/assets', (context: ContextLike) => context.json(symbolsFromQuery(context).map(alpacaAsset), 200));
   app.get('/v2/assets/fixed_income/us_corporates', (context: ContextLike) => context.json({ us_corporates: [{ cusip: '123456789', isin: 'US1234567890', ticker: 'CORP', description: 'Emulator Corporate Bond', bond_status: 'active', coupon: 5, coupon_frequency: 'semi_annual', coupon_type: 'fixed', callable: false, convertible: false, country_domicile: 'US', dated_date: '2025-01-01', issue_date: '2025-01-01', maturity_date: '2030-01-01', min_order_size: 1, min_size_increment: 1, price_multiplier: 1, tradable: true }] }, 200));
@@ -1110,8 +1183,12 @@ export function registerRoutes(app: AppLike, store: StoreLike): void {
   app.get('/v1/accounts/:accountId/documents/:documentId', (context: ContextLike) => context.json({ id: context.req.param('documentId'), type: 'document' }, 200));
   app.get('/v1/accounts/:accountId/documents/:documentId/download', (context: ContextLike) => context.json({ id: context.req.param('documentId'), content: '' }, 200));
   app.get('/v1/trading/accounts/:accountId/account', (context: ContextLike) => context.json(alpaca.accounts.all()[0] ?? {}, 200));
-  app.get('/v1/trading/accounts/:accountId/account/configurations', (context: ContextLike) => context.json(accountConfiguration(), 200));
-  app.patch?.('/v1/trading/accounts/:accountId/account/configurations', async (context: ContextLike) => context.json({ ...accountConfiguration(), ...(await jsonBody(context)) }, 200));
+  app.get('/v1/trading/accounts/:accountId/account/configurations', (context: ContextLike) => context.json(accountConfigurationPayload(accountConfiguration(alpaca)), 200));
+  app.patch?.('/v1/trading/accounts/:accountId/account/configurations', async (context: ContextLike) => {
+    const current = accountConfiguration(alpaca);
+    const updated = alpaca.accountConfigurations.update(current.id, await jsonBody(context));
+    return context.json(accountConfigurationPayload(updated ?? current), 200);
+  });
   app.get('/v1/trading/accounts/:accountId/positions', (context: ContextLike) => context.json(alpaca.positions.all(), 200));
   app.get('/v1/trading/accounts/:accountId/positions/:symbol', (context: ContextLike) => context.json(alpaca.positions.findOneBy('symbol', context.req.param('symbol')) ?? {}, 200));
   app.delete('/v1/trading/accounts/:accountId/positions', (context: ContextLike) => context.json([], 200));

@@ -118,13 +118,37 @@ const requiredOrderFailureSignals = [
   'asset "${symbol}" not found',
   'account is restricted from trading',
   'pattern day trader protection blocks this order',
+  'account is configured for long-only trading',
+  'qty and notional are mutually exclusive',
+  'notional replace is only supported for IPO indications of interest',
+  'non-IPO notional orders cannot be replaced; cancel and resubmit instead',
   'too many requests',
   'temporarily unavailable',
   'rejectAlpacaOrderIfNeeded',
+  'rejectAlpacaOrderReplaceIfNeeded',
 ];
 
 for (const signal of requiredOrderFailureSignals) {
   assert.ok(source.includes(signal), `missing Alpaca order failure coverage for ${signal}`);
+}
+
+const requiredAccountConfigurationFields = [
+  'dtbp_check',
+  'trade_confirm_email',
+  'suspend_trade',
+  'no_shorting',
+  'fractional_trading',
+  'max_margin_multiplier',
+  'max_options_trading_level',
+  'pdt_check',
+  'ptp_no_exception_entry',
+  'disable_overnight_trading',
+  'accountConfigurationPayload',
+  'alpaca.accountConfigurations.update',
+];
+
+for (const field of requiredAccountConfigurationFields) {
+  assert.ok(source.includes(field), `missing Alpaca account configuration coverage for ${field}`);
 }
 
 console.log('alpaca smoke ok');

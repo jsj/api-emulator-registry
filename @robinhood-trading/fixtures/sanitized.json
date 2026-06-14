@@ -64,28 +64,59 @@
     }
   ],
   "portfolio": {
-    "total_value": "0.00",
-    "buying_power": "0.00",
+    "total_value": "124850.00",
+    "buying_power": "12350.00",
     "values_by_asset_class": {
-      "equities": "0.00",
+      "equities": "112500.00",
       "options": "0.00",
-      "cash": "0.00"
+      "cash": "12350.00"
     },
     "series": [
-      24750,
-      25200,
-      26000
+      119250,
+      121900,
+      124850
     ],
     "updated_at": "2026-01-01T00:00:00.000Z"
   },
-  "positions": [],
+  "positions": [
+    {
+      "id": "pos_voo",
+      "symbol": "VOO",
+      "quantity": "200",
+      "side": "long",
+      "market_value": "107500.00",
+      "average_entry_price": "488.25",
+      "current_price": "537.50",
+      "unrealized_pl": "9850.00",
+      "unrealized_pl_percent": "10.09"
+    },
+    {
+      "id": "pos_aapl",
+      "symbol": "AAPL",
+      "quantity": "20",
+      "side": "long",
+      "market_value": "5000.00",
+      "average_entry_price": "224.00",
+      "current_price": "250.00",
+      "unrealized_pl": "520.00",
+      "unrealized_pl_percent": "11.61"
+    }
+  ],
   "quotes": [
     {
+      "symbol": "VOO",
+      "price": "537.50",
+      "bid": "537.42",
+      "ask": "537.58",
+      "prior_close": "535.90",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
       "symbol": "AAPL",
-      "price": "312.51",
-      "bid": "312.20",
-      "ask": "312.46",
-      "prior_close": "310.85",
+      "price": "250.00",
+      "bid": "249.92",
+      "ask": "250.08",
+      "prior_close": "248.75",
       "updated_at": "2026-01-01T00:00:00.000Z"
     }
   ],

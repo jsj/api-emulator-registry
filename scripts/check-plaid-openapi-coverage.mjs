@@ -56,6 +56,11 @@ function parseOpenApiOperations(openapi) {
   return operations;
 }
 
+function parseOpenApiVersion(openapi) {
+  const match = openapi.match(/^info:\n(?:  .*\n)*?  version:\s*"?([^"\n]+)"?/m);
+  return match?.[1] ?? null;
+}
+
 function routeLiteral(path) {
   return `app.post("${path}"`;
 }
@@ -68,6 +73,7 @@ const [openapi, pluginSource, routesSource, fallbackSource] = await Promise.all(
 ]);
 
 const operations = parseOpenApiOperations(openapi);
+const openapiVersion = parseOpenApiVersion(openapi);
 const failures = [];
 const fallbackPresent =
   fallbackSource.includes('function registerFallbackRoutes') &&
@@ -102,6 +108,12 @@ const contractCountMatch = pluginSource.match(/openapiRouteCount:\s*(\d+)/);
 const declaredCount = contractCountMatch ? Number(contractCountMatch[1]) : null;
 if (declaredCount !== operations.length) {
   failures.push(`contract openapiRouteCount ${declaredCount ?? 'missing'} does not match spec operation count ${operations.length}`);
+}
+
+const contractVersionMatch = pluginSource.match(/openapiVersion:\s*["']([^"']+)["']/);
+const declaredVersion = contractVersionMatch?.[1] ?? null;
+if (declaredVersion !== openapiVersion) {
+  failures.push(`contract openapiVersion ${declaredVersion ?? 'missing'} does not match spec version ${openapiVersion ?? 'missing'}`);
 }
 
 if (failures.length > 0) {

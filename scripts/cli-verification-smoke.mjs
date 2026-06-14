@@ -4401,6 +4401,7 @@ async function main() {
     assert.equal(skyscannerPoll.status, 200);
     assert.equal((await skyscannerPoll.json()).status, 'RESULT_STATUS_COMPLETE');
     console.warn('Skyscanner has no maintained official v3 CLI/SDK with safe base URL override; direct route smoke covers the emulator slice');
+    console.warn('Financial Datasets exposes OpenAPI/HTTP docs but no maintained official CLI with a documented localhost base URL override; direct route smoke covers the emulator slice');
 
     const youtubeSearch = await fetch(`${baseUrl}/youtube/v3/search?part=snippet&q=emulator&type=video&key=youtube_emulator_key`);
     assert.equal(youtubeSearch.status, 200);

@@ -402,6 +402,12 @@
       "specifier": "./@figma/api-emulator.mjs",
       "description": "Figma provides REST APIs for user identity, design files, image rendering, comments, teams, and collaboration workflows."
     },
+    "financialdatasets": {
+      "kind": "package",
+      "packageName": "@api-emulator/financialdatasets",
+      "specifier": "./@financialdatasets/api-emulator.mjs",
+      "description": "Financial Datasets provides stock prices, company facts, financial statements, SEC filings, news, and macro interest-rate APIs."
+    },
     "finnhub": {
       "kind": "package",
       "packageName": "@api-emulator/finnhub",

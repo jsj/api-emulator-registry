@@ -5,6 +5,7 @@ import { fixedNow, getState, readBody, setState } from '../scripts/provider-plug
 
 const STATE_KEY = 'robinhood-trading:state';
 const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sanitized.json');
+const fixturePath = () => process.env.ROBINHOOD_EMULATOR_FIXTURE_PATH || FIXTURE_PATH;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_DAYS = 7;
 const ROBINHOOD_TRADING_TOOLS = [
@@ -45,7 +46,7 @@ const ROBINHOOD_TRADING_TOOLS = [
 
 function sanitizedFixtureState() {
   try {
-    return JSON.parse(readFileSync(FIXTURE_PATH, 'utf8'));
+    return JSON.parse(readFileSync(fixturePath(), 'utf8'));
   } catch {
     return null;
   }

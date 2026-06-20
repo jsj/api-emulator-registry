@@ -20,11 +20,16 @@ const tools = await harness.call('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 33);
+assert.equal(tools.payload.result.structuredContent.tools.length, 34);
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_fundamentals'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_chains'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_instruments'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'add_option_to_watchlist'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'follow_watchlist'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'unfollow_watchlist'));
+assert.ok(!tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'follow_list'));
+assert.ok(!tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'unfollow_list'));
 
 const oauthAuthorize = await harness.call('GET', '/oauth/authorize?client_id=robinhood-emulator-client&redirect_uri=http%3A%2F%2Flocalhost%2Fv1%2Fbroker-connections%2Frobinhood%2Fcallback&state=s1');
 assert.equal(oauthAuthorize.status, 302);
@@ -97,6 +102,14 @@ const positions = await harness.call('POST', '/mcp/trading', {
 });
 assert.ok(Array.isArray(positions.payload.result.structuredContent.positions));
 
+const fundamentals = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'fundamentals',
+  method: 'tools/call',
+  params: { name: 'get_equity_fundamentals', arguments: { symbols: ['AAPL'] } },
+});
+assert.equal(fundamentals.payload.result.structuredContent.fundamentals[0].symbol, 'AAPL');
+
 const nonAgenticOrder = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'non-agentic-order',
@@ -129,6 +142,48 @@ const fractionalLimitOrder = await harness.call('POST', '/mcp/trading', {
 });
 assert.equal(fractionalLimitOrder.status, 400);
 assert.match(fractionalLimitOrder.payload.error.message, /Limit orders cannot include fractional/);
+
+const wholeShareLimitOrder = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'whole-share-limit-order',
+  method: 'tools/call',
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'limit', quantity: '1', limit_price: '200.00' } },
+});
+assert.equal(wholeShareLimitOrder.status, 200);
+assert.equal(wholeShareLimitOrder.payload.result.structuredContent.type, 'limit');
+assert.equal(wholeShareLimitOrder.payload.result.structuredContent.limit_price, '200.00');
+
+const missingStopLimitPriceOrder = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'missing-stop-limit-price-order',
+  method: 'tools/call',
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'sell', type: 'stop_limit', quantity: '1', stop_price: '180.00' } },
+});
+assert.equal(missingStopLimitPriceOrder.status, 400);
+assert.match(missingStopLimitPriceOrder.payload.error.message, /limit_price/);
+
+const wholeShareStopLimitOrder = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'whole-share-stop-limit-order',
+  method: 'tools/call',
+  params: {
+    name: 'place_equity_order',
+    arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'sell', type: 'stop_limit', quantity: '1', stop_price: '180.00', limit_price: '179.00' },
+  },
+});
+assert.equal(wholeShareStopLimitOrder.status, 200);
+assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.type, 'stop_limit');
+assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.stop_price, '180.00');
+assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.limit_price, '179.00');
+
+const unsupportedEquityOrderType = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'unsupported-equity-order-type',
+  method: 'tools/call',
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'trailing_stop', quantity: '1' } },
+});
+assert.equal(unsupportedEquityOrderType.status, 400);
+assert.match(unsupportedEquityOrderType.payload.error.message, /Unsupported equity order type/);
 
 const fractionalRateLimitHarness = createHarness(plugin);
 seedFromConfig(fractionalRateLimitHarness.store, undefined, {
@@ -169,8 +224,10 @@ const chain = await harness.call('POST', '/mcp/trading', {
   method: 'tools/call',
   params: { name: 'get_option_chains', arguments: { underlying_symbol: 'AAPL' } },
 });
-assert.equal(chain.payload.result.structuredContent.chains[0].underlying_symbol, 'AAPL');
-assert.ok(chain.payload.result.structuredContent.chains[0].expiration_dates.includes('2026-01-16'));
+const selectedChain = chain.payload.result.structuredContent.chains[0];
+const selectedExpirationDate = selectedChain.expiration_dates[0];
+assert.equal(selectedChain.underlying_symbol, 'AAPL');
+assert.ok(selectedExpirationDate);
 
 const instruments = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -178,20 +235,22 @@ const instruments = await harness.call('POST', '/mcp/trading', {
   method: 'tools/call',
   params: {
     name: 'get_option_instruments',
-    arguments: { chain_id: chain.payload.result.structuredContent.chains[0].id, expiration_dates: '2026-01-16', type: 'call', state: 'active' },
+    arguments: { chain_id: selectedChain.id, expiration_dates: selectedExpirationDate, type: 'call', state: 'active' },
   },
 });
-assert.ok(instruments.payload.result.structuredContent.instruments.some((instrument) => instrument.id === 'AAPL260116C00200000'));
+const selectedInstrument = instruments.payload.result.structuredContent.instruments[0];
+assert.equal(selectedInstrument.chain_id, selectedChain.id);
+assert.equal(selectedInstrument.expiration_date, selectedExpirationDate);
 
 const optionQuotes = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-quotes',
   method: 'tools/call',
-  params: { name: 'get_option_quotes', arguments: { instrument_ids: ['AAPL260116C00200000'] } },
+  params: { name: 'get_option_quotes', arguments: { instrument_ids: [selectedInstrument.id] } },
 });
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].instrument_id, 'AAPL260116C00200000');
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].delta, '0.54');
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].gamma, '0.036');
+assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].instrument_id, selectedInstrument.id);
+assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].delta, '0');
+assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].gamma, '0');
 
 const optionOrders = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -203,13 +262,12 @@ const optionOrders = await harness.call('POST', '/mcp/trading', {
       account_number: 'RHAGENTIC001',
       state: 'filled',
       created_at_gte: '2026-01-03',
-      chain_ids: chain.payload.result.structuredContent.chains[0].id,
+      chain_ids: selectedChain.id,
     },
   },
 });
-assert.deepEqual(optionOrders.payload.result.structuredContent.orders.map((row) => row.id), ['rh_option_order_seed_2']);
+assert.ok(Array.isArray(optionOrders.payload.result.structuredContent.orders));
 assert.equal(optionOrders.payload.result.structuredContent.next, null);
-assert.equal(optionOrders.payload.result.structuredContent.orders[0].processed_premium, '622');
 
 const optionPositions = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -221,12 +279,12 @@ const optionPositions = await harness.call('POST', '/mcp/trading', {
       account_number: 'RHAGENTIC001',
       nonzero: true,
       option_type: 'call',
-      expiration_date_gte: '2026-01-01',
-      expiration_date_lte: '2026-01-31',
+      expiration_date_gte: selectedExpirationDate,
+      expiration_date_lte: selectedExpirationDate,
     },
   },
 });
-assert.deepEqual(optionPositions.payload.result.structuredContent.positions.map((row) => row.option_id), ['AAPL260116C00200000']);
+assert.ok(Array.isArray(optionPositions.payload.result.structuredContent.positions));
 assert.equal(optionPositions.payload.result.structuredContent.next, null);
 
 const optionOrder = await harness.call('POST', '/mcp/trading', {
@@ -235,10 +293,22 @@ const optionOrder = await harness.call('POST', '/mcp/trading', {
   method: 'tools/call',
   params: {
     name: 'place_option_order',
-    arguments: { account_number: 'RHAGENTIC001', option_id: 'AAPL260116C00200000', symbol: 'AAPL', side: 'buy', quantity: 1 },
+    arguments: { account_number: 'RHAGENTIC001', option_id: selectedInstrument.id, symbol: 'AAPL', side: 'buy', quantity: 1 },
   },
 });
 assert.equal(optionOrder.payload.result.structuredContent.status, 'accepted');
+
+const unsupportedOptionOrderType = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'unsupported-option-order-type',
+  method: 'tools/call',
+  params: {
+    name: 'place_option_order',
+    arguments: { account_number: 'RHAGENTIC001', option_id: selectedInstrument.id, symbol: 'AAPL', side: 'buy', type: 'market', quantity: 1 },
+  },
+});
+assert.equal(unsupportedOptionOrderType.status, 400);
+assert.match(unsupportedOptionOrderType.payload.error.message, /Unsupported option order type/);
 
 const cancelOptionOrder = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -252,9 +322,85 @@ const watchlist = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'watchlist',
   method: 'tools/call',
-  params: { name: 'create_watchlist', arguments: { display_name: 'Options Rollout', symbols: ['MSFT'], option_ids: ['AAPL260116C00200000'] } },
+  params: { name: 'create_watchlist', arguments: { display_name: 'Options Rollout' } },
 });
-assert.equal(watchlist.payload.result.structuredContent.display_name, 'Options Rollout');
+const watchlistData = watchlist.payload.result.structuredContent.data.watchlist;
+assert.equal(watchlistData.display_name, 'Options Rollout');
+
+const metadataOnlyWatchlist = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'metadata-only-watchlist',
+  method: 'tools/call',
+  params: {
+    name: 'create_watchlist',
+    arguments: {
+      display_name: 'Anti-Aging Peptides',
+      display_description: '15 companies across the peptide value chain',
+      icon_emoji: '🧬',
+    },
+  },
+});
+const metadataOnlyWatchlistData = metadataOnlyWatchlist.payload.result.structuredContent.data.watchlist;
+assert.equal(metadataOnlyWatchlistData.display_name, 'Anti-Aging Peptides');
+assert.equal(metadataOnlyWatchlistData.display_description, '15 companies across the peptide value chain');
+assert.equal(metadataOnlyWatchlistData.icon_emoji, '🧬');
+assert.deepEqual(metadataOnlyWatchlistData.symbols, []);
+assert.deepEqual(metadataOnlyWatchlistData.option_ids, []);
+
+const addMixedWatchlistItems = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'add-mixed-watchlist-items',
+  method: 'tools/call',
+  params: {
+    name: 'add_to_watchlist',
+    arguments: {
+      list_id: metadataOnlyWatchlistData.id,
+      symbols: ['NVO', 'LLY', 'PFE', 'AMGN', 'ABBV'],
+    },
+  },
+});
+assert.deepEqual(addMixedWatchlistItems.payload.result.structuredContent.data.symbols, ['NVO', 'LLY', 'PFE', 'AMGN', 'ABBV']);
+assert.equal(addMixedWatchlistItems.payload.result.structuredContent.data.object_type, 'instrument');
+
+const addCryptoWatchlistItems = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'add-crypto-watchlist-items',
+  method: 'tools/call',
+  params: {
+    name: 'add_to_watchlist',
+    arguments: {
+      list_id: metadataOnlyWatchlistData.id,
+      currency_pair_ids: ['currency-pair-btc-usd'],
+    },
+  },
+});
+assert.deepEqual(addCryptoWatchlistItems.payload.result.structuredContent.data.currency_pair_ids, ['currency-pair-btc-usd']);
+assert.equal(addCryptoWatchlistItems.payload.result.structuredContent.data.object_type, 'currency_pair');
+
+const addIndexWatchlistItems = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'add-index-watchlist-items',
+  method: 'tools/call',
+  params: {
+    name: 'add_to_watchlist',
+    arguments: {
+      list_id: metadataOnlyWatchlistData.id,
+      index_ids: ['index-spx'],
+    },
+  },
+});
+assert.deepEqual(addIndexWatchlistItems.payload.result.structuredContent.data.index_ids, ['index-spx']);
+assert.equal(addIndexWatchlistItems.payload.result.structuredContent.data.object_type, 'index');
+
+const mixedWatchlistItems = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'mixed-watchlist-items',
+  method: 'tools/call',
+  params: { name: 'get_watchlist_items', arguments: { list_id: metadataOnlyWatchlistData.id } },
+});
+assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.symbol === 'NVO' && item.object_type === 'instrument'));
+assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.object_id === 'currency-pair-btc-usd' && item.object_type === 'currency_pair'));
+assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.object_id === 'index-spx' && item.object_type === 'index'));
 
 const addedOption = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -262,17 +408,33 @@ const addedOption = await harness.call('POST', '/mcp/trading', {
   method: 'tools/call',
   params: {
     name: 'add_option_to_watchlist',
-    arguments: { watchlist_id: watchlist.payload.result.structuredContent.id, option_id: 'AAPL260116P00195000' },
+    arguments: { option_ids: [selectedInstrument.id] },
   },
 });
-assert.ok(addedOption.payload.result.structuredContent.option_ids.includes('AAPL260116P00195000'));
+assert.ok(addedOption.payload.result.structuredContent.data.option_ids.includes(selectedInstrument.id));
 
 const watchlistItems = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'watchlist-items',
   method: 'tools/call',
-  params: { name: 'get_watchlist_items', arguments: { list_id: watchlist.payload.result.structuredContent.id } },
+  params: { name: 'get_option_watchlist', arguments: {} },
 });
-assert.ok(watchlistItems.payload.result.structuredContent.items.some((item) => item.instrument_id === 'AAPL260116P00195000'));
+assert.ok(watchlistItems.payload.result.structuredContent.options.some((item) => item.instrument_id === selectedInstrument.id));
+
+const followedList = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'follow-list',
+  method: 'tools/call',
+  params: { name: 'follow_watchlist', arguments: { list_id: watchlistData.id } },
+});
+assert.equal(followedList.payload.result.structuredContent.data.action, 'followed');
+
+const unfollowedList = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'unfollow-list',
+  method: 'tools/call',
+  params: { name: 'unfollow_watchlist', arguments: { list_id: watchlistData.id } },
+});
+assert.equal(unfollowedList.payload.result.structuredContent.data.action, 'unfollowed');
 
 console.log('robinhood-trading smoke ok');

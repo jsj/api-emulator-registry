@@ -64,60 +64,393 @@
     }
   ],
   "portfolio": {
-    "total_value": "124850.00",
-    "buying_power": "12350.00",
+    "total_value": "1.00",
+    "buying_power": "1.00",
     "values_by_asset_class": {
-      "equities": "112500.00",
+      "equities": "0.00",
       "options": "0.00",
-      "cash": "12350.00"
+      "cash": "1.00"
     },
     "series": [
-      119250,
-      121900,
-      124850
+      24750,
+      25200,
+      26000
     ],
     "updated_at": "2026-01-01T00:00:00.000Z"
   },
-  "positions": [
-    {
-      "id": "pos_voo",
-      "symbol": "VOO",
-      "quantity": "200",
-      "side": "long",
-      "market_value": "107500.00",
-      "average_entry_price": "488.25",
-      "current_price": "537.50",
-      "unrealized_pl": "9850.00",
-      "unrealized_pl_percent": "10.09"
-    },
-    {
-      "id": "pos_aapl",
-      "symbol": "AAPL",
-      "quantity": "20",
-      "side": "long",
-      "market_value": "5000.00",
-      "average_entry_price": "224.00",
-      "current_price": "250.00",
-      "unrealized_pl": "520.00",
-      "unrealized_pl_percent": "11.61"
-    }
-  ],
+  "positions": [],
   "quotes": [
     {
-      "symbol": "VOO",
-      "price": "537.50",
-      "bid": "537.42",
-      "ask": "537.58",
-      "prior_close": "535.90",
+      "symbol": "AAPL",
+      "price": "297.89",
+      "bid": "290.00",
+      "ask": "303.00",
+      "prior_close": "295.95",
       "updated_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "optionChains": {
+    "AAPL": {
+      "id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+      "underlying_symbol": "AAPL",
+      "symbol": "AAPL",
+      "can_open_position": true,
+      "expiration_dates": [
+        "2026-06-22",
+        "2026-06-24",
+        "2026-06-26",
+        "2026-06-29",
+        "2026-07-01",
+        "2026-07-02"
+      ],
+      "trade_value_multiplier": "100.0000",
+      "min_ticks": {
+        "above_tick": "0.05",
+        "below_tick": "0.01",
+        "cutoff_price": "3.00"
+      },
+      "instruments": [
+        {
+          "id": "e43bcc78-1f83-4900-bf11-ac6d2cd02d34",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "225.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "cfa0de2b-c7b1-443f-aa52-f3c2f9e7e47d",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "230.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "d366cbe5-07e8-41cc-94a8-5720917b000a",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "235.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "676163e0-9793-454c-b6a9-3c9c49b9b239",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "240.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "a5d719d9-b77f-4ede-ab72-5cd0cd680c3f",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "245.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "683f926d-2462-4402-bc01-bd4bfbdbcf24",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "250.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "e2a80488-4e4a-4802-83d7-2eadc2f74b9f",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "255.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "808c9155-6ba8-4196-a7a5-afaec6efbaef",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "260.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "5df1469e-d8b1-4e6e-8d81-224e147b8289",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "262.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "1218fc6a-3470-4dba-b16b-317a3ddbdb7c",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "265.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "62c4203e-fa93-400c-8450-1b18d00a41da",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "267.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "29d65882-3a20-4e90-8813-ad4fe5650262",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "270.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "7204496d-1a7d-4a25-84b9-27907eff14ca",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "272.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "a24ec1e8-5c7b-454b-a5b1-4b38c2a2c173",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "275.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "dd412c41-c81a-4f49-9626-172a9c5a4888",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "277.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "7994bdbf-ff42-4c5f-b325-96e70331cdd5",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "280.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "e1fcfec0-c2d2-41db-8fe4-2bd773c93594",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "282.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "153a2678-6dbe-40ae-9d4e-08a45abe908a",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "285.0000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "98395cc5-8c65-4047-965c-2f4aa043056f",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "287.5000",
+          "state": "active",
+          "tradable": true
+        },
+        {
+          "id": "0aed83bb-78d6-45ef-85c0-4f2d21ce3ba5",
+          "chain_id": "7dd906e5-7d4b-4161-a3fe-2c3b62038482",
+          "symbol": "AAPL",
+          "chain_symbol": "AAPL",
+          "type": "call",
+          "expiration_date": "2026-06-22",
+          "strike_price": "290.0000",
+          "state": "active",
+          "tradable": true
+        }
+      ]
+    }
+  },
+  "optionQuotes": [
+    {
+      "instrument_id": "e43bcc78-1f83-4900-bf11-ac6d2cd02d34",
+      "symbol": "AAPL",
+      "bid": "0.00",
+      "ask": "0.00",
+      "mark_price": "0.00",
+      "implied_volatility": "0",
+      "delta": "0",
+      "gamma": "0",
+      "theta": "0",
+      "vega": "0",
+      "rho": "0",
+      "open_interest": 0,
+      "volume": 0,
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "watchlists": [
+    {
+      "id": "watchlist_1",
+      "name": "Options Watchlist",
+      "display_name": "Options Watchlist",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
     },
     {
-      "symbol": "AAPL",
-      "price": "250.00",
-      "bid": "249.92",
-      "ask": "250.08",
-      "prior_close": "248.75",
-      "updated_at": "2026-01-01T00:00:00.000Z"
+      "id": "watchlist_2",
+      "name": "Apps 💯",
+      "display_name": "Apps 💯",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_3",
+      "name": "100 most popular",
+      "display_name": "100 most popular",
+      "icon_emoji": null,
+      "display_description": "Watchlist 3",
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_4",
+      "name": "Upcoming earnings",
+      "display_name": "Upcoming earnings",
+      "icon_emoji": null,
+      "display_description": "Watchlist 4",
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_5",
+      "name": "Daily movers",
+      "display_name": "Daily movers",
+      "icon_emoji": null,
+      "display_description": "Watchlist 5",
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_6",
+      "name": "FNGA",
+      "display_name": "FNGA",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_7",
+      "name": "Risk",
+      "display_name": "Risk",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_8",
+      "name": "Generational",
+      "display_name": "Generational",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_9",
+      "name": "Bearish",
+      "display_name": "Bearish",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
+    },
+    {
+      "id": "watchlist_10",
+      "name": "Now",
+      "display_name": "Now",
+      "icon_emoji": null,
+      "display_description": null,
+      "symbols": [],
+      "option_ids": [],
+      "followed": false
     }
   ],
   "orders": [],

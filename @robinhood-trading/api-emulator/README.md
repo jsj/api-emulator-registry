@@ -24,9 +24,13 @@ npx -p api-emulator api --plugin ./@robinhood-trading/api-emulator.mjs --service
 
 ## Tool Coverage
 
-The emulator advertises the 33 MCP tools returned by Robinhood Trading MCP, including equity tools, index quotes, option chain/instrument/quote/position/order tools, watchlist read/mutation tools, and symbol search.
+The emulator advertises the 34 MCP tools returned by Robinhood Trading MCP, including equity tools, index quotes, option chain/instrument/quote/position/order tools, watchlist read/mutation tools, and symbol search.
 
-The Streamable HTTP MCP handshake returns protocol version `2025-06-18`. The option activity read surface was checked against the live read-only tool schema on `2026-06-12`:
+The Streamable HTTP MCP handshake returns protocol version `2025-06-18`. The live watchlist schema was checked on `2026-06-17`: `create_watchlist` creates metadata-only custom lists, `add_to_watchlist` adds stocks/ETFs, crypto currency-pair IDs, or market-index IDs, and options use `add_option_to_watchlist`.
+
+Supported emulator order types are `market`, `limit`, and `stop_limit` for equity orders, and `limit` for option orders. Unsupported order types return a 400 MCP error.
+
+The option activity read surface was checked against the live read-only tool schema on `2026-06-12`:
 
 - `get_option_orders(account_number, order_id?, state?, created_at_gte?, chain_ids?, underlying_type?, placed_agent?, cursor?)`
 - `get_option_positions(account_number, nonzero?, chain_ids?, option_ids?, type?, option_type?, expiration_date?, expiration_date_lte?, expiration_date_gte?, cursor?)`

@@ -8,6 +8,8 @@ const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', '
 const fixturePath = () => process.env.ROBINHOOD_EMULATOR_FIXTURE_PATH || FIXTURE_PATH;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_DAYS = 7;
+const EQUITY_ORDER_TYPES = ['market', 'limit', 'stop_limit'];
+const OPTION_ORDER_TYPES = ['limit'];
 const ROBINHOOD_TRADING_TOOLS = [
   'add_option_to_watchlist',
   'add_to_watchlist',
@@ -16,6 +18,7 @@ const ROBINHOOD_TRADING_TOOLS = [
   'create_watchlist',
   'follow_watchlist',
   'get_accounts',
+  'get_equity_fundamentals',
   'get_equity_historicals',
   'get_equity_orders',
   'get_equity_positions',
@@ -84,6 +87,16 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         { begins_at: '2025-12-30T14:30:00.000Z', open_price: '200.10', high_price: '202.00', low_price: '199.10', close_price: '201.20', volume: 39000000 },
       ],
     },
+    equityFundamentals: [
+      {
+        symbol: 'AAPL',
+        instrument_id: 'instrument-aapl',
+        market_cap: '3000000000000',
+        pe_ratio: '31.5',
+        dividend_yield: '0.005',
+        description: 'Apple Inc. designs, manufactures, and markets smartphones, computers, tablets, wearables, and services.',
+      },
+    ],
     optionChains: {
       AAPL: {
         id: '7dd906e5-7d4b-4161-a3fe-2c3b62038482',
@@ -249,17 +262,25 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         display_name: 'Agentic Watchlist',
         icon_emoji: null,
         symbols: ['AAPL'],
+        currency_pair_ids: [],
+        index_ids: [],
         option_ids: ['AAPL260116C00200000'],
         followed: true,
+        owner_type: 'custom',
+        allowed_object_types: ['instrument', 'currency_pair', 'index'],
       },
     ],
     indexes: [
-      { symbol: 'SPX', name: 'S&P 500 Index', mic: 'XSP' },
-      { symbol: 'NDX', name: 'Nasdaq 100 Index', mic: 'XND' },
+      { id: 'index-spx', symbol: 'SPX', name: 'S&P 500 Index', mic: 'XSP' },
+      { id: 'index-ndx', symbol: 'NDX', name: 'Nasdaq 100 Index', mic: 'XND' },
     ],
     indexQuotes: [
       { symbol: 'SPX', price: '5150.25', bid: '5150.00', ask: '5150.50', updated_at: fixedNow },
       { symbol: 'NDX', price: '18225.10', bid: '18224.75', ask: '18225.50', updated_at: fixedNow },
+    ],
+    currencyPairs: [
+      { id: 'currency-pair-btc-usd', symbol: 'BTC-USD', name: 'Bitcoin' },
+      { id: 'currency-pair-eth-usd', symbol: 'ETH-USD', name: 'Ethereum' },
     ],
     followedWatchlists: ['watchlist-default'],
     orders: [],
@@ -292,6 +313,50 @@ const mcpResult = (id, structuredContent) => ({
   result: { content: [{ type: 'text', text: JSON.stringify(structuredContent) }], structuredContent },
 });
 const mcpError = (id, message, status = 400, code = -32602) => ({ payload: { jsonrpc: '2.0', id, error: { code, message } }, status });
+const watchlistGuide =
+  "Distinguish lists by owner_type: 'custom' lists are writable with add_to_watchlist, remove_from_watchlist, and update_watchlist; Robinhood-curated lists are read-only and managed via follow_watchlist / unfollow_watchlist.";
+const watchlistItemsGuide =
+  'For instruments object_type=instrument and symbol is the ticker. For crypto object_type=currency_pair. The has_futures_contracts flag indicates whether futures items are present.';
+
+function watchlistData(watchlist) {
+  if (!watchlist) return null;
+  const symbols = watchlist.symbols ?? [];
+  const currencyPairIds = watchlist.currency_pair_ids ?? [];
+  const indexIds = watchlist.index_ids ?? [];
+  const optionIds = watchlist.option_ids ?? [];
+  return {
+    ...watchlist,
+    symbols,
+    currency_pair_ids: currencyPairIds,
+    index_ids: indexIds,
+    option_ids: optionIds,
+    owner_type: watchlist.owner_type ?? 'custom',
+    item_count: Number(watchlist.item_count ?? symbols.length + currencyPairIds.length + indexIds.length + optionIds.length),
+    allowed_object_types: watchlist.allowed_object_types ?? ['instrument', 'currency_pair', 'index'],
+  };
+}
+
+function watchlistItems(watchlist) {
+  return [
+    ...(watchlist?.symbols ?? []).map((symbol) => ({ type: 'equity', object_type: 'instrument', symbol })),
+    ...(watchlist?.currency_pair_ids ?? []).map((objectId) => ({ type: 'crypto', object_type: 'currency_pair', object_id: objectId })),
+    ...(watchlist?.index_ids ?? []).map((objectId) => ({ type: 'index', object_type: 'index', object_id: objectId })),
+    ...(watchlist?.option_ids ?? []).map((instrumentId) => ({ type: 'option', object_type: 'option_strategy', instrument_id: instrumentId })),
+  ];
+}
+
+function singleAssetWatchlistOperation(args) {
+  const symbols = args.symbols !== undefined || args.symbol !== undefined ? requestedSymbols(args) : [];
+  const currencyPairIds = requestedCurrencyPairIds(args);
+  const indexIds = requestedIndexIds(args);
+  if (currencyPairIds.length) {
+    return { symbols: [], currency_pair_ids: currencyPairIds, index_ids: [], object_type: 'currency_pair' };
+  }
+  if (indexIds.length) {
+    return { symbols: [], currency_pair_ids: [], index_ids: indexIds, object_type: 'index' };
+  }
+  return { symbols, currency_pair_ids: [], index_ids: [], object_type: 'instrument' };
+}
 const currentMs = () => new Date(fixedNow).getTime();
 const isExpired = (isoTimestamp) => !isoTimestamp || new Date(isoTimestamp).getTime() <= currentMs();
 const tokenExpiry = () => new Date(currentMs() + REFRESH_TOKEN_TTL_DAYS * DAY_MS).toISOString();
@@ -324,11 +389,38 @@ function validateTradingAccount(id, s, args) {
 }
 
 function validateOrderShape(id, args) {
-  const orderType = String(args.type ?? 'market');
+  const orderType = normalizedEquityOrderType(args);
+  if (!EQUITY_ORDER_TYPES.includes(orderType)) {
+    return mcpError(id, `Unsupported equity order type "${args.type}"; supported order types: ${EQUITY_ORDER_TYPES.join(', ')}`, 400);
+  }
+  const hasLimitPrice = args.limit_price !== undefined || args.limitPrice !== undefined;
+  const hasStopPrice = args.stop_price !== undefined || args.stopPrice !== undefined;
+  if ((orderType === 'limit' || orderType === 'stop_limit') && !hasLimitPrice) {
+    return mcpError(id, 'Limit orders require limit_price', 400);
+  }
+  if (orderType === 'stop_limit' && !hasStopPrice) {
+    return mcpError(id, 'Stop-limit orders require stop_price', 400);
+  }
   if ((orderType === 'limit' || orderType === 'stop_limit') && isFractionalQuantity(args.quantity ?? args.qty)) {
     return mcpError(id, 'Limit orders cannot include fractional share quantities; use whole-share limit orders or market dollar_amount orders', 400);
   }
   return null;
+}
+
+function validateOptionOrderShape(id, args) {
+  const orderType = normalizedOptionOrderType(args);
+  if (!OPTION_ORDER_TYPES.includes(orderType)) {
+    return mcpError(id, `Unsupported option order type "${args.type}"; supported order types: ${OPTION_ORDER_TYPES.join(', ')}`, 400);
+  }
+  return null;
+}
+
+function normalizedEquityOrderType(args) {
+  return String(args.type ?? 'market').trim().toLowerCase();
+}
+
+function normalizedOptionOrderType(args) {
+  return String(args.type ?? 'limit').trim().toLowerCase();
 }
 
 function validateFractionalRateLimit(id, s, args) {
@@ -377,6 +469,24 @@ function requestedExplicitOptionIds(args) {
   if (args.option_ids) return splitList(args.option_ids);
   if (args.option_id) return splitList(args.option_id);
   if (args.optionId) return [String(args.optionId)];
+  return [];
+}
+
+function requestedCurrencyPairIds(args) {
+  if (Array.isArray(args.currency_pair_ids)) return args.currency_pair_ids.map(String);
+  if (Array.isArray(args.currencyPairIds)) return args.currencyPairIds.map(String);
+  if (args.currency_pair_ids) return splitList(args.currency_pair_ids);
+  if (args.currency_pair_id) return splitList(args.currency_pair_id);
+  if (args.currencyPairId) return [String(args.currencyPairId)];
+  return [];
+}
+
+function requestedIndexIds(args) {
+  if (Array.isArray(args.index_ids)) return args.index_ids.map(String);
+  if (Array.isArray(args.indexIds)) return args.indexIds.map(String);
+  if (args.index_ids) return splitList(args.index_ids);
+  if (args.index_id) return splitList(args.index_id);
+  if (args.indexId) return [String(args.indexId)];
   return [];
 }
 
@@ -568,7 +678,7 @@ function optionOrder(id, s, args, status = 'accepted') {
     processed_premium: processedPremium,
     state: status,
     placed_agent: 'agent',
-    type: args.type ?? 'limit',
+    type: normalizedOptionOrderType(args),
     limit_price: args.limit_price ?? args.limitPrice ?? '6.25',
     status,
     created_at: fixedNow,
@@ -743,6 +853,10 @@ export const plugin = {
             }),
           );
         }
+        case 'get_equity_fundamentals': {
+          const symbols = requestedSymbols(args);
+          return c.json(mcpResult(id, { fundamentals: (s.equityFundamentals ?? []).filter((row) => symbols.includes(row.symbol)) }));
+        }
         case 'get_equity_orders':
           return c.json(mcpResult(id, { orders: s.orders }));
         case 'get_equity_tradability':
@@ -775,7 +889,9 @@ export const plugin = {
             quantity: args.quantity ?? args.qty ?? '1',
             dollar_amount: args.dollar_amount,
             notional: args.notional,
-            type: args.type ?? 'market',
+            type: normalizedEquityOrderType(args),
+            limit_price: args.limit_price ?? args.limitPrice,
+            stop_price: args.stop_price ?? args.stopPrice,
             status: 'accepted',
             submitted_at: fixedNow,
           };
@@ -827,11 +943,15 @@ export const plugin = {
         case 'review_option_order': {
           const accountError = validateTradingAccount(id, s, args);
           if (accountError) return c.json(accountError.payload, accountError.status);
+          const shapeError = validateOptionOrderShape(id, args);
+          if (shapeError) return c.json(shapeError.payload, shapeError.status);
           return c.json(mcpResult(id, { accepted: true, warnings: [], estimated_price: args.limit_price ?? '6.25', estimated_notional: '625.00' }));
         }
         case 'place_option_order': {
           const accountError = validateTradingAccount(id, s, args);
           if (accountError) return c.json(accountError.payload, accountError.status);
+          const shapeError = validateOptionOrderShape(id, args);
+          if (shapeError) return c.json(shapeError.payload, shapeError.status);
           const order = optionOrder(id, s, args);
           s.optionOrders.push(order);
           save(store, s);
@@ -844,16 +964,13 @@ export const plugin = {
           return c.json(mcpResult(id, { id: args.order_id ?? args.id, status: order ? 'canceled' : 'not_found' }));
         }
         case 'get_watchlists':
-          return c.json(mcpResult(id, { watchlists: s.watchlists }));
+          return c.json(mcpResult(id, { data: { watchlists: s.watchlists.map(watchlistData) }, guide: watchlistGuide }));
         case 'get_watchlist_items': {
           const watchlist = findWatchlist(s, args);
           return c.json(
             mcpResult(id, {
-              watchlist: watchlist ?? null,
-              items: [
-                ...(watchlist?.symbols ?? []).map((symbol) => ({ type: 'equity', symbol })),
-                ...(watchlist?.option_ids ?? []).map((instrumentId) => ({ type: 'option', instrument_id: instrumentId })),
-              ],
+              data: { items: watchlistItems(watchlist), has_futures_contracts: false },
+              guide: watchlistItemsGuide,
             }),
           );
         }
@@ -865,13 +982,22 @@ export const plugin = {
             display_name: displayName,
             icon_emoji: args.icon_emoji ?? args.iconEmoji ?? null,
             display_description: args.display_description ?? args.displayDescription ?? null,
-            symbols: requestedSymbols(args, '').filter(Boolean),
-            option_ids: requestedOptionIds(args, s),
+            symbols: [],
+            currency_pair_ids: [],
+            index_ids: [],
+            option_ids: [],
             followed: false,
+            owner_type: 'custom',
+            allowed_object_types: ['instrument', 'currency_pair', 'index'],
           };
           s.watchlists.push(watchlist);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: { watchlist: watchlistData(watchlist) },
+              guide: 'On success the response includes the new list_id; pass it to add_to_watchlist to populate the list.',
+            }),
+          );
         }
         case 'update_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -886,37 +1012,78 @@ export const plugin = {
             watchlist.display_description = args.display_description ?? args.displayDescription;
           }
           if (Array.isArray(args.symbols)) watchlist.symbols = requestedSymbols(args, '');
+          if (Array.isArray(args.currency_pair_ids) || Array.isArray(args.currencyPairIds)) watchlist.currency_pair_ids = requestedCurrencyPairIds(args);
+          if (Array.isArray(args.index_ids) || Array.isArray(args.indexIds)) watchlist.index_ids = requestedIndexIds(args);
           if (Array.isArray(args.option_ids) || Array.isArray(args.optionIds)) watchlist.option_ids = requestedOptionIds(args, s);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(mcpResult(id, { data: { watchlist: watchlistData(watchlist) }, guide: 'On success the response contains the full updated list.' }));
         }
         case 'add_to_watchlist': {
           const watchlist = findWatchlist(s, args);
           if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
-          watchlist.symbols = upsertIntoArray(watchlist.symbols, requestedSymbols(args));
+          const operation = singleAssetWatchlistOperation(args);
+          watchlist.symbols = upsertIntoArray(watchlist.symbols, operation.symbols);
+          watchlist.currency_pair_ids = upsertIntoArray(watchlist.currency_pair_ids, operation.currency_pair_ids);
+          watchlist.index_ids = upsertIntoArray(watchlist.index_ids, operation.index_ids);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: { ...operation, list_id: watchlist.id, operation: 'create', status: 'ok' },
+              guide: 'On success the response echoes the operations applied.',
+            }),
+          );
         }
         case 'add_option_to_watchlist': {
           const watchlist = findWatchlist(s, args);
           if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
           watchlist.option_ids = upsertIntoArray(watchlist.option_ids, requestedOptionIds(args, s));
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: {
+                option_ids: requestedOptionIds(args, s),
+                position_type: args.position_type ?? args.positionType ?? 'long',
+                list_id: watchlist.id,
+                operation: 'create',
+                status: 'ok',
+              },
+              guide: 'Each option_id is added as a single-leg position with the supplied position_type.',
+            }),
+          );
         }
         case 'remove_from_watchlist': {
           const watchlist = findWatchlist(s, args);
           if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
-          watchlist.symbols = removeFromArray(watchlist.symbols, requestedSymbols(args));
+          const operation = singleAssetWatchlistOperation(args);
+          watchlist.symbols = removeFromArray(watchlist.symbols, operation.symbols);
+          watchlist.currency_pair_ids = removeFromArray(watchlist.currency_pair_ids, operation.currency_pair_ids);
+          watchlist.index_ids = removeFromArray(watchlist.index_ids, operation.index_ids);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: { ...operation, list_id: watchlist.id, operation: 'delete', status: 'ok' },
+              guide: 'On success the response echoes the operations applied.',
+            }),
+          );
         }
         case 'remove_option_from_watchlist': {
           const watchlist = findWatchlist(s, args);
           if (!watchlist) return c.json(mcpError(id, 'Watchlist not found', 404).payload, 404);
-          watchlist.option_ids = removeFromArray(watchlist.option_ids, requestedOptionIds(args, s));
+          const optionIds = requestedOptionIds(args, s);
+          watchlist.option_ids = removeFromArray(watchlist.option_ids, optionIds);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: {
+                option_ids: optionIds,
+                position_type: args.position_type ?? args.positionType ?? 'long',
+                list_id: watchlist.id,
+                operation: 'delete',
+                status: 'ok',
+              },
+              guide: 'Contracts not on the list are no-ops.',
+            }),
+          );
         }
         case 'follow_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -924,7 +1091,17 @@ export const plugin = {
           watchlist.followed = true;
           s.followedWatchlists = upsertIntoArray(s.followedWatchlists, [watchlist.id]);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(
+            mcpResult(id, {
+              data: {
+                follower: { list_id: watchlist.id, user_id: 'user-emulator', owner_type: watchlist.owner_type ?? 'custom', created_at: fixedNow },
+                list_id: watchlist.id,
+                action: 'followed',
+                status: 'ok',
+              },
+              guide: 'Use only for curated lists; the user already owns their custom lists.',
+            }),
+          );
         }
         case 'unfollow_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -932,10 +1109,21 @@ export const plugin = {
           watchlist.followed = false;
           s.followedWatchlists = removeFromArray(s.followedWatchlists, [watchlist.id]);
           save(store, s);
-          return c.json(mcpResult(id, watchlist));
+          return c.json(mcpResult(id, { data: { list_id: watchlist.id, action: 'unfollowed', status: 'ok' }, guide: "404 means the user wasn't following that list." }));
         }
-        case 'search':
-          return c.json(mcpResult(id, { results: [{ symbol: 'AAPL', name: 'Apple Inc.' }] }));
+        case 'search': {
+          const query = String(args.query ?? '').toLowerCase();
+          const assetType = String(args.asset_type ?? args.assetType ?? 'instrument');
+          if (assetType === 'currency_pair') {
+            const currencyPairs = (s.currencyPairs ?? []).filter((row) => `${row.symbol} ${row.name}`.toLowerCase().includes(query));
+            return c.json(mcpResult(id, { currency_pairs: currencyPairs.length ? currencyPairs : s.currencyPairs ?? [] }));
+          }
+          if (assetType === 'market_index') {
+            const marketIndexes = (s.indexes ?? []).filter((row) => `${row.symbol} ${row.name}`.toLowerCase().includes(query));
+            return c.json(mcpResult(id, { market_indexes: marketIndexes.length ? marketIndexes : s.indexes ?? [] }));
+          }
+          return c.json(mcpResult(id, { results: [{ instrument_id: 'instrument-aapl', symbol: 'AAPL', name: 'Apple Inc.' }] }));
+        }
         default: {
           const result = mcpError(id, `Unknown tool: ${tool}`);
           return c.json(result.payload, result.status);

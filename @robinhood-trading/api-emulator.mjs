@@ -83,8 +83,12 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
     quotes: [{ symbol: 'AAPL', price: '200.00', bid: '199.95', ask: '200.05', prior_close: '198.00', updated_at: fixedNow }],
     equityHistoricals: {
       AAPL: [
-        { begins_at: '2025-12-29T14:30:00.000Z', open_price: '198.00', high_price: '201.50', low_price: '197.25', close_price: '200.00', volume: 42000000 },
-        { begins_at: '2025-12-30T14:30:00.000Z', open_price: '200.10', high_price: '202.00', low_price: '199.10', close_price: '201.20', volume: 39000000 },
+        { begins_at: '2025-12-29T00:00:00Z', open_price: '198.00', high_price: '201.50', low_price: '197.25', close_price: '200.00', volume: 42000000, session: 'reg' },
+        { begins_at: '2025-12-30T00:00:00Z', open_price: '200.10', high_price: '202.00', low_price: '199.10', close_price: '201.20', volume: 39000000, session: 'reg' },
+      ],
+      SPY: [
+        { begins_at: '2025-12-29T00:00:00Z', open_price: '585.00', high_price: '590.00', low_price: '584.25', close_price: '589.50', volume: 58000000, session: 'reg' },
+        { begins_at: '2025-12-30T00:00:00Z', open_price: '589.75', high_price: '592.20', low_price: '588.90', close_price: '591.10', volume: 54000000, session: 'reg' },
       ],
     },
     equityFundamentals: [
@@ -441,6 +445,39 @@ function requestedSymbols(args, fallback = 'AAPL') {
     .split(',')
     .map((symbol) => normalizeSymbol(symbol))
     .filter(Boolean);
+}
+
+function parseRfc3339(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value)) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : null;
+}
+
+function equityHistoricalResults(s, args) {
+  const symbols = requestedSymbols(args);
+  const interval = String(args.interval ?? '5minute');
+  const bounds = String(args.bounds ?? 'regular');
+  const startTime = parseRfc3339(args.start_time ?? args.startTime);
+  const endTime = args.end_time || args.endTime ? parseRfc3339(args.end_time ?? args.endTime) : null;
+  const savedResults = Array.isArray(s.equityHistoricalResults) ? s.equityHistoricalResults : null;
+
+  return symbols.map((symbol) => {
+    const saved = savedResults?.find((row) => normalizeSymbol(row.symbol) === symbol);
+    const bars = saved?.bars ?? s.equityHistoricals?.[symbol] ?? [];
+    const filteredBars = bars.filter((bar) => {
+      const beginsAt = Date.parse(bar.begins_at);
+      if (!Number.isFinite(beginsAt)) return true;
+      if (startTime !== null && beginsAt < startTime) return false;
+      if (endTime !== null && beginsAt >= endTime) return false;
+      return true;
+    });
+    return {
+      symbol,
+      interval: saved?.interval ?? interval,
+      bounds: saved?.bounds ?? bounds,
+      bars: filteredBars,
+    };
+  });
 }
 
 function requestedOptionIds(args, s) {
@@ -844,12 +881,19 @@ export const plugin = {
           return c.json(mcpResult(id, { quotes: s.quotes.filter((quote) => symbols.includes(quote.symbol)) }));
         }
         case 'get_equity_historicals': {
-          const symbols = requestedSymbols(args);
+          if (!parseRfc3339(args.start_time ?? args.startTime)) {
+            const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          if ((args.end_time || args.endTime) && !parseRfc3339(args.end_time ?? args.endTime)) {
+            const error = mcpError(id, "end_time must be RFC3339 (e.g. '2026-01-08T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
           return c.json(
             mcpResult(id, {
-              historicals: Object.fromEntries(symbols.map((symbol) => [symbol, s.equityHistoricals?.[symbol] ?? []])),
-              interval: args.interval ?? 'day',
-              span: args.span ?? 'week',
+              data: { results: equityHistoricalResults(s, args) },
+              guide:
+                "Bars are left-edge labeled in UTC; convert to the user's timezone for presentation. Treat interpolated=true bars as gap-fill and usually hide them in charts. For a multi-bar move, compute return from the first bar's open_price to the last bar's close_price.",
             }),
           );
         }

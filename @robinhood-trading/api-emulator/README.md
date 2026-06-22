@@ -1,6 +1,6 @@
 # @api-emulator/robinhood-trading
 
-Robinhood Agentic Trading MCP provides an emulator for accounts, portfolios, equity and option positions, quotes with Greeks, option chains, option instruments, watchlists, order review, placement, cancellation, and symbol search.
+Robinhood Agentic Trading MCP provides an emulator for accounts, portfolios, equity and option positions, equity historical bars, quotes with Greeks, option chains, option instruments, watchlists, order review, placement, cancellation, and symbol search.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -24,11 +24,17 @@ npx -p api-emulator api --plugin ./@robinhood-trading/api-emulator.mjs --service
 
 ## Tool Coverage
 
-The emulator advertises the 34 MCP tools returned by Robinhood Trading MCP, including equity tools, index quotes, option chain/instrument/quote/position/order tools, watchlist read/mutation tools, and symbol search.
+The emulator advertises the 34 MCP tools returned by Robinhood Trading MCP, including equity tools, equity historical bars, index quotes, option chain/instrument/quote/position/order tools, watchlist read/mutation tools, and symbol search.
 
 The Streamable HTTP MCP handshake returns protocol version `2025-06-18`. The live watchlist schema was checked on `2026-06-17`: `create_watchlist` creates metadata-only custom lists, `add_to_watchlist` adds stocks/ETFs, crypto currency-pair IDs, or market-index IDs, and options use `add_option_to_watchlist`.
 
 Supported emulator order types are `market`, `limit`, and `stop_limit` for equity orders, and `limit` for option orders. Unsupported order types return a 400 MCP error.
+
+The equity historicals read surface was checked against the live tool on `2026-06-22`:
+
+- `get_equity_historicals(symbols, start_time, end_time?, interval?, bounds?)`
+
+`start_time` must be RFC3339, for example `2026-06-15T00:00:00Z`; date-only strings are rejected. When `interval` is omitted, the live tool currently returns `5minute` bars. `interval=day` works for multi-year analysis but the live service rejects ranges estimated above 5,000 bars, so long lookbacks should use `week`/`month` or chunked daily requests. Historical comparisons can include benchmark symbols such as `SPY`; bars before a symbol has real data may be returned as `interpolated: true` gap-fill rows and should usually be ignored for analytics.
 
 The option activity read surface was checked against the live read-only tool schema on `2026-06-12`:
 
@@ -62,6 +68,29 @@ robinhood-trading:
       gamma: "0.036"
       theta: "-0.071"
       vega: "0.118"
+  equityHistoricalResults:
+    - symbol: AAPL
+      interval: day
+      bounds: regular
+      bars:
+        - begins_at: "2025-12-29T00:00:00Z"
+          open_price: "198.00"
+          close_price: "200.00"
+          high_price: "201.50"
+          low_price: "197.25"
+          volume: 42000000
+          session: reg
+    - symbol: SPY
+      interval: day
+      bounds: regular
+      bars:
+        - begins_at: "2025-12-29T00:00:00Z"
+          open_price: "585.00"
+          close_price: "589.50"
+          high_price: "590.00"
+          low_price: "584.25"
+          volume: 58000000
+          session: reg
   optionOrders:
     - id: rh_option_order_seed_1
       account_number: RHAGENTIC001

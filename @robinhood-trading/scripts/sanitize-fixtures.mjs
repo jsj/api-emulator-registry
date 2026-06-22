@@ -159,6 +159,28 @@ function sanitizeOptionQuotes(quotesPayload) {
   }));
 }
 
+function sanitizeEquityHistoricals(historicalsPayload) {
+  const results = firstArray(historicalsPayload, ['results']);
+  return results.slice(0, 10).map((result) => ({
+    symbol: String(result.symbol ?? 'AAPL').trim().toUpperCase(),
+    interval: result.interval ?? 'day',
+    bounds: result.bounds ?? 'regular',
+    bars: firstArray(result, ['bars', 'historicals'])
+      .slice(0, 40)
+      .map((bar) => ({
+        begins_at: bar.begins_at,
+        open_price: money(bar.open_price ?? bar.open, '0.00'),
+        close_price: money(bar.close_price ?? bar.close, '0.00'),
+        high_price: money(bar.high_price ?? bar.high, '0.00'),
+        low_price: money(bar.low_price ?? bar.low, '0.00'),
+        volume: Number(bar.volume ?? 0),
+        session: bar.session ?? 'reg',
+        ...(bar.interpolated ? { interpolated: true } : {}),
+      }))
+      .filter((bar) => bar.begins_at),
+  }));
+}
+
 function sanitizeWatchlists(watchlistsPayload) {
   const watchlists = firstArray(watchlistsPayload, ['watchlists', 'results']);
   return watchlists.slice(0, 10).map((watchlist, index) => ({
@@ -178,6 +200,7 @@ const accountsRaw = loadTool('get_accounts') ?? {};
 const positionsRaw = loadTool('get_equity_positions') ?? {};
 const ordersRaw = loadTool('get_equity_orders') ?? {};
 const quotesRaw = firstArray(loadTool('get_equity_quotes'), ['quotes', 'results']);
+const equityHistoricalResults = sanitizeEquityHistoricals(loadTool('get_equity_historicals'));
 const tradabilityRaw = loadTool('get_equity_tradability') ?? {};
 const optionChains = sanitizeOptionChains(loadTool('get_option_chains'), loadTool('get_option_instruments'));
 const optionQuotes = sanitizeOptionQuotes(loadTool('get_option_quotes'));
@@ -211,6 +234,7 @@ const sanitized = {
       updated_at: fixedNow,
     },
   ],
+  ...(equityHistoricalResults.length ? { equityHistoricalResults } : {}),
   ...(optionChains ? { optionChains } : {}),
   ...(optionQuotes.length ? { optionQuotes } : {}),
   ...(watchlists.length ? { watchlists } : {}),

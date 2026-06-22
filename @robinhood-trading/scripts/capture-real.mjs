@@ -10,6 +10,9 @@ const RAW_DIR = join(RAW_ROOT, new Date().toISOString().replace(/[:.]/g, '-'));
 const LATEST_DIR = join(RAW_ROOT, 'latest');
 const MCP_URL = process.env.ROBINHOOD_MCP_TRADING_URL ?? 'https://agent.robinhood.com/mcp/trading';
 const SYMBOLS = (process.env.ROBINHOOD_MCP_FIXTURE_SYMBOLS ?? 'AAPL').split(',').map((symbol) => symbol.trim()).filter(Boolean);
+const HISTORICAL_START_TIME = process.env.ROBINHOOD_MCP_HISTORICAL_START_TIME ?? '2026-06-15T00:00:00Z';
+const HISTORICAL_END_TIME = process.env.ROBINHOOD_MCP_HISTORICAL_END_TIME ?? '2026-06-22T00:00:00Z';
+const HISTORICAL_INTERVAL = process.env.ROBINHOOD_MCP_HISTORICAL_INTERVAL ?? 'day';
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -76,6 +79,15 @@ const calls = [
   { tool: 'get_portfolio', args: [accountArg] },
   { tool: 'get_equity_positions', args: [accountArg] },
   { tool: 'get_equity_quotes', args: [`symbols=${JSON.stringify(SYMBOLS)}`] },
+  {
+    tool: 'get_equity_historicals',
+    args: [
+      `symbols=${JSON.stringify([...new Set([...SYMBOLS, 'SPY'])])}`,
+      `start_time=${HISTORICAL_START_TIME}`,
+      `end_time=${HISTORICAL_END_TIME}`,
+      `interval=${HISTORICAL_INTERVAL}`,
+    ],
+  },
   { tool: 'get_equity_orders', args: [accountArg] },
   { tool: 'get_equity_tradability', args: [accountArg, `symbols=${JSON.stringify([SYMBOLS[0] ?? 'AAPL'])}`] },
   { tool: 'search', args: ['query=Apple'] },

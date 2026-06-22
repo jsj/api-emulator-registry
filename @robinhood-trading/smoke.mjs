@@ -23,6 +23,7 @@ const tools = await harness.call('POST', '/mcp/trading', {
 assert.equal(tools.payload.result.structuredContent.tools.length, 34);
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_fundamentals'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_historicals'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_chains'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_instruments'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'add_option_to_watchlist'));
@@ -109,6 +110,30 @@ const fundamentals = await harness.call('POST', '/mcp/trading', {
   params: { name: 'get_equity_fundamentals', arguments: { symbols: ['AAPL'] } },
 });
 assert.equal(fundamentals.payload.result.structuredContent.fundamentals[0].symbol, 'AAPL');
+
+const missingHistoricalStart = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'missing-historical-start',
+  method: 'tools/call',
+  params: { name: 'get_equity_historicals', arguments: { symbols: ['AAPL'] } },
+});
+assert.equal(missingHistoricalStart.status, 400);
+assert.match(missingHistoricalStart.payload.error.message, /start_time/);
+
+const historicals = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'historicals',
+  method: 'tools/call',
+  params: {
+    name: 'get_equity_historicals',
+    arguments: { symbols: ['AAPL', 'SPY'], start_time: '2025-12-29T00:00:00Z', end_time: '2026-01-01T00:00:00Z', interval: 'day' },
+  },
+});
+const historicalResults = historicals.payload.result.structuredContent.data.results;
+assert.equal(historicalResults[0].symbol, 'AAPL');
+assert.equal(historicalResults[0].interval, 'day');
+assert.ok(historicalResults[0].bars.length > 0);
+assert.ok(historicalResults.some((result) => result.symbol === 'SPY'));
 
 const nonAgenticOrder = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',

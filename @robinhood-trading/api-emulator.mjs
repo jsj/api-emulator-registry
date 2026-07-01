@@ -15,9 +15,12 @@ const ROBINHOOD_TRADING_TOOLS = [
   'add_to_watchlist',
   'cancel_equity_order',
   'cancel_option_order',
+  'create_scan',
   'create_watchlist',
   'follow_watchlist',
   'get_accounts',
+  'get_earnings_calendar',
+  'get_earnings_results',
   'get_equity_fundamentals',
   'get_equity_historicals',
   'get_equity_orders',
@@ -27,6 +30,7 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_index_quotes',
   'get_indexes',
   'get_option_chains',
+  'get_option_historicals',
   'get_option_instruments',
   'get_option_orders',
   'get_option_positions',
@@ -34,6 +38,8 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_option_watchlist',
   'get_popular_watchlists',
   'get_portfolio',
+  'get_realized_pnl',
+  'get_scans',
   'get_watchlist_items',
   'get_watchlists',
   'place_equity_order',
@@ -42,8 +48,11 @@ const ROBINHOOD_TRADING_TOOLS = [
   'remove_option_from_watchlist',
   'review_equity_order',
   'review_option_order',
+  'run_scan',
   'search',
   'unfollow_watchlist',
+  'update_scan_config',
+  'update_scan_filters',
   'update_watchlist',
 ];
 
@@ -170,6 +179,15 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         updated_at: fixedNow,
       },
     ],
+    optionHistoricals: {
+      AAPL260116C00200000: [
+        { begins_at: '2026-01-02T14:30:00Z', open_price: '5.80', high_price: '6.40', low_price: '5.70', close_price: '6.22', volume: 980 },
+        { begins_at: '2026-01-03T14:30:00Z', open_price: '6.20', high_price: '6.55', low_price: '6.05', close_price: '6.35', volume: 740 },
+      ],
+      AAPL260116P00195000: [
+        { begins_at: '2026-01-02T14:30:00Z', open_price: '3.30', high_price: '3.70', low_price: '3.25', close_price: '3.45', volume: 610 },
+      ],
+    },
     optionPositions: [
       {
         id: 'opt_pos_aapl_call',
@@ -282,6 +300,78 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
       { symbol: 'SPX', price: '5150.25', bid: '5150.00', ask: '5150.50', updated_at: fixedNow },
       { symbol: 'NDX', price: '18225.10', bid: '18224.75', ask: '18225.50', updated_at: fixedNow },
     ],
+    earningsCalendar: [
+      {
+        symbol: 'AAPL',
+        year: 2026,
+        quarter: 1,
+        eps: { estimate: '2.35', actual: null },
+        report: { date: '2026-01-29', timing: 'pm', verified: true },
+        company: { name: 'Apple Inc.', market_cap: '3000000000000' },
+      },
+      {
+        symbol: 'MSFT',
+        year: 2026,
+        quarter: 2,
+        eps: { estimate: '3.21', actual: null },
+        report: { date: '2026-01-28', timing: 'pm', verified: true },
+        company: { name: 'Microsoft Corporation', market_cap: '3200000000000' },
+      },
+    ],
+    earningsResults: {
+      AAPL: [
+        {
+          symbol: 'AAPL',
+          year: 2026,
+          quarter: 1,
+          eps: { estimate: '2.35', actual: null },
+          report: { date: '2026-01-29', timing: 'pm', verified: true },
+          company: { name: 'Apple Inc.', market_cap: '3000000000000' },
+        },
+        {
+          symbol: 'AAPL',
+          year: 2025,
+          quarter: 4,
+          eps: { estimate: '1.94', actual: '1.97' },
+          report: { date: '2025-10-30', timing: 'pm', verified: true },
+          company: { name: 'Apple Inc.', market_cap: '3000000000000' },
+        },
+      ],
+    },
+    realizedPnl: [
+      {
+        account_number: 'RHAGENTIC001',
+        start_time: '2025-10-01T04:00:00.000Z',
+        end_time: '2025-11-01T03:59:59.999Z',
+        realized_gain: '125.42',
+        rate_of_realized_gain: '2.1',
+        number_of_trades: 3,
+      },
+      {
+        account_number: 'RHAGENTIC001',
+        start_time: '2025-11-01T04:00:00.000Z',
+        end_time: '2025-12-01T04:59:59.999Z',
+        realized_gain: '-34.10',
+        rate_of_realized_gain: '-0.6',
+        number_of_trades: 1,
+      },
+    ],
+    scans: [
+      {
+        scan_id: 'scan-daily-gainers',
+        title: 'Daily Gainers',
+        preset: 'DAILY_GAINERS',
+        filter_summary: [{ filter_type: '% Change', predicate: '>', values: ['5'], interval: '1d', length: 0, plot: 'close' }],
+        filters: [{ filter_type: 'FILTER_TYPE_PERCENT_CHANGE', predicate: 'PREDICATE_GREATER_THAN', values: ['5'], interval: '1d', plot: 'close' }],
+        columns: ['Symbol', '% Change', 'Volume', 'Price'],
+        sorting: { column: '% Change', direction: 'desc' },
+        cortex_managed: false,
+        results: [
+          { ticker: 'AAPL', instrument_id: 'instrument-aapl', instrument_type: 'STOCK', columns: { Symbol: 'AAPL', '% Change': '5.26%', Volume: '42,000,000', Price: '200.00' } },
+          { ticker: 'NVDA', instrument_id: 'instrument-nvda', instrument_type: 'STOCK', columns: { Symbol: 'NVDA', '% Change': '4.80%', Volume: '55,000,000', Price: '125.50' } },
+        ],
+      },
+    ],
     currencyPairs: [
       { id: 'currency-pair-btc-usd', symbol: 'BTC-USD', name: 'Bitcoin' },
       { id: 'currency-pair-eth-usd', symbol: 'ETH-USD', name: 'Ethereum' },
@@ -290,6 +380,7 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
     orders: [],
     nextId: 1,
     nextWatchlistId: 2,
+    nextScanId: 2,
     oauthRefreshTokens: {},
     fractionalOrderCount: 0,
     fractionalOrderLimit: 12,
@@ -480,6 +571,35 @@ function equityHistoricalResults(s, args) {
   });
 }
 
+function optionHistoricalResults(s, args) {
+  const optionIds = requestedExplicitOptionIds(args);
+  const interval = String(args.interval ?? 'day');
+  const bounds = String(args.bounds ?? 'regular');
+  const startTime = parseRfc3339(args.start_time ?? args.startTime);
+  const endTime = args.end_time || args.endTime ? parseRfc3339(args.end_time ?? args.endTime) : null;
+  const instruments = allOptionInstruments(s);
+
+  return optionIds.map((instrumentId) => {
+    const instrument = instruments.find((row) => String(row.id ?? row.instrument_id ?? row.option_id) === String(instrumentId));
+    const bars = s.optionHistoricals?.[instrumentId] ?? [];
+    const filteredBars = bars.filter((bar) => {
+      const beginsAt = Date.parse(bar.begins_at);
+      if (!Number.isFinite(beginsAt)) return true;
+      if (startTime !== null && beginsAt < startTime) return false;
+      if (endTime !== null && beginsAt >= endTime) return false;
+      return true;
+    });
+    return {
+      instrument_id: instrumentId,
+      occ_symbol: instrument?.occ_symbol ?? instrument?.occSymbol ?? instrumentId,
+      symbol: normalizeSymbol(instrument?.symbol ?? instrument?.chain_symbol ?? 'AAPL'),
+      interval,
+      bounds,
+      bars: filteredBars,
+    };
+  });
+}
+
 function requestedOptionIds(args, s) {
   if (Array.isArray(args.instrument_ids)) return args.instrument_ids.map(String);
   if (Array.isArray(args.instrumentIds)) return args.instrumentIds.map(String);
@@ -665,6 +785,104 @@ function filteredOptionPositions(s, args) {
   });
 }
 
+function dateOnlyMs(value) {
+  if (!value) return null;
+  const timestamp = Date.parse(`${String(value).slice(0, 10)}T00:00:00.000Z`);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function earningsInWindow(s, args) {
+  const startDate = String(args.start_date ?? fixedNow.slice(0, 10));
+  const days = Number(args.days ?? 7);
+  const windowDays = Number.isFinite(days) && days !== 0 ? Math.max(-31, Math.min(31, days)) : 7;
+  const start = dateOnlyMs(startDate);
+  const end = start === null ? null : start + (windowDays > 0 ? windowDays : 0) * DAY_MS;
+  const lower = windowDays < 0 && start !== null ? start + windowDays * DAY_MS : start;
+  const upper = windowDays < 0 ? start : end;
+  const highMarketCapOnly = String(args.filter ?? '') === 'high_market_cap';
+
+  return (s.earningsCalendar ?? []).filter((event) => {
+    const reportDate = dateOnlyMs(event.report?.date);
+    const marketCap = Number(event.company?.market_cap ?? event.market_cap ?? 0);
+    return (
+      reportDate !== null &&
+      (lower === null || reportDate >= lower) &&
+      (upper === null || reportDate <= upper) &&
+      (!highMarketCapOnly || marketCap > 1_000_000_000)
+    );
+  });
+}
+
+function realizedPnlResult(s, args) {
+  const accountNumber = String(args.account_number ?? '');
+  const displayCurrency = String(args.display_currency ?? 'USD');
+  const span = args.start_date || args.end_date ? `${args.start_date ?? ''}..${args.end_date ?? ''}` : String(args.span ?? '3month');
+  const start = args.start_date ? dateOnlyMs(args.start_date) : null;
+  const end = args.end_date ? dateOnlyMs(args.end_date) + DAY_MS : null;
+  const dataPoints = (s.realizedPnl ?? []).filter((point) => {
+    const pointStart = dateMs(point.start_time);
+    return (
+      (!accountNumber || String(point.account_number) === accountNumber) &&
+      (start === null || (pointStart !== null && pointStart >= start)) &&
+      (end === null || (pointStart !== null && pointStart < end))
+    );
+  });
+  const totalRealizedGain = dataPoints.reduce((sum, point) => sum + Number(point.realized_gain ?? 0), 0).toFixed(2);
+  const totalTrades = dataPoints.reduce((sum, point) => sum + Number(point.number_of_trades ?? 0), 0);
+  return {
+    account_number: accountNumber,
+    window: span,
+    display_currency: displayCurrency,
+    data_points: dataPoints,
+    totals: {
+      realized_gain: totalRealizedGain,
+      number_of_trades: totalTrades,
+    },
+  };
+}
+
+function scanFiltersForSummary(filters) {
+  return (filters ?? []).map((filter) => ({
+    filter_type: String(filter.filter_type ?? '').replace(/^FILTER_TYPE_/, '').replaceAll('_', ' ') || 'Custom',
+    predicate: String(filter.predicate ?? '').replace(/^PREDICATE_/, '') || 'IS',
+    values: filter.values ?? [],
+    interval: filter.interval ?? '',
+    length: filter.length ?? 0,
+    plot: filter.plot ?? '',
+  }));
+}
+
+function scanResult(scan) {
+  const results = scan.results ?? [];
+  return {
+    scan_id: scan.scan_id,
+    scan_title: scan.title ?? scan.scan_title ?? 'Saved Scan',
+    total_items: Number(scan.total_items ?? results.length),
+    results,
+    sorting: scan.sorting ?? { column: 'Symbol', direction: 'asc' },
+    filters: scan.filters ?? [],
+    filter_summary: scan.filter_summary ?? scanFiltersForSummary(scan.filters),
+  };
+}
+
+function scanData(scan) {
+  return {
+    scan_id: scan.scan_id,
+    title: scan.title ?? scan.scan_title ?? 'Saved Scan',
+    filter_summary: scan.filter_summary ?? scanFiltersForSummary(scan.filters),
+    filters: scan.filters ?? [],
+    column_count: Number(scan.column_count ?? scan.columns?.length ?? 0),
+    columns: scan.columns ?? [],
+    sorting: scan.sorting ?? { column: 'Symbol', direction: 'asc' },
+    cortex_managed: Boolean(scan.cortex_managed),
+  };
+}
+
+function findScan(s, args) {
+  const scanId = args.scan_id ?? args.scanId ?? args.id;
+  return (s.scans ?? []).find((scan) => String(scan.scan_id) === String(scanId));
+}
+
 function findWatchlist(s, args) {
   const watchlistId = args.list_id ?? args.listId ?? args.watchlist_id ?? args.watchlistId ?? args.id;
   if (watchlistId) return s.watchlists.find((watchlist) => watchlist.id === String(watchlistId));
@@ -742,7 +960,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Robinhood Agentic Trading MCP documentation-informed subset plus observed read-only Streamable HTTP MCP contract, 2026-06-12',
+  source: 'Robinhood Agentic Trading MCP documentation-informed subset plus observed Streamable HTTP MCP tool list, 2026-07-01',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -876,6 +1094,12 @@ export const plugin = {
           return c.json(mcpResult(id, s.portfolio));
         case 'get_equity_positions':
           return c.json(mcpResult(id, { positions: s.positions }));
+        case 'get_earnings_calendar':
+          return c.json(mcpResult(id, { data: { results: earningsInWindow(s, args) } }));
+        case 'get_earnings_results': {
+          const symbol = normalizeSymbol(args.symbol);
+          return c.json(mcpResult(id, { data: { results: s.earningsResults?.[symbol] ?? (s.earningsCalendar ?? []).filter((row) => normalizeSymbol(row.symbol) === symbol) } }));
+        }
         case 'get_equity_quotes': {
           const symbols = requestedSymbols(args);
           return c.json(mcpResult(id, { quotes: s.quotes.filter((quote) => symbols.includes(quote.symbol)) }));
@@ -961,10 +1185,82 @@ export const plugin = {
             }),
           );
         }
+        case 'get_option_historicals': {
+          if (!parseRfc3339(args.start_time ?? args.startTime)) {
+            const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          if ((args.end_time || args.endTime) && !parseRfc3339(args.end_time ?? args.endTime)) {
+            const error = mcpError(id, "end_time must be RFC3339 (e.g. '2026-01-08T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          return c.json(
+            mcpResult(id, {
+              data: { results: optionHistoricalResults(s, args) },
+              guide: 'Bars are left-edge labeled in UTC. instrument_ids must be option contract UUIDs from get_option_instruments.',
+            }),
+          );
+        }
         case 'get_option_positions':
           return c.json(mcpResult(id, { positions: filteredOptionPositions(s, args), next: null }));
         case 'get_option_orders':
           return c.json(mcpResult(id, { orders: filteredOptionOrders(s, args), next: null }));
+        case 'get_realized_pnl':
+          return c.json(mcpResult(id, { data: realizedPnlResult(s, args) }));
+        case 'get_scans':
+          return c.json(
+            mcpResult(id, {
+              data: { scans: (s.scans ?? []).map(scanData) },
+              guide: 'Cortex-managed scans are read-only via MCP. Use run_scan to execute a saved scan.',
+            }),
+          );
+        case 'run_scan': {
+          const scan = findScan(s, args);
+          if (!scan) return c.json(mcpError(id, 'Scan not found', 404).payload, 404);
+          return c.json(mcpResult(id, { data: { result: scanResult(scan) }, guide: 'Results are live market scan rows in the scan sort order.' }));
+        }
+        case 'create_scan': {
+          const filters = Array.isArray(args.filters) ? args.filters : [];
+          const preset = String(args.preset ?? (filters.length ? 'INITIAL' : 'DAILY_GAINERS'));
+          const title = String(args.title ?? preset.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()));
+          const scan = {
+            scan_id: `scan-${String(s.nextScanId++).padStart(3, '0')}`,
+            title,
+            preset,
+            filters,
+            filter_summary: scanFiltersForSummary(filters),
+            columns: ['Symbol', '% Change', 'Volume', 'Price'],
+            sorting: { column: '% Change', direction: 'desc' },
+            cortex_managed: false,
+            results: (s.scans?.[0]?.results ?? []).map((row) => ({ ...row, columns: { ...row.columns } })),
+          };
+          s.scans = [...(s.scans ?? []), scan];
+          save(store, s);
+          return c.json(mcpResult(id, { data: { result: scanResult(scan) }, guide: 'Created saved scanner in emulator state.' }));
+        }
+        case 'update_scan_filters': {
+          const scan = findScan(s, args);
+          if (!scan) return c.json(mcpError(id, 'Scan not found', 404).payload, 404);
+          if (scan.cortex_managed) return c.json(mcpError(id, 'Cortex-managed scans are read-only via MCP', 400).payload, 400);
+          scan.filters = Array.isArray(args.filters) ? args.filters : [];
+          scan.filter_summary = scanFiltersForSummary(scan.filters);
+          save(store, s);
+          return c.json(mcpResult(id, { data: { result: scanResult(scan) }, guide: 'Filters replaced on the saved scan.' }));
+        }
+        case 'update_scan_config': {
+          const scan = findScan(s, args);
+          if (!scan) return c.json(mcpError(id, 'Scan not found', 404).payload, 404);
+          if (scan.cortex_managed) return c.json(mcpError(id, 'Cortex-managed scans are read-only via MCP', 400).payload, 400);
+          const sortingColumn = String(args.sorting_column ?? args.sortingColumn ?? '');
+          const sortingDirection = String(args.sorting_direction ?? args.sortingDirection ?? 'asc').toLowerCase();
+          const columns = scan.columns ?? Object.keys(scan.results?.[0]?.columns ?? {});
+          if (sortingColumn && columns.length && !columns.includes(sortingColumn)) {
+            return c.json(mcpError(id, `sorting_column must match a visible column. Available columns: ${columns.join(', ')}`, 400).payload, 400);
+          }
+          scan.sorting = { column: sortingColumn || scan.sorting?.column || 'Symbol', direction: sortingDirection === 'desc' ? 'desc' : 'asc' };
+          save(store, s);
+          return c.json(mcpResult(id, { data: { result: scanResult(scan) }, guide: 'Sort configuration updated on the saved scan.' }));
+        }
         case 'get_option_watchlist': {
           const watchlist = findWatchlist(s, args);
           const optionIds = new Set(watchlist?.option_ids ?? []);

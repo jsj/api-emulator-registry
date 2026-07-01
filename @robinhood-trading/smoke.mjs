@@ -20,8 +20,12 @@ const tools = await harness.call('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 34);
+assert.equal(tools.payload.result.structuredContent.tools.length, 43);
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'create_scan'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_earnings_calendar'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_historicals'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_realized_pnl'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_fundamentals'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_historicals'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_chains'));
@@ -103,6 +107,31 @@ const positions = await harness.call('POST', '/mcp/trading', {
 });
 assert.ok(Array.isArray(positions.payload.result.structuredContent.positions));
 
+const realizedPnl = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'realized-pnl',
+  method: 'tools/call',
+  params: { name: 'get_realized_pnl', arguments: { account_number: 'RHAGENTIC001', span: '3month' } },
+});
+assert.equal(realizedPnl.payload.result.structuredContent.data.account_number, 'RHAGENTIC001');
+assert.ok(Array.isArray(realizedPnl.payload.result.structuredContent.data.data_points));
+
+const earningsCalendar = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'earnings-calendar',
+  method: 'tools/call',
+  params: { name: 'get_earnings_calendar', arguments: { start_date: '2026-01-28', days: 2, filter: 'high_market_cap' } },
+});
+assert.ok(earningsCalendar.payload.result.structuredContent.data.results.some((event) => event.symbol === 'AAPL'));
+
+const earningsResults = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'earnings-results',
+  method: 'tools/call',
+  params: { name: 'get_earnings_results', arguments: { symbol: 'aapl' } },
+});
+assert.equal(earningsResults.payload.result.structuredContent.data.results[0].symbol, 'AAPL');
+
 const fundamentals = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'fundamentals',
@@ -134,6 +163,58 @@ assert.equal(historicalResults[0].symbol, 'AAPL');
 assert.equal(historicalResults[0].interval, 'day');
 assert.ok(historicalResults[0].bars.length > 0);
 assert.ok(historicalResults.some((result) => result.symbol === 'SPY'));
+
+const scans = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'scans',
+  method: 'tools/call',
+  params: { name: 'get_scans', arguments: {} },
+});
+const scan = scans.payload.result.structuredContent.data.scans[0];
+assert.equal(scan.scan_id, 'scan-daily-gainers');
+
+const runScan = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'run-scan',
+  method: 'tools/call',
+  params: { name: 'run_scan', arguments: { scan_id: scan.scan_id } },
+});
+assert.ok(runScan.payload.result.structuredContent.data.result.results.some((row) => row.ticker === 'AAPL'));
+
+const createdScan = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'created-scan',
+  method: 'tools/call',
+  params: {
+    name: 'create_scan',
+    arguments: {
+      preset: 'INITIAL',
+      title: 'High RSI + High Volume',
+      filters: [{ filter_type: 'FILTER_TYPE_RSI', predicate: 'PREDICATE_GREATER_THAN', values: ['70'], interval: '1d', length: 14 }],
+    },
+  },
+});
+const createdScanId = createdScan.payload.result.structuredContent.data.result.scan_id;
+assert.ok(createdScanId.startsWith('scan-'));
+
+const updatedScanFilters = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'updated-scan-filters',
+  method: 'tools/call',
+  params: {
+    name: 'update_scan_filters',
+    arguments: { scan_id: createdScanId, filters: [{ filter_type: 'FILTER_TYPE_VOLUME', predicate: 'PREDICATE_GREATER_THAN', values: ['1000000'], interval: '1d' }] },
+  },
+});
+assert.equal(updatedScanFilters.payload.result.structuredContent.data.result.filters[0].filter_type, 'FILTER_TYPE_VOLUME');
+
+const updatedScanConfig = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'updated-scan-config',
+  method: 'tools/call',
+  params: { name: 'update_scan_config', arguments: { scan_id: createdScanId, sorting_column: 'Volume', sorting_direction: 'asc' } },
+});
+assert.equal(updatedScanConfig.payload.result.structuredContent.data.result.sorting.column, 'Volume');
 
 const nonAgenticOrder = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -276,6 +357,24 @@ const optionQuotes = await harness.call('POST', '/mcp/trading', {
 assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].instrument_id, selectedInstrument.id);
 assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].delta, '0');
 assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].gamma, '0');
+
+const missingOptionHistoricalStart = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'missing-option-historical-start',
+  method: 'tools/call',
+  params: { name: 'get_option_historicals', arguments: { instrument_ids: [selectedInstrument.id] } },
+});
+assert.equal(missingOptionHistoricalStart.status, 400);
+assert.match(missingOptionHistoricalStart.payload.error.message, /start_time/);
+
+const optionHistoricals = await harness.call('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'option-historicals',
+  method: 'tools/call',
+  params: { name: 'get_option_historicals', arguments: { instrument_ids: [selectedInstrument.id], start_time: '2026-01-01T00:00:00Z', interval: 'day' } },
+});
+assert.equal(optionHistoricals.payload.result.structuredContent.data.results[0].instrument_id, selectedInstrument.id);
+assert.ok(Array.isArray(optionHistoricals.payload.result.structuredContent.data.results[0].bars));
 
 const optionOrders = await harness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',

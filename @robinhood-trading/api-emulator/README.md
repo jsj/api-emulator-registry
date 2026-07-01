@@ -1,6 +1,6 @@
 # @api-emulator/robinhood-trading
 
-Robinhood Agentic Trading MCP provides an emulator for accounts, portfolios, equity and option positions, equity historical bars, quotes with Greeks, option chains, option instruments, watchlists, order review, placement, cancellation, and symbol search.
+Robinhood Agentic Trading MCP provides an emulator for accounts, portfolios, realized P&L, equity and option positions, equity and option historical bars, earnings, quotes with Greeks, option chains, option instruments, saved scanners, watchlists, order review, placement, cancellation, and symbol search.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -24,7 +24,7 @@ npx -p api-emulator api --plugin ./@robinhood-trading/api-emulator.mjs --service
 
 ## Tool Coverage
 
-The emulator advertises the 34 MCP tools returned by Robinhood Trading MCP, including equity tools, equity historical bars, index quotes, option chain/instrument/quote/position/order tools, watchlist read/mutation tools, and symbol search.
+The emulator advertises the 43 MCP tools returned by Robinhood Trading MCP as checked live on `2026-07-01`, including equity tools, realized P&L, equity and option historical bars, earnings tools, index quotes, option chain/instrument/quote/position/order tools, saved scanner tools, watchlist read/mutation tools, and symbol search.
 
 The Streamable HTTP MCP handshake returns protocol version `2025-06-18`. The live watchlist schema was checked on `2026-06-17`: `create_watchlist` creates metadata-only custom lists, `add_to_watchlist` adds stocks/ETFs, crypto currency-pair IDs, or market-index IDs, and options use `add_option_to_watchlist`.
 
@@ -35,6 +35,20 @@ The equity historicals read surface was checked against the live tool on `2026-0
 - `get_equity_historicals(symbols, start_time, end_time?, interval?, bounds?)`
 
 `start_time` must be RFC3339, for example `2026-06-15T00:00:00Z`; date-only strings are rejected. When `interval` is omitted, the live tool currently returns `5minute` bars. `interval=day` works for multi-year analysis but the live service rejects ranges estimated above 5,000 bars, so long lookbacks should use `week`/`month` or chunked daily requests. Historical comparisons can include benchmark symbols such as `SPY`; bars before a symbol has real data may be returned as `interpolated: true` gap-fill rows and should usually be ignored for analytics.
+
+The `2026-07-01` live tool-list check added these MCP tools to the emulator:
+
+- `get_earnings_calendar`
+- `get_earnings_results`
+- `get_option_historicals`
+- `get_realized_pnl`
+- `get_scans`
+- `run_scan`
+- `create_scan`
+- `update_scan_filters`
+- `update_scan_config`
+
+Scanner write tools mutate only emulator state. Live scanner tools can create or modify saved scanners, so production clients should confirm with the user before calling them.
 
 The option activity read surface was checked against the live read-only tool schema on `2026-06-12`:
 

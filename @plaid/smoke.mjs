@@ -68,7 +68,7 @@ function createHarness() {
 
 const harness = createHarness();
 assert.equal(contract.provider, 'plaid');
-assert.equal(contract.openapiRouteCount, 329);
+assert.equal(contract.openapiRouteCount, 331);
 
 const link = await harness.call('POST', '/link/token/create', {
   client_name: 'Smoke App',

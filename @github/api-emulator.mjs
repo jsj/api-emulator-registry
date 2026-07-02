@@ -7,7 +7,7 @@ export const contract = {
   scope: ['apps', 'users', 'orgs', 'repos', 'search', 'git-refs', 'git-trees', 'contents', 'issues', 'pulls', 'actions-workflows', 'actions-runs', 'checks'],
   fidelity: 'stateful-core-plus-openapi-compatible-generic-fallback',
   openapiVersion: '1.1.4',
-  openapiRouteCount: 1190,
+  openapiRouteCount: 1194,
 };
 
 export const plugin = {

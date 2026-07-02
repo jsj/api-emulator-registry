@@ -80,13 +80,15 @@ const fallbackPresent =
   fallbackSource.includes('app.post("*", fallback)') &&
   fallbackSource.includes('app.post("/*", fallback)') &&
   fallbackSource.includes('app.get?.("*", fallback)') &&
-  fallbackSource.includes('app.get?.("/*", fallback)');
+  fallbackSource.includes('app.get?.("/*", fallback)') &&
+  fallbackSource.includes('app.put?.("*", fallback)') &&
+  fallbackSource.includes('app.put?.("/*", fallback)');
 
 if (operations.length < 300) {
   failures.push(`Plaid OpenAPI parse found too few operations: ${operations.length}`);
 }
 
-const unsupportedOperations = operations.filter((operation) => !['post', 'get'].includes(operation.method));
+const unsupportedOperations = operations.filter((operation) => !['post', 'get', 'put'].includes(operation.method));
 if (unsupportedOperations.length > 0) {
   failures.push(`Plaid OpenAPI contains unsupported methods not covered by current fallback: ${unsupportedOperations.length}`);
 }

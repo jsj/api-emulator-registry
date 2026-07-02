@@ -53,8 +53,8 @@ for (const provider of providers) {
   assert.equal(pkg.name, `@api-emulator/${provider}`);
   assert.equal(pkg.private, true);
   assert.equal(pkg.dependencies?.['@emulators/core'], undefined);
-  assert.equal(pkg.dependencies?.['@api-emulator/core'], '^0.6.0');
-  assert.equal(pkg.peerDependencies?.['api-emulator'], '>=0.6.0');
+  assert.equal(pkg.dependencies?.['@api-emulator/core'], '^0.7.0');
+  assert.equal(pkg.peerDependencies?.['api-emulator'], '>=0.7.0');
 
   const entry = packageEntry(pkg);
   assert.equal(entry, './src/index.ts');

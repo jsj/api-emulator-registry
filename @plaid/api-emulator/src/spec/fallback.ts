@@ -30,4 +30,6 @@ export function registerFallbackRoutes(app: AppLike, plaid: PlaidStore): void {
   app.post("/*", fallback);
   app.get?.("*", fallback);
   app.get?.("/*", fallback);
+  app.put?.("*", fallback);
+  app.put?.("/*", fallback);
 }

@@ -625,17 +625,17 @@ async function runBusinessProviderE2E(baseUrl) {
   const robinhoodPortfolio = await fetch(`${baseUrl}/mcp/trading`, {
     method: 'POST',
     headers: { authorization: 'Bearer robinhood_mcp_emulator_token', 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 'portfolio', method: 'tools/call', params: { name: 'get_portfolio', arguments: {} } }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 'portfolio', method: 'tools/call', params: { name: 'get_portfolio', arguments: { account_number: 'RHAGENTIC001' } } }),
   });
   assert.equal(robinhoodPortfolio.status, 200);
-  assert.ok(Number.isFinite(Number((await robinhoodPortfolio.json()).result.structuredContent.buying_power)));
+  assert.ok(Number.isFinite(Number((await robinhoodPortfolio.json()).result.structuredContent.data.buying_power)));
   const robinhoodOrder = await fetch(`${baseUrl}/mcp/trading`, {
     method: 'POST',
     headers: { authorization: 'Bearer robinhood_mcp_emulator_token', 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 'order', method: 'tools/call', params: { name: 'place_equity_order', arguments: { symbol: 'AAPL', side: 'buy', quantity: 1 } } }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 'order', method: 'tools/call', params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } } }),
   });
   assert.equal(robinhoodOrder.status, 200);
-  assert.equal((await robinhoodOrder.json()).result.structuredContent.status, 'accepted');
+  assert.equal((await robinhoodOrder.json()).result.structuredContent.data.order.status, 'accepted');
 
   const schwabAccounts = await fetch(`${baseUrl}/trader/v1/accounts/accountNumbers`, { headers: { authorization: 'Bearer schwab_emulator_token' } });
   assert.equal(schwabAccounts.status, 200);
@@ -716,9 +716,11 @@ async function runJiraCliSmoke(baseUrl) {
     let jira = installed;
     if (!jira) {
       const source = join(dir, 'jira-cli');
-      await run(git, ['clone', '--depth', '1', 'https://github.com/ankitpokhrel/jira-cli.git', source]);
+      const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/ankitpokhrel/jira-cli.git', source]).catch(() => null);
+      if (!cloned) return null;
       jira = join(dir, 'jira');
-      await run(go, ['build', '-o', jira, './cmd/jira'], { cwd: source });
+      const built = await run(go, ['build', '-o', jira, './cmd/jira'], { cwd: source }).catch(() => null);
+      if (!built) return null;
     }
 
     const configFile = join(dir, 'jira.yml');
@@ -770,9 +772,11 @@ async function runMercuryCliSmoke(baseUrl) {
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-mercury-cli-'));
   try {
     const source = join(dir, 'mercury-cli');
-    await run(git, ['clone', '--depth', '1', 'https://github.com/MercuryTechnologies/mercury-cli.git', source]);
+    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/MercuryTechnologies/mercury-cli.git', source]).catch(() => null);
+    if (!cloned) return null;
     const mercury = join(dir, 'mercury');
-    await run(go, ['build', '-o', mercury, './cmd/mercury'], { cwd: source });
+    const built = await run(go, ['build', '-o', mercury, './cmd/mercury'], { cwd: source }).catch(() => null);
+    if (!built) return null;
     const env = {
       HOME: dir,
       XDG_CONFIG_HOME: join(dir, '.config'),
@@ -815,7 +819,8 @@ async function runRipplingCliSmoke(baseUrl) {
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-rippling-cli-'));
   try {
     const source = join(dir, 'rippling-cli');
-    await run(git, ['clone', '--depth', '1', 'https://github.com/Rippling/rippling-cli.git', source]);
+    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/Rippling/rippling-cli.git', source]).catch(() => null);
+    if (!cloned) return null;
     const constantsPath = join(source, 'rippling_cli', 'constants.py');
     const constants = await readFile(constantsPath, 'utf8');
     await writeFile(
@@ -850,7 +855,8 @@ async function runWorkdayRaasCliSmoke(baseUrl) {
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-workday-raas-'));
   try {
     const source = join(dir, 'raas-python');
-    await run(git, ['clone', '--depth', '1', 'https://github.com/Workday/raas-python.git', source]);
+    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/Workday/raas-python.git', source]).catch(() => null);
+    if (!cloned) return null;
     const script = [
       'import json, os, sys',
       `sys.path.insert(0, ${JSON.stringify(source)})`,
@@ -880,7 +886,8 @@ async function runGrafanactlCliSmoke(baseUrl) {
     let grafanactl = installed;
     if (!grafanactl) {
       const source = join(dir, 'grafanactl');
-      await run(git, ['clone', '--depth', '1', 'https://github.com/grafana/grafanactl.git', source]);
+      const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/grafana/grafanactl.git', source]).catch(() => null);
+      if (!cloned) return null;
       grafanactl = join(dir, 'grafanactl-bin');
       const built = await run(go, ['build', '-o', grafanactl, './cmd/grafanactl'], { cwd: source }).catch(() => null);
       if (!built) return null;
@@ -950,7 +957,8 @@ async function runStainlessCliSmoke(baseUrl) {
   if (!git || !go) return null;
   const dir = await mkdtemp(join(tmpdir(), 'stainless-cli-smoke-'));
   try {
-    await run(git, ['clone', '--depth', '1', 'https://github.com/stainless-api/stainless-api-cli', dir]);
+    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/stainless-api/stainless-api-cli', dir]).catch(() => null);
+    if (!cloned) return null;
     const common = ['run', './cmd/stl', '--base-url', baseUrl, '--api-key', 'stl_emulator_key', '--format', 'json'];
     const env = {
       HOME: dir,
@@ -2313,7 +2321,11 @@ async function builtSpogoCli(baseUrl) {
   );
 
   const path = join(dir, 'spogo-bin');
-  await run('go', ['build', '-o', path, './cmd/spogo'], { cwd: root });
+  const built = await run('go', ['build', '-o', path, './cmd/spogo'], { cwd: root }).catch(() => null);
+  if (!built) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
   await chmod(path, 0o755);
 
   const cookiePath = join(dir, 'cookies.json');
@@ -4465,15 +4477,15 @@ async function main() {
   falPlugin.register(falApp, new Store());
   await withServer(
     falApp,
-    async () => {
-      const genmedia = await patchedGenmedia('http://127.0.0.1:8787');
+    async (baseUrl) => {
+      const genmedia = await patchedGenmedia(baseUrl);
       if (!genmedia) {
         console.warn('genmedia CLI unavailable; skipping fal CLI smoke');
         return;
       }
       try {
         const env = {
-          F: 'http://127.0.0.1:8787',
+          F: baseUrl,
           FAL_KEY: 'fal_emulator_key',
           GENMEDIA_NO_ANALYTICS: '1',
           GENMEDIA_NO_UPDATE: '1',
@@ -4494,7 +4506,7 @@ async function main() {
         await rm(genmedia.dir, { recursive: true, force: true });
       }
     },
-    { port: 8787, host: '127.0.0.1' },
+    { port: Array.from({ length: 13 }, (_, offset) => 8787 + offset), host: '127.0.0.1' },
   );
 }
 

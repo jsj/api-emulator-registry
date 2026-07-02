@@ -1,6 +1,18 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 
+export const CLI_SMOKE_COMMAND_TIMEOUT_ENV = 'CLI_SMOKE_COMMAND_TIMEOUT_MS';
+export const DEFAULT_CLI_SMOKE_COMMAND_TIMEOUT_MS = 120_000;
+
+function commandTimeoutMs(override) {
+  const rawValue = override ?? process.env[CLI_SMOKE_COMMAND_TIMEOUT_ENV] ?? DEFAULT_CLI_SMOKE_COMMAND_TIMEOUT_MS;
+  const timeoutMs = Number(rawValue);
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw new Error(`${CLI_SMOKE_COMMAND_TIMEOUT_ENV} must be a non-negative millisecond value`);
+  }
+  return timeoutMs;
+}
+
 class Collection {
   constructor(indexes = []) {
     this.rows = [];
@@ -215,9 +227,33 @@ export async function withServer(app, fn, options = {}) {
     res.setHeader('content-type', 'application/json');
     res.end(JSON.stringify({ error: 'not_found', path: pathname }));
   });
-  await new Promise((resolve) => server.listen(options.port ?? 0, options.host ?? '127.0.0.1', resolve));
-  const { port } = server.address();
   const host = options.host ?? '127.0.0.1';
+  const ports = Array.isArray(options.port) ? options.port : [options.port ?? 0];
+  let listenError;
+  for (const port of ports) {
+    try {
+      await new Promise((resolve, reject) => {
+        const onError = (error) => {
+          server.off('listening', onListening);
+          reject(error);
+        };
+        const onListening = () => {
+          server.off('error', onError);
+          resolve();
+        };
+        server.once('error', onError);
+        server.once('listening', onListening);
+        server.listen(port, host);
+      });
+      listenError = null;
+      break;
+    } catch (error) {
+      listenError = error;
+      if (!Array.isArray(options.port) || error.code !== 'EADDRINUSE') throw error;
+    }
+  }
+  if (listenError) throw listenError;
+  const { port } = server.address();
   try {
     await fn(`http://${host}:${port}`);
   } finally {
@@ -277,11 +313,32 @@ export function createPluginHarness(plugin, options = {}) {
 
 export function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
+    const timeoutMs = commandTimeoutMs(options.timeout);
+    let settled = false;
+    let exited = false;
     const child = spawn(command, args, {
       env: { ...process.env, ...options.env },
       cwd: options.cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    const clear = () => {
+      settled = true;
+      if (timer) clearTimeout(timer);
+    };
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            child.kill('SIGTERM');
+            setTimeout(() => {
+              if (!exited) child.kill('SIGKILL');
+            }, 1000).unref();
+            reject(new Error(`${command} ${args.join(' ')} timed out after ${timeoutMs}ms`));
+          }, timeoutMs)
+        : null;
+    timer?.unref();
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (data) => {
@@ -290,8 +347,15 @@ export function run(command, args, options = {}) {
     child.stderr.on('data', (data) => {
       stderr += data;
     });
-    child.on('error', reject);
+    child.on('error', (error) => {
+      if (settled) return;
+      clear();
+      reject(error);
+    });
     child.on('exit', (code) => {
+      exited = true;
+      if (settled) return;
+      clear();
       if (code === 0) resolve({ stdout, stderr });
       else reject(new Error(`${command} ${args.join(' ')} failed with ${code}\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}`));
     });

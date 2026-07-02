@@ -27,7 +27,16 @@ function initialState(config = {}) {
       demo: {
         dev: {
           API_KEY: { raw: 'doppler-emulator-key', computed: 'doppler-emulator-key' },
+          CLI_SMOKE_COMMAND_TIMEOUT_MS: { raw: '120000', computed: '120000' },
           DATABASE_URL: { raw: 'postgres://emulator.local/app', computed: 'postgres://emulator.local/app' },
+          MCPORTER_OAUTH_TIMEOUT_MS: { raw: '300000', computed: '300000' },
+          ROBINHOOD_MCP_FIXTURE_SYMBOLS: { raw: 'AAPL', computed: 'AAPL' },
+          ROBINHOOD_MCP_HISTORICAL_END_TIME: { raw: '2026-06-22T00:00:00Z', computed: '2026-06-22T00:00:00Z' },
+          ROBINHOOD_MCP_HISTORICAL_INTERVAL: { raw: 'day', computed: 'day' },
+          ROBINHOOD_MCP_HISTORICAL_START_TIME: { raw: '2026-06-15T00:00:00Z', computed: '2026-06-15T00:00:00Z' },
+          ROBINHOOD_MCP_SINCE: { raw: '2021-01-01', computed: '2021-01-01' },
+          ROBINHOOD_MCP_TRADING_URL: { raw: 'https://agent.robinhood.com/mcp/trading', computed: 'https://agent.robinhood.com/mcp/trading' },
+          ROBINHOOD_MCP_UNTIL: { raw: '2021-12-31', computed: '2021-12-31' },
         },
       },
     },

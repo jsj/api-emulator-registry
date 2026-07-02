@@ -3,9 +3,26 @@ import { createHarness } from '../scripts/provider-smoke-harness.mjs';
 import { contract, plugin, seedFromConfig } from './api-emulator.mjs';
 
 const harness = createHarness(plugin);
+const calledToolNames = new Set();
+
+async function callHarness(method, path, body = undefined, headers = {}) {
+  const toolName = body?.method === 'tools/call' ? body?.params?.name : null;
+  if (toolName) calledToolNames.add(toolName);
+  const response = await harness.call(method, path, body, headers);
+  if (toolName && response.status === 200) {
+    const structuredContent = response.payload?.result?.structuredContent;
+    assert.ok(structuredContent && typeof structuredContent === 'object', `${toolName} returns structuredContent`);
+    assert.ok(Object.hasOwn(structuredContent, 'data'), `${toolName} returns structuredContent.data`);
+    assert.equal(typeof structuredContent.guide, 'string', `${toolName} returns structuredContent.guide`);
+  }
+  return response;
+}
+
+const data = (response) => response.payload.result.structuredContent.data;
+
 assert.equal(contract.provider, 'robinhood-trading');
 
-const initialized = await harness.call('POST', '/mcp/trading', {
+const initialized = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'init',
   method: 'initialize',
@@ -14,13 +31,14 @@ const initialized = await harness.call('POST', '/mcp/trading', {
 assert.equal(initialized.payload.result.serverInfo.name, 'robinhood-trading-emulator');
 assert.equal(initialized.headers['mcp-session-id'], 'rh-mcp-session-emulator');
 
-const tools = await harness.call('POST', '/mcp/trading', {
+const tools = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'tools',
   method: 'tools/list',
   params: {},
 });
 assert.equal(tools.payload.result.structuredContent.tools.length, 43);
+assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'create_scan'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_earnings_calendar'));
@@ -36,7 +54,7 @@ assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name 
 assert.ok(!tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'follow_list'));
 assert.ok(!tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'unfollow_list'));
 
-const oauthAuthorize = await harness.call('GET', '/oauth/authorize?client_id=robinhood-emulator-client&redirect_uri=http%3A%2F%2Flocalhost%2Fv1%2Fbroker-connections%2Frobinhood%2Fcallback&state=s1');
+const oauthAuthorize = await callHarness('GET', '/oauth/authorize?client_id=robinhood-emulator-client&redirect_uri=http%3A%2F%2Flocalhost%2Fv1%2Fbroker-connections%2Frobinhood%2Fcallback&state=s1');
 assert.equal(oauthAuthorize.status, 302);
 const callbackUrl = new URL(oauthAuthorize.headers.location);
 assert.equal(callbackUrl.pathname, '/v1/broker-connections/robinhood/callback');
@@ -44,7 +62,7 @@ assert.equal(callbackUrl.searchParams.get('state'), 's1');
 const code = callbackUrl.searchParams.get('code');
 assert.ok(code?.startsWith('rh-code-'));
 
-const oauthToken = await harness.call('POST', '/oauth/token', new URLSearchParams({
+const oauthToken = await callHarness('POST', '/oauth/token', new URLSearchParams({
   grant_type: 'authorization_code',
   code,
   redirect_uri: 'http://localhost/v1/broker-connections/robinhood/callback',
@@ -55,7 +73,7 @@ assert.equal(oauthToken.payload.token_type, 'Bearer');
 assert.ok(oauthToken.payload.access_token.startsWith('rh-access-'));
 assert.ok(oauthToken.payload.refresh_token.startsWith('rh-refresh-'));
 
-const refreshToken = await harness.call('POST', '/oauth/token', new URLSearchParams({
+const refreshToken = await callHarness('POST', '/oauth/token', new URLSearchParams({
   grant_type: 'refresh_token',
   refresh_token: oauthToken.payload.refresh_token,
   client_id: 'robinhood-emulator-client',
@@ -63,7 +81,7 @@ const refreshToken = await harness.call('POST', '/oauth/token', new URLSearchPar
 }).toString(), { 'content-type': 'application/x-www-form-urlencoded' });
 assert.ok(refreshToken.payload.access_token.startsWith('rh-access-'));
 
-const unknownRefreshToken = await harness.call('POST', '/oauth/token', new URLSearchParams({
+const unknownRefreshToken = await callHarness('POST', '/oauth/token', new URLSearchParams({
   grant_type: 'refresh_token',
   refresh_token: 'rh-refresh-unknown',
   client_id: 'robinhood-emulator-client',
@@ -91,56 +109,106 @@ const expiredRefreshToken = await expiredRefreshHarness.call('POST', '/oauth/tok
 assert.equal(expiredRefreshToken.status, 400);
 assert.equal(expiredRefreshToken.payload.error, 'invalid_grant');
 
-const portfolio = await harness.call('POST', '/mcp/trading', {
+const accounts = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'accounts',
+  method: 'tools/call',
+  params: { name: 'get_accounts', arguments: {} },
+});
+assert.ok(data(accounts).accounts.some((account) => account.account_number === 'RHAGENTIC001'));
+
+const portfolio = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'portfolio',
   method: 'tools/call',
-  params: { name: 'get_portfolio', arguments: {} },
+  params: { name: 'get_portfolio', arguments: { account_number: 'RHAGENTIC001' } },
 });
-assert.ok(Number.isFinite(Number(portfolio.payload.result.structuredContent.buying_power)));
+assert.ok(Number.isFinite(Number(data(portfolio).buying_power)));
 
-const positions = await harness.call('POST', '/mcp/trading', {
+const positions = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'positions',
   method: 'tools/call',
-  params: { name: 'get_equity_positions', arguments: {} },
+  params: { name: 'get_equity_positions', arguments: { account_number: 'RHAGENTIC001' } },
 });
-assert.ok(Array.isArray(positions.payload.result.structuredContent.positions));
+assert.ok(Array.isArray(data(positions).positions));
 
-const realizedPnl = await harness.call('POST', '/mcp/trading', {
+const quotes = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'equity-quotes',
+  method: 'tools/call',
+  params: { name: 'get_equity_quotes', arguments: { symbols: ['AAPL'] } },
+});
+assert.equal(data(quotes).results[0].symbol, 'AAPL');
+
+const tradability = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'equity-tradability',
+  method: 'tools/call',
+  params: { name: 'get_equity_tradability', arguments: { account_number: 'RHAGENTIC001', symbols: ['AAPL'] } },
+});
+assert.equal(data(tradability).results[0].symbol, 'AAPL');
+assert.equal(data(tradability).results[0].tradable, true);
+
+const indexes = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'indexes',
+  method: 'tools/call',
+  params: { name: 'get_indexes', arguments: {} },
+});
+const spxIndex = data(indexes).indexes.find((index) => index.symbol === 'SPX');
+assert.ok(spxIndex);
+
+const indexQuotes = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'index-quotes',
+  method: 'tools/call',
+  params: { name: 'get_index_quotes', arguments: { instrument_ids: [spxIndex.id] } },
+});
+assert.equal(data(indexQuotes).quotes[0].symbol, 'SPX');
+
+const search = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'search',
+  method: 'tools/call',
+  params: { name: 'search', arguments: { query: 'Apple' } },
+});
+assert.equal(data(search).results[0].symbol, 'AAPL');
+
+const realizedPnl = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'realized-pnl',
   method: 'tools/call',
   params: { name: 'get_realized_pnl', arguments: { account_number: 'RHAGENTIC001', span: '3month' } },
 });
-assert.equal(realizedPnl.payload.result.structuredContent.data.account_number, 'RHAGENTIC001');
-assert.ok(Array.isArray(realizedPnl.payload.result.structuredContent.data.data_points));
+assert.equal(data(realizedPnl).account_number, 'RHAGENTIC001');
+assert.ok(Array.isArray(data(realizedPnl).data_points));
 
-const earningsCalendar = await harness.call('POST', '/mcp/trading', {
+const earningsCalendar = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'earnings-calendar',
   method: 'tools/call',
   params: { name: 'get_earnings_calendar', arguments: { start_date: '2026-01-28', days: 2, filter: 'high_market_cap' } },
 });
-assert.ok(earningsCalendar.payload.result.structuredContent.data.results.some((event) => event.symbol === 'AAPL'));
+assert.ok(data(earningsCalendar).results.some((event) => event.symbol === 'AAPL'));
 
-const earningsResults = await harness.call('POST', '/mcp/trading', {
+const earningsResults = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'earnings-results',
   method: 'tools/call',
   params: { name: 'get_earnings_results', arguments: { symbol: 'aapl' } },
 });
-assert.equal(earningsResults.payload.result.structuredContent.data.results[0].symbol, 'AAPL');
+assert.equal(data(earningsResults).results[0].symbol, 'AAPL');
 
-const fundamentals = await harness.call('POST', '/mcp/trading', {
+const fundamentals = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'fundamentals',
   method: 'tools/call',
   params: { name: 'get_equity_fundamentals', arguments: { symbols: ['AAPL'] } },
 });
-assert.equal(fundamentals.payload.result.structuredContent.fundamentals[0].symbol, 'AAPL');
+assert.equal(data(fundamentals).results[0].symbol, 'AAPL');
 
-const missingHistoricalStart = await harness.call('POST', '/mcp/trading', {
+const missingHistoricalStart = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'missing-historical-start',
   method: 'tools/call',
@@ -149,7 +217,7 @@ const missingHistoricalStart = await harness.call('POST', '/mcp/trading', {
 assert.equal(missingHistoricalStart.status, 400);
 assert.match(missingHistoricalStart.payload.error.message, /start_time/);
 
-const historicals = await harness.call('POST', '/mcp/trading', {
+const historicals = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'historicals',
   method: 'tools/call',
@@ -158,30 +226,30 @@ const historicals = await harness.call('POST', '/mcp/trading', {
     arguments: { symbols: ['AAPL', 'SPY'], start_time: '2025-12-29T00:00:00Z', end_time: '2026-01-01T00:00:00Z', interval: 'day' },
   },
 });
-const historicalResults = historicals.payload.result.structuredContent.data.results;
+const historicalResults = data(historicals).results;
 assert.equal(historicalResults[0].symbol, 'AAPL');
 assert.equal(historicalResults[0].interval, 'day');
 assert.ok(historicalResults[0].bars.length > 0);
 assert.ok(historicalResults.some((result) => result.symbol === 'SPY'));
 
-const scans = await harness.call('POST', '/mcp/trading', {
+const scans = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'scans',
   method: 'tools/call',
   params: { name: 'get_scans', arguments: {} },
 });
-const scan = scans.payload.result.structuredContent.data.scans[0];
+const scan = data(scans).scans[0];
 assert.equal(scan.scan_id, 'scan-daily-gainers');
 
-const runScan = await harness.call('POST', '/mcp/trading', {
+const runScan = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'run-scan',
   method: 'tools/call',
   params: { name: 'run_scan', arguments: { scan_id: scan.scan_id } },
 });
-assert.ok(runScan.payload.result.structuredContent.data.result.results.some((row) => row.ticker === 'AAPL'));
+assert.ok(data(runScan).result.results.some((row) => row.ticker === 'AAPL'));
 
-const createdScan = await harness.call('POST', '/mcp/trading', {
+const createdScan = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'created-scan',
   method: 'tools/call',
@@ -194,10 +262,10 @@ const createdScan = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-const createdScanId = createdScan.payload.result.structuredContent.data.result.scan_id;
+const createdScanId = data(createdScan).result.scan_id;
 assert.ok(createdScanId.startsWith('scan-'));
 
-const updatedScanFilters = await harness.call('POST', '/mcp/trading', {
+const updatedScanFilters = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'updated-scan-filters',
   method: 'tools/call',
@@ -206,21 +274,21 @@ const updatedScanFilters = await harness.call('POST', '/mcp/trading', {
     arguments: { scan_id: createdScanId, filters: [{ filter_type: 'FILTER_TYPE_VOLUME', predicate: 'PREDICATE_GREATER_THAN', values: ['1000000'], interval: '1d' }] },
   },
 });
-assert.equal(updatedScanFilters.payload.result.structuredContent.data.result.filters[0].filter_type, 'FILTER_TYPE_VOLUME');
+assert.equal(data(updatedScanFilters).result.filters[0].filter_type, 'FILTER_TYPE_VOLUME');
 
-const updatedScanConfig = await harness.call('POST', '/mcp/trading', {
+const updatedScanConfig = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'updated-scan-config',
   method: 'tools/call',
   params: { name: 'update_scan_config', arguments: { scan_id: createdScanId, sorting_column: 'Volume', sorting_direction: 'asc' } },
 });
-assert.equal(updatedScanConfig.payload.result.structuredContent.data.result.sorting.column, 'Volume');
+assert.equal(data(updatedScanConfig).result.sorting.column, 'Volume');
 
-const nonAgenticOrder = await harness.call('POST', '/mcp/trading', {
+const nonAgenticOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'non-agentic-order',
   method: 'tools/call',
-  params: { name: 'place_equity_order', arguments: { account_number: 'RHACCOUNT001', symbol: 'AAPL', side: 'buy', quantity: 1 } },
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHACCOUNT001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } },
 });
 assert.equal(nonAgenticOrder.status, 400);
 assert.match(nonAgenticOrder.payload.error.message, /not enabled for agentic trading/);
@@ -235,12 +303,12 @@ const profileGateOrder = await profileGateHarness.call('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'profile-gate-order',
   method: 'tools/call',
-  params: { name: 'place_equity_order', arguments: { account_number: 'RHPROFILE001', symbol: 'AAPL', side: 'buy', quantity: 1 } },
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHPROFILE001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } },
 });
 assert.equal(profileGateOrder.status, 400);
 assert.match(profileGateOrder.payload.error.message, /Investor profile must be completed/);
 
-const fractionalLimitOrder = await harness.call('POST', '/mcp/trading', {
+const fractionalLimitOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'fractional-limit-order',
   method: 'tools/call',
@@ -249,17 +317,17 @@ const fractionalLimitOrder = await harness.call('POST', '/mcp/trading', {
 assert.equal(fractionalLimitOrder.status, 400);
 assert.match(fractionalLimitOrder.payload.error.message, /Limit orders cannot include fractional/);
 
-const wholeShareLimitOrder = await harness.call('POST', '/mcp/trading', {
+const wholeShareLimitOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'whole-share-limit-order',
   method: 'tools/call',
   params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'limit', quantity: '1', limit_price: '200.00' } },
 });
 assert.equal(wholeShareLimitOrder.status, 200);
-assert.equal(wholeShareLimitOrder.payload.result.structuredContent.type, 'limit');
-assert.equal(wholeShareLimitOrder.payload.result.structuredContent.limit_price, '200.00');
+assert.equal(data(wholeShareLimitOrder).order.type, 'limit');
+assert.equal(data(wholeShareLimitOrder).order.limit_price, '200.00');
 
-const missingStopLimitPriceOrder = await harness.call('POST', '/mcp/trading', {
+const missingStopLimitPriceOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'missing-stop-limit-price-order',
   method: 'tools/call',
@@ -268,7 +336,7 @@ const missingStopLimitPriceOrder = await harness.call('POST', '/mcp/trading', {
 assert.equal(missingStopLimitPriceOrder.status, 400);
 assert.match(missingStopLimitPriceOrder.payload.error.message, /limit_price/);
 
-const wholeShareStopLimitOrder = await harness.call('POST', '/mcp/trading', {
+const wholeShareStopLimitOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'whole-share-stop-limit-order',
   method: 'tools/call',
@@ -278,11 +346,11 @@ const wholeShareStopLimitOrder = await harness.call('POST', '/mcp/trading', {
   },
 });
 assert.equal(wholeShareStopLimitOrder.status, 200);
-assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.type, 'stop_limit');
-assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.stop_price, '180.00');
-assert.equal(wholeShareStopLimitOrder.payload.result.structuredContent.limit_price, '179.00');
+assert.equal(data(wholeShareStopLimitOrder).order.type, 'stop_limit');
+assert.equal(data(wholeShareStopLimitOrder).order.stop_price, '180.00');
+assert.equal(data(wholeShareStopLimitOrder).order.limit_price, '179.00');
 
-const unsupportedEquityOrderType = await harness.call('POST', '/mcp/trading', {
+const unsupportedEquityOrderType = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'unsupported-equity-order-type',
   method: 'tools/call',
@@ -308,34 +376,51 @@ const fractionalRateLimitOrder = await fractionalRateLimitHarness.call('POST', '
 assert.equal(fractionalRateLimitOrder.status, 429);
 assert.match(fractionalRateLimitOrder.payload.error.message, /Fractional order rate limit exceeded/);
 
-const order = await harness.call('POST', '/mcp/trading', {
+const reviewedOrder = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'review-equity-order',
+  method: 'tools/call',
+  params: { name: 'review_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } },
+});
+assert.equal(data(reviewedOrder).symbol, 'AAPL');
+assert.ok(Array.isArray(data(reviewedOrder).order_checks));
+
+const order = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'order',
   method: 'tools/call',
-  params: { name: 'place_equity_order', arguments: { symbol: 'AAPL', side: 'buy', quantity: 1 } },
+  params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } },
 });
-assert.equal(order.payload.result.structuredContent.status, 'accepted');
+assert.equal(data(order).order.status, 'accepted');
 
-const cancel = await harness.call('POST', '/mcp/trading', {
+const cancel = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'cancel',
   method: 'tools/call',
-  params: { name: 'cancel_equity_order', arguments: { order_id: order.payload.result.structuredContent.id } },
+  params: { name: 'cancel_equity_order', arguments: { account_number: 'RHAGENTIC001', order_id: data(order).order.id } },
 });
-assert.equal(cancel.payload.result.structuredContent.status, 'canceled');
+assert.equal(data(cancel).accepted, true);
 
-const chain = await harness.call('POST', '/mcp/trading', {
+const equityOrders = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'equity-orders',
+  method: 'tools/call',
+  params: { name: 'get_equity_orders', arguments: { account_number: 'RHAGENTIC001' } },
+});
+assert.ok(data(equityOrders).orders.some((row) => row.id === data(order).order.id));
+
+const chain = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'chain',
   method: 'tools/call',
   params: { name: 'get_option_chains', arguments: { underlying_symbol: 'AAPL' } },
 });
-const selectedChain = chain.payload.result.structuredContent.chains[0];
+const selectedChain = data(chain).chains[0];
 const selectedExpirationDate = selectedChain.expiration_dates[0];
 assert.equal(selectedChain.underlying_symbol, 'AAPL');
 assert.ok(selectedExpirationDate);
 
-const instruments = await harness.call('POST', '/mcp/trading', {
+const instruments = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-instruments',
   method: 'tools/call',
@@ -344,21 +429,21 @@ const instruments = await harness.call('POST', '/mcp/trading', {
     arguments: { chain_id: selectedChain.id, expiration_dates: selectedExpirationDate, type: 'call', state: 'active' },
   },
 });
-const selectedInstrument = instruments.payload.result.structuredContent.instruments[0];
+const selectedInstrument = data(instruments).instruments[0];
 assert.equal(selectedInstrument.chain_id, selectedChain.id);
 assert.equal(selectedInstrument.expiration_date, selectedExpirationDate);
 
-const optionQuotes = await harness.call('POST', '/mcp/trading', {
+const optionQuotes = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-quotes',
   method: 'tools/call',
   params: { name: 'get_option_quotes', arguments: { instrument_ids: [selectedInstrument.id] } },
 });
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].instrument_id, selectedInstrument.id);
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].delta, '0');
-assert.equal(optionQuotes.payload.result.structuredContent.quotes[0].gamma, '0');
+assert.equal(data(optionQuotes).results[0].instrument_id, selectedInstrument.id);
+assert.equal(data(optionQuotes).results[0].delta, '0');
+assert.equal(data(optionQuotes).results[0].gamma, '0');
 
-const missingOptionHistoricalStart = await harness.call('POST', '/mcp/trading', {
+const missingOptionHistoricalStart = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'missing-option-historical-start',
   method: 'tools/call',
@@ -367,16 +452,16 @@ const missingOptionHistoricalStart = await harness.call('POST', '/mcp/trading', 
 assert.equal(missingOptionHistoricalStart.status, 400);
 assert.match(missingOptionHistoricalStart.payload.error.message, /start_time/);
 
-const optionHistoricals = await harness.call('POST', '/mcp/trading', {
+const optionHistoricals = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-historicals',
   method: 'tools/call',
   params: { name: 'get_option_historicals', arguments: { instrument_ids: [selectedInstrument.id], start_time: '2026-01-01T00:00:00Z', interval: 'day' } },
 });
-assert.equal(optionHistoricals.payload.result.structuredContent.data.results[0].instrument_id, selectedInstrument.id);
-assert.ok(Array.isArray(optionHistoricals.payload.result.structuredContent.data.results[0].bars));
+assert.equal(data(optionHistoricals).results[0].instrument_id, selectedInstrument.id);
+assert.ok(Array.isArray(data(optionHistoricals).results[0].bars));
 
-const optionOrders = await harness.call('POST', '/mcp/trading', {
+const optionOrders = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-orders',
   method: 'tools/call',
@@ -390,10 +475,10 @@ const optionOrders = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-assert.ok(Array.isArray(optionOrders.payload.result.structuredContent.orders));
-assert.equal(optionOrders.payload.result.structuredContent.next, null);
+assert.ok(Array.isArray(data(optionOrders).orders));
+assert.equal(data(optionOrders).next, null);
 
-const optionPositions = await harness.call('POST', '/mcp/trading', {
+const optionPositions = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-positions',
   method: 'tools/call',
@@ -408,50 +493,78 @@ const optionPositions = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-assert.ok(Array.isArray(optionPositions.payload.result.structuredContent.positions));
-assert.equal(optionPositions.payload.result.structuredContent.next, null);
+assert.ok(Array.isArray(data(optionPositions).positions));
+assert.equal(data(optionPositions).next, null);
 
-const optionOrder = await harness.call('POST', '/mcp/trading', {
+const reviewedOptionOrder = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'review-option-order',
+  method: 'tools/call',
+  params: {
+    name: 'review_option_order',
+    arguments: { account_number: 'RHAGENTIC001', legs: [{ option_id: selectedInstrument.id, side: 'buy', position_effect: 'open' }], type: 'limit', quantity: '1', price: '6.25' },
+  },
+});
+assert.equal(data(reviewedOptionOrder).account_number, 'RHAGENTIC001');
+assert.ok(Array.isArray(data(reviewedOptionOrder).option_quotes));
+
+const optionOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'option-order',
   method: 'tools/call',
   params: {
     name: 'place_option_order',
-    arguments: { account_number: 'RHAGENTIC001', option_id: selectedInstrument.id, symbol: 'AAPL', side: 'buy', quantity: 1 },
+    arguments: { account_number: 'RHAGENTIC001', legs: [{ option_id: selectedInstrument.id, side: 'buy', position_effect: 'open' }], type: 'limit', quantity: '1', price: '6.25' },
   },
 });
-assert.equal(optionOrder.payload.result.structuredContent.status, 'accepted');
+assert.equal(data(optionOrder).order.status, 'accepted');
 
-const unsupportedOptionOrderType = await harness.call('POST', '/mcp/trading', {
+const unsupportedOptionOrderType = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'unsupported-option-order-type',
   method: 'tools/call',
   params: {
     name: 'place_option_order',
-    arguments: { account_number: 'RHAGENTIC001', option_id: selectedInstrument.id, symbol: 'AAPL', side: 'buy', type: 'market', quantity: 1 },
+    arguments: { account_number: 'RHAGENTIC001', legs: [{ option_id: selectedInstrument.id, side: 'buy', position_effect: 'open' }], type: 'trailing_stop', quantity: '1', price: '6.25' },
   },
 });
 assert.equal(unsupportedOptionOrderType.status, 400);
 assert.match(unsupportedOptionOrderType.payload.error.message, /Unsupported option order type/);
 
-const cancelOptionOrder = await harness.call('POST', '/mcp/trading', {
+const cancelOptionOrder = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'cancel-option-order',
   method: 'tools/call',
-  params: { name: 'cancel_option_order', arguments: { order_id: optionOrder.payload.result.structuredContent.id } },
+  params: { name: 'cancel_option_order', arguments: { account_number: 'RHAGENTIC001', order_id: data(optionOrder).order.id } },
 });
-assert.equal(cancelOptionOrder.payload.result.structuredContent.status, 'canceled');
+assert.equal(data(cancelOptionOrder).accepted, true);
 
-const watchlist = await harness.call('POST', '/mcp/trading', {
+const popularWatchlists = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'popular-watchlists',
+  method: 'tools/call',
+  params: { name: 'get_popular_watchlists', arguments: {} },
+});
+assert.ok(data(popularWatchlists).lists.some((list) => list.id === 'popular-tech'));
+
+const watchlists = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'watchlists',
+  method: 'tools/call',
+  params: { name: 'get_watchlists', arguments: {} },
+});
+assert.ok(Array.isArray(data(watchlists).watchlists));
+
+const watchlist = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'watchlist',
   method: 'tools/call',
   params: { name: 'create_watchlist', arguments: { display_name: 'Options Rollout' } },
 });
-const watchlistData = watchlist.payload.result.structuredContent.data.watchlist;
+const watchlistData = data(watchlist).watchlist;
 assert.equal(watchlistData.display_name, 'Options Rollout');
 
-const metadataOnlyWatchlist = await harness.call('POST', '/mcp/trading', {
+const metadataOnlyWatchlist = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'metadata-only-watchlist',
   method: 'tools/call',
@@ -464,14 +577,30 @@ const metadataOnlyWatchlist = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-const metadataOnlyWatchlistData = metadataOnlyWatchlist.payload.result.structuredContent.data.watchlist;
+const metadataOnlyWatchlistData = data(metadataOnlyWatchlist).watchlist;
 assert.equal(metadataOnlyWatchlistData.display_name, 'Anti-Aging Peptides');
 assert.equal(metadataOnlyWatchlistData.display_description, '15 companies across the peptide value chain');
 assert.equal(metadataOnlyWatchlistData.icon_emoji, '🧬');
 assert.deepEqual(metadataOnlyWatchlistData.symbols, []);
 assert.deepEqual(metadataOnlyWatchlistData.option_ids, []);
 
-const addMixedWatchlistItems = await harness.call('POST', '/mcp/trading', {
+const updatedWatchlist = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'updated-watchlist',
+  method: 'tools/call',
+  params: {
+    name: 'update_watchlist',
+    arguments: {
+      list_id: metadataOnlyWatchlistData.id,
+      display_name: 'Peptide Supply Chain',
+      icon_emoji: 'P',
+    },
+  },
+});
+assert.equal(data(updatedWatchlist).watchlist.display_name, 'Peptide Supply Chain');
+metadataOnlyWatchlistData.display_name = data(updatedWatchlist).watchlist.display_name;
+
+const addMixedWatchlistItems = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'add-mixed-watchlist-items',
   method: 'tools/call',
@@ -483,10 +612,10 @@ const addMixedWatchlistItems = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-assert.deepEqual(addMixedWatchlistItems.payload.result.structuredContent.data.symbols, ['NVO', 'LLY', 'PFE', 'AMGN', 'ABBV']);
-assert.equal(addMixedWatchlistItems.payload.result.structuredContent.data.object_type, 'instrument');
+assert.deepEqual(data(addMixedWatchlistItems).symbols, ['NVO', 'LLY', 'PFE', 'AMGN', 'ABBV']);
+assert.equal(data(addMixedWatchlistItems).object_type, 'instrument');
 
-const addCryptoWatchlistItems = await harness.call('POST', '/mcp/trading', {
+const addCryptoWatchlistItems = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'add-crypto-watchlist-items',
   method: 'tools/call',
@@ -498,10 +627,10 @@ const addCryptoWatchlistItems = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-assert.deepEqual(addCryptoWatchlistItems.payload.result.structuredContent.data.currency_pair_ids, ['currency-pair-btc-usd']);
-assert.equal(addCryptoWatchlistItems.payload.result.structuredContent.data.object_type, 'currency_pair');
+assert.deepEqual(data(addCryptoWatchlistItems).currency_pair_ids, ['currency-pair-btc-usd']);
+assert.equal(data(addCryptoWatchlistItems).object_type, 'currency_pair');
 
-const addIndexWatchlistItems = await harness.call('POST', '/mcp/trading', {
+const addIndexWatchlistItems = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'add-index-watchlist-items',
   method: 'tools/call',
@@ -513,20 +642,32 @@ const addIndexWatchlistItems = await harness.call('POST', '/mcp/trading', {
     },
   },
 });
-assert.deepEqual(addIndexWatchlistItems.payload.result.structuredContent.data.index_ids, ['index-spx']);
-assert.equal(addIndexWatchlistItems.payload.result.structuredContent.data.object_type, 'index');
+assert.deepEqual(data(addIndexWatchlistItems).index_ids, ['index-spx']);
+assert.equal(data(addIndexWatchlistItems).object_type, 'index');
 
-const mixedWatchlistItems = await harness.call('POST', '/mcp/trading', {
+const mixedWatchlistItems = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'mixed-watchlist-items',
   method: 'tools/call',
   params: { name: 'get_watchlist_items', arguments: { list_id: metadataOnlyWatchlistData.id } },
 });
-assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.symbol === 'NVO' && item.object_type === 'instrument'));
-assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.object_id === 'currency-pair-btc-usd' && item.object_type === 'currency_pair'));
-assert.ok(mixedWatchlistItems.payload.result.structuredContent.data.items.some((item) => item.object_id === 'index-spx' && item.object_type === 'index'));
+assert.ok(data(mixedWatchlistItems).items.some((item) => item.symbol === 'NVO' && item.object_type === 'instrument'));
+assert.ok(data(mixedWatchlistItems).items.some((item) => item.object_id === 'currency-pair-btc-usd' && item.object_type === 'currency_pair'));
+assert.ok(data(mixedWatchlistItems).items.some((item) => item.object_id === 'index-spx' && item.object_type === 'index'));
 
-const addedOption = await harness.call('POST', '/mcp/trading', {
+const removedMixedWatchlistItem = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'remove-mixed-watchlist-item',
+  method: 'tools/call',
+  params: {
+    name: 'remove_from_watchlist',
+    arguments: { list_id: metadataOnlyWatchlistData.id, symbols: ['NVO'] },
+  },
+});
+assert.deepEqual(data(removedMixedWatchlistItem).symbols, ['NVO']);
+assert.equal(data(removedMixedWatchlistItem).operation, 'delete');
+
+const addedOption = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'add-option-watchlist',
   method: 'tools/call',
@@ -535,30 +676,44 @@ const addedOption = await harness.call('POST', '/mcp/trading', {
     arguments: { option_ids: [selectedInstrument.id] },
   },
 });
-assert.ok(addedOption.payload.result.structuredContent.data.option_ids.includes(selectedInstrument.id));
+assert.ok(data(addedOption).option_ids.includes(selectedInstrument.id));
 
-const watchlistItems = await harness.call('POST', '/mcp/trading', {
+const watchlistItems = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'watchlist-items',
   method: 'tools/call',
   params: { name: 'get_option_watchlist', arguments: {} },
 });
-assert.ok(watchlistItems.payload.result.structuredContent.options.some((item) => item.instrument_id === selectedInstrument.id));
+assert.ok(data(watchlistItems).items.some((item) => item.instrument_id === selectedInstrument.id));
 
-const followedList = await harness.call('POST', '/mcp/trading', {
+const removedOption = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'remove-option-watchlist',
+  method: 'tools/call',
+  params: {
+    name: 'remove_option_from_watchlist',
+    arguments: { option_ids: [selectedInstrument.id] },
+  },
+});
+assert.ok(data(removedOption).option_ids.includes(selectedInstrument.id));
+assert.equal(data(removedOption).operation, 'delete');
+
+const followedList = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'follow-list',
   method: 'tools/call',
   params: { name: 'follow_watchlist', arguments: { list_id: watchlistData.id } },
 });
-assert.equal(followedList.payload.result.structuredContent.data.action, 'followed');
+assert.equal(data(followedList).action, 'followed');
 
-const unfollowedList = await harness.call('POST', '/mcp/trading', {
+const unfollowedList = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'unfollow-list',
   method: 'tools/call',
   params: { name: 'unfollow_watchlist', arguments: { list_id: watchlistData.id } },
 });
-assert.equal(unfollowedList.payload.result.structuredContent.data.action, 'unfollowed');
+assert.equal(data(unfollowedList).action, 'unfollowed');
+
+assert.deepEqual(contract.scope.filter((name) => !calledToolNames.has(name)), []);
 
 console.log('robinhood-trading smoke ok');

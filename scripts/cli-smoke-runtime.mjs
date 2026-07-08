@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 
 export const CLI_SMOKE_COMMAND_TIMEOUT_ENV = 'CLI_SMOKE_COMMAND_TIMEOUT_MS';
-export const DEFAULT_CLI_SMOKE_COMMAND_TIMEOUT_MS = 120_000;
+export const DEFAULT_CLI_SMOKE_COMMAND_TIMEOUT_MS = 15_000;
 
 function commandTimeoutMs(override) {
   const rawValue = override ?? process.env[CLI_SMOKE_COMMAND_TIMEOUT_ENV] ?? DEFAULT_CLI_SMOKE_COMMAND_TIMEOUT_MS;

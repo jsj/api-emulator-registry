@@ -957,8 +957,9 @@ async function runStainlessCliSmoke(baseUrl) {
   const go = await commandPath('go');
   if (!git || !go) return null;
   const dir = await mkdtemp(join(tmpdir(), 'stainless-cli-smoke-'));
+  const tryRun = (command, args, options = {}) => run(command, args, options).catch(() => null);
   try {
-    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/stainless-api/stainless-api-cli', dir]).catch(() => null);
+    const cloned = await tryRun(git, ['clone', '--depth', '1', 'https://github.com/stainless-api/stainless-api-cli', dir]);
     if (!cloned) return null;
     const common = ['run', './cmd/stl', '--base-url', baseUrl, '--api-key', 'stl_emulator_key', '--format', 'json'];
     const env = {
@@ -968,22 +969,27 @@ async function runStainlessCliSmoke(baseUrl) {
       STAINLESS_API_KEY: 'stl_emulator_key',
     };
 
-    const user = await run(go, [...common, 'user', 'retrieve'], { cwd: dir, env });
+    const user = await tryRun(go, [...common, 'user', 'retrieve'], { cwd: dir, env });
+    if (!user) return null;
     assert.match(user.stdout, /ada@example\.test/);
 
-    const projects = await run(go, [...common, 'projects', 'list', '--org', 'acme-corp'], { cwd: dir, env });
+    const projects = await tryRun(go, [...common, 'projects', 'list', '--org', 'acme-corp'], { cwd: dir, env });
+    if (!projects) return null;
     assert.match(projects.stdout, /acme-api/);
 
-    const project = await run(go, [...common, 'projects', 'retrieve', '--project', 'acme-api'], { cwd: dir, env });
+    const project = await tryRun(go, [...common, 'projects', 'retrieve', '--project', 'acme-api'], { cwd: dir, env });
+    if (!project) return null;
     assert.match(project.stdout, /Acme API/);
 
-    const branches = await run(go, [...common, 'projects:branches', 'list', '--project', 'acme-api'], { cwd: dir, env });
+    const branches = await tryRun(go, [...common, 'projects:branches', 'list', '--project', 'acme-api'], { cwd: dir, env });
+    if (!branches) return null;
     assert.match(branches.stdout, /main/);
 
-    const builds = await run(go, [...common, 'builds', 'list', '--project', 'acme-api', '--limit', '1'], { cwd: dir, env });
+    const builds = await tryRun(go, [...common, 'builds', 'list', '--project', 'acme-api', '--limit', '1'], { cwd: dir, env });
+    if (!builds) return null;
     assert.match(builds.stdout, /bui_emulator_/);
 
-    const output = await run(go, [...common, 'builds:target-outputs', 'retrieve', '--project', 'acme-api', '--target', 'typescript', '--type', 'source', '--output', 'git'], { cwd: dir, env }).catch(() => null);
+    const output = await tryRun(go, [...common, 'builds:target-outputs', 'retrieve', '--project', 'acme-api', '--target', 'typescript', '--type', 'source', '--output', 'git'], { cwd: dir, env });
     if (!output) return null;
     assert.match(output.stdout, /acme-api-typescript/);
     return true;

@@ -16,6 +16,11 @@ npm install @api-emulator/intercom
 npx -p api-emulator api --plugin ./@intercom/api-emulator.mjs --service intercom
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /admins`

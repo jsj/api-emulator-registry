@@ -16,6 +16,11 @@ npm install @api-emulator/google-classroom
 npx -p api-emulator api --plugin ./@google-classroom/api-emulator.mjs --service google-classroom
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /$discovery/rest`

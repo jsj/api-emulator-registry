@@ -16,6 +16,11 @@ npm install @api-emulator/suno
 npx -p api-emulator api --plugin ./@suno/api-emulator.mjs --service suno
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/generate/credit`

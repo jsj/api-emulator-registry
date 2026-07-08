@@ -16,6 +16,11 @@ npm install @api-emulator/turbotax
 npx -p api-emulator api --plugin ./@turbotax/api-emulator.mjs --service turbotax
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /oauth2/v1/tokens/bearer`

@@ -16,6 +16,11 @@ npm install @api-emulator/imsg
 npx -p api-emulator api --plugin ./@imsg/api-emulator.mjs --service imsg
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /imsg/inspect/contract`

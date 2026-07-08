@@ -16,6 +16,11 @@ npm install @api-emulator/coreweave
 npx -p api-emulator api --plugin ./@coreweave/api-emulator.mjs --service coreweave
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1beta1/cks/clusters`

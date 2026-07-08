@@ -16,6 +16,11 @@ npm install @api-emulator/attio
 npx -p api-emulator api --plugin ./@attio/api-emulator.mjs --service attio
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v2/self`

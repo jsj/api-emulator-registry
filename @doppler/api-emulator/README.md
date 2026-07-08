@@ -16,6 +16,11 @@ npm install @api-emulator/doppler
 npx -p api-emulator api --plugin ./@doppler/api-emulator.mjs --service doppler
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v3/projects`

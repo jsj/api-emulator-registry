@@ -16,6 +16,11 @@ npm install @api-emulator/wikipedia
 npx -p api-emulator api --plugin ./@wikipedia/api-emulator.mjs --service wikipedia
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/rest_v1/page/summary/:title{.+}`

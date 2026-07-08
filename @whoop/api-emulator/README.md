@@ -16,6 +16,11 @@ npm install @api-emulator/whoop
 npx -p api-emulator api --plugin ./@whoop/api-emulator.mjs --service whoop
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /oauth/oauth2/token`

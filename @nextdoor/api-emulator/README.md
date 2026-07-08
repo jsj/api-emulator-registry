@@ -16,6 +16,11 @@ npm install @api-emulator/nextdoor
 npx -p api-emulator api --plugin ./@nextdoor/api-emulator.mjs --service nextdoor
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /me`

@@ -16,6 +16,11 @@ npm install @api-emulator/youtube-music
 npx -p api-emulator api --plugin ./@youtube-music/api-emulator.mjs --service youtube-music
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /`

@@ -16,6 +16,11 @@ npm install @api-emulator/steam
 npx -p api-emulator api --plugin ./@steam/api-emulator.mjs --service steam
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /ISteamUser/GetPlayerSummaries/v0002/`
@@ -24,6 +29,8 @@ npx -p api-emulator api --plugin ./@steam/api-emulator.mjs --service steam
 - `GET /IPlayerService/GetOwnedGames/v1/`
 - `GET /ISteamUserStats/GetPlayerAchievements/v0001/`
 - `GET /ISteamNews/GetNewsForApp/v0002/`
+- `GET /v1/info/:id`
+- `GET /v1/version`
 - `GET /steam/inspect/state`
 
 ## Auth
@@ -39,5 +46,5 @@ steam:
 
 ## Links
 
-- [Official API docs](https://steamcommunity.com/dev)
+- [Official API docs](https://steamcommunity.com/dev; https://www.steamcmd.net/)
 - [api-emulator](https://github.com/jsj/api-emulator)

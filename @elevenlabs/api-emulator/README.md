@@ -16,6 +16,11 @@ npm install @api-emulator/elevenlabs
 npx -p api-emulator api --plugin ./@elevenlabs/api-emulator.mjs --service elevenlabs
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

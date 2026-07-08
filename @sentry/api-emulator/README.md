@@ -16,6 +16,11 @@ npm install @api-emulator/sentry
 npx -p api-emulator api --plugin ./@sentry/api-emulator.mjs --service sentry
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

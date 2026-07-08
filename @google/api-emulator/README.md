@@ -16,6 +16,11 @@ npm install @api-emulator/google
 npx -p api-emulator api --plugin ./@google/api-emulator/src/index.ts --service google
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

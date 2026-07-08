@@ -16,6 +16,11 @@ npm install @api-emulator/salesforce
 npx -p api-emulator api --plugin ./@salesforce/api-emulator.mjs --service salesforce
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /services/oauth2/userinfo`

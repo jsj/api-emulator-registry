@@ -16,6 +16,11 @@ npm install @api-emulator/anotes
 npx -p api-emulator api --plugin ./@anotes/api-emulator.mjs --service anotes
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /anotes/inspect/contract`

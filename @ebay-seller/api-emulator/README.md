@@ -16,6 +16,11 @@ npm install @api-emulator/ebay-seller
 npx -p api-emulator api --plugin ./@ebay-seller/api-emulator.mjs --service ebay-seller
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /identity/v1/oauth2/token`

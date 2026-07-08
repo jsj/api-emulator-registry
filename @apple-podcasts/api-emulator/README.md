@@ -16,6 +16,11 @@ npm install @api-emulator/apple-podcasts
 npx -p api-emulator api --plugin ./@apple-podcasts/api-emulator.mjs --service apple-podcasts
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /search`

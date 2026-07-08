@@ -16,6 +16,11 @@ npm install @api-emulator/servicenow
 npx -p api-emulator api --plugin ./@servicenow/api-emulator.mjs --service servicenow
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/now/table/:table`

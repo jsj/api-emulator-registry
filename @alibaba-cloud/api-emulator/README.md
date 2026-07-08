@@ -16,6 +16,11 @@ npm install @api-emulator/alibaba-cloud
 npx -p api-emulator api --plugin ./@alibaba-cloud/api-emulator.mjs --service alibaba-cloud
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /`

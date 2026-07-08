@@ -16,6 +16,11 @@ npm install @api-emulator/progressive
 npx -p api-emulator api --plugin ./@progressive/api-emulator.mjs --service progressive
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/customers`

@@ -16,6 +16,11 @@ npm install @api-emulator/scaleway
 npx -p api-emulator api --plugin ./@scaleway/api-emulator.mjs --service scaleway
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

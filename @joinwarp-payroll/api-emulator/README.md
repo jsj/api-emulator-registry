@@ -16,6 +16,11 @@ npm install @api-emulator/joinwarp-payroll
 npx -p api-emulator api --plugin ./@joinwarp-payroll/api-emulator.mjs --service joinwarp-payroll
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v1/departments`

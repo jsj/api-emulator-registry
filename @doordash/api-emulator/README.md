@@ -16,6 +16,11 @@ npm install @api-emulator/doordash
 npx -p api-emulator api --plugin ./@doordash/api-emulator.mjs --service doordash
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /drive/v2/quotes`

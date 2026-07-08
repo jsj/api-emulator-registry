@@ -16,6 +16,11 @@ npm install @api-emulator/reddit
 npx -p api-emulator api --plugin ./@reddit/api-emulator.mjs --service reddit
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /api/v1/access_token`

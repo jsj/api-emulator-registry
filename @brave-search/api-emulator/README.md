@@ -16,6 +16,11 @@ npm install @api-emulator/brave-search
 npx -p api-emulator api --plugin ./@brave-search/api-emulator.mjs --service brave-search
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

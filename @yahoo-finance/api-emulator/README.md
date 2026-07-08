@@ -16,6 +16,11 @@ npm install @api-emulator/yahoo-finance
 npx -p api-emulator api --plugin ./@yahoo-finance/api-emulator.mjs --service yahoo-finance
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /`

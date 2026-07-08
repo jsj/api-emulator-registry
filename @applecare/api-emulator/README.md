@@ -16,6 +16,11 @@ npm install @api-emulator/applecare
 npx -p api-emulator api --plugin ./@applecare/api-emulator.mjs --service applecare
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/orgDevices`

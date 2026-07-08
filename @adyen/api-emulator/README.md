@@ -16,6 +16,11 @@ npm install @api-emulator/adyen
 npx -p api-emulator api --plugin ./@adyen/api-emulator.mjs --service adyen
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

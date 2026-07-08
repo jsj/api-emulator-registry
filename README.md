@@ -17,6 +17,15 @@ These plugins are more than request stubs:
 
 Use this repo like an app store for API clones. Start one service for local integration work, combine several for end-to-end tests, or put them behind agent evals where mocks are too thin and real systems are too risky.
 
+## Fidelity tiers
+
+Each provider README declares a fidelity tier so breadth does not hide depth:
+
+- `contract-backed`: has a conformance manifest with scored fidelity dimensions and declared smoke or contract checks
+- `smoke-only`: has a direct smoke test, but no conformance manifest yet
+- `stub`: starter or health-check-level surface
+- `generated fallback`: generated local surface without smoke or conformance evidence yet
+
 ## Provider wall
 
 <!-- provider-wall:start -->
@@ -264,14 +273,15 @@ Use this repo like an app store for API clones. Start one service for local inte
   <tr>
     <td align="center"><a href="./@slack/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=slack.com&sz=64" width="36" height="36" alt=""><br>Slack</a></td>
     <td align="center"><a href="./@snap/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=snap.com&sz=64" width="36" height="36" alt=""><br>Snap</a></td>
+    <td align="center"><a href="./@snappr/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=snappr.com&sz=64" width="36" height="36" alt=""><br>Snappr</a></td>
     <td align="center"><a href="./@snowflake/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=snowflake.com&sz=64" width="36" height="36" alt=""><br>Snowflake</a></td>
     <td align="center"><a href="./@sourcegraph/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=sourcegraph.com&sz=64" width="36" height="36" alt=""><br>Sourcegraph</a></td>
     <td align="center"><a href="./@spark/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=spark.com&sz=64" width="36" height="36" alt=""><br>Spark</a></td>
     <td align="center"><a href="./@spectrum/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=spectrum.com&sz=64" width="36" height="36" alt=""><br>Spectrum</a></td>
     <td align="center"><a href="./@spotify/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=spotify.com&sz=64" width="36" height="36" alt=""><br>Spotify</a></td>
-    <td align="center"><a href="./@stainless/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=stainless.com&sz=64" width="36" height="36" alt=""><br>Stainless</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@stainless/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=stainless.com&sz=64" width="36" height="36" alt=""><br>Stainless</a></td>
     <td align="center"><a href="./@statefarm/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=statefarm.com&sz=64" width="36" height="36" alt=""><br>Statefarm</a></td>
     <td align="center"><a href="./@steam/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=steam.com&sz=64" width="36" height="36" alt=""><br>Steam</a></td>
     <td align="center"><a href="./@stripe/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=stripe.com&sz=64" width="36" height="36" alt=""><br>Stripe</a></td>
@@ -279,9 +289,9 @@ Use this repo like an app store for API clones. Start one service for local inte
     <td align="center"><a href="./@suno/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=suno.com&sz=64" width="36" height="36" alt=""><br>Suno</a></td>
     <td align="center"><a href="./@supabase/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=supabase.com&sz=64" width="36" height="36" alt=""><br>Supabase</a></td>
     <td align="center"><a href="./@surveymonkey/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=surveymonkey.com&sz=64" width="36" height="36" alt=""><br>Surveymonkey</a></td>
-    <td align="center"><a href="./@symbolab/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=symbolab.com&sz=64" width="36" height="36" alt=""><br>Symbolab</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@symbolab/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=symbolab.com&sz=64" width="36" height="36" alt=""><br>Symbolab</a></td>
     <td align="center"><a href="./@telegram/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=telegram.org&sz=64" width="36" height="36" alt=""><br>Telegram</a></td>
     <td align="center"><a href="./@ticketmaster/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=ticketmaster.com&sz=64" width="36" height="36" alt=""><br>Ticketmaster</a></td>
     <td align="center"><a href="./@tiktok/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=64" width="36" height="36" alt=""><br>Tiktok</a></td>
@@ -289,9 +299,9 @@ Use this repo like an app store for API clones. Start one service for local inte
     <td align="center"><a href="./@truemed/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=truemed.com&sz=64" width="36" height="36" alt=""><br>Truemed</a></td>
     <td align="center"><a href="./@tryprofound/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=tryprofound.com&sz=64" width="36" height="36" alt=""><br>Tryprofound</a></td>
     <td align="center"><a href="./@turbotax/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=turbotax.com&sz=64" width="36" height="36" alt=""><br>Turbotax</a></td>
-    <td align="center"><a href="./@twilio/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=twilio.com&sz=64" width="36" height="36" alt=""><br>Twilio</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@twilio/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=twilio.com&sz=64" width="36" height="36" alt=""><br>Twilio</a></td>
     <td align="center"><a href="./@uber/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=uber.com&sz=64" width="36" height="36" alt=""><br>Uber</a></td>
     <td align="center"><a href="./@uipath/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=uipath.com&sz=64" width="36" height="36" alt=""><br>Uipath</a></td>
     <td align="center"><a href="./@unifygtm/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=unifygtm.com&sz=64" width="36" height="36" alt=""><br>Unifygtm</a></td>
@@ -299,9 +309,9 @@ Use this repo like an app store for API clones. Start one service for local inte
     <td align="center"><a href="./@upcloud/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=upcloud.com&sz=64" width="36" height="36" alt=""><br>Upcloud</a></td>
     <td align="center"><a href="./@upstash/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=upstash.com&sz=64" width="36" height="36" alt=""><br>Upstash</a></td>
     <td align="center"><a href="./@usaa/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=usaa.com&sz=64" width="36" height="36" alt=""><br>USAA</a></td>
-    <td align="center"><a href="./@uspto/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=uspto.com&sz=64" width="36" height="36" alt=""><br>Uspto</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@uspto/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=uspto.com&sz=64" width="36" height="36" alt=""><br>Uspto</a></td>
     <td align="center"><a href="./@vercel/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=vercel.com&sz=64" width="36" height="36" alt=""><br>Vercel</a></td>
     <td align="center"><a href="./@vultr/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=vultr.com&sz=64" width="36" height="36" alt=""><br>Vultr</a></td>
     <td align="center"><a href="./@weatherkit/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=developer.apple.com&sz=64" width="36" height="36" alt=""><br>Weatherkit</a></td>
@@ -309,9 +319,9 @@ Use this repo like an app store for API clones. Start one service for local inte
     <td align="center"><a href="./@whoop/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=whoop.com&sz=64" width="36" height="36" alt=""><br>Whoop</a></td>
     <td align="center"><a href="./@wikipedia/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=wikipedia.org&sz=64" width="36" height="36" alt=""><br>Wikipedia</a></td>
     <td align="center"><a href="./@wolfram/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=wolframalpha.com&sz=64" width="36" height="36" alt=""><br>Wolfram</a></td>
-    <td align="center"><a href="./@workato/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="36" height="36" alt=""><br>Workato</a></td>
   </tr>
   <tr>
+    <td align="center"><a href="./@workato/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="36" height="36" alt=""><br>Workato</a></td>
     <td align="center"><a href="./@workday/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=workday.com&sz=64" width="36" height="36" alt=""><br>Workday</a></td>
     <td align="center"><a href="./@x/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=x.com&sz=64" width="36" height="36" alt=""><br>X</a></td>
     <td align="center"><a href="./@xbox/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=xbox.com&sz=64" width="36" height="36" alt=""><br>Xbox</a></td>

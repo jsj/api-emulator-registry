@@ -16,6 +16,11 @@ npm install @api-emulator/google-forms
 npx -p api-emulator api --plugin ./@google-forms/api-emulator.mjs --service google-forms
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /$discovery/rest`

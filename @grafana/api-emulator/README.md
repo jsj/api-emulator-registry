@@ -16,6 +16,11 @@ npm install @api-emulator/grafana
 npx -p api-emulator api --plugin ./@grafana/api-emulator.mjs --service grafana
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/health`

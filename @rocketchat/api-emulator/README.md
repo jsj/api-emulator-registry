@@ -16,6 +16,11 @@ npm install @api-emulator/rocketchat
 npx -p api-emulator api --plugin ./@rocketchat/api-emulator/src/index.js --service rocketchat
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/rooms.get`

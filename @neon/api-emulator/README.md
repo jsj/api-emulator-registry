@@ -16,6 +16,11 @@ npm install @api-emulator/neon
 npx -p api-emulator api --plugin ./@neon/api-emulator.mjs --service neon
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

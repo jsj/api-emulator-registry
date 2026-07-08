@@ -1062,6 +1062,12 @@
       "specifier": "./@snap/api-emulator.mjs",
       "description": "Snap Ads provides Marketing API surfaces for OAuth, organizations, ad accounts, campaigns, ads, and reporting."
     },
+    "snappr": {
+      "kind": "package",
+      "packageName": "@api-emulator/snappr",
+      "specifier": "./@snappr/api-emulator.mjs",
+      "description": "Snappr provides visual-content APIs for coverage, availability, photoshoot bookings, editing jobs, presets, and asset retrieval."
+    },
     "snowflake": {
       "kind": "package",
       "packageName": "@api-emulator/snowflake",

@@ -16,6 +16,11 @@ npm install @api-emulator/oculus
 npx -p api-emulator api --plugin ./@oculus/api-emulator.mjs --service oculus
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /graphql`

@@ -16,6 +16,11 @@ npm install @api-emulator/privy
 npx -p api-emulator api --plugin ./@privy/api-emulator.mjs --service privy
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/intuit
 npx -p api-emulator api --plugin ./@intuit/api-emulator.mjs --service intuit
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /oauth2/v1/tokens/bearer`

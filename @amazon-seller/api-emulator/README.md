@@ -16,6 +16,11 @@ npm install @api-emulator/amazon-seller
 npx -p api-emulator api --plugin ./@amazon-seller/api-emulator.mjs --service amazon-seller
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /auth/o2/token`

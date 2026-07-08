@@ -16,6 +16,11 @@ npm install @api-emulator/workday
 npx -p api-emulator api --plugin ./@workday/api-emulator.mjs --service workday
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /ccx/oauth2/:tenant/token`

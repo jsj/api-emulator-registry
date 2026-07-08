@@ -1,8 +1,8 @@
 # @api-emulator/financialdatasets
 
-Deterministic emulator for the Financial Datasets API market data, fundamentals, filings, news, and macro rate endpoints.
+Financial Datasets provides stock prices, company facts, financial statements, SEC filings, news, and macro interest-rate APIs.
 
-Part of [api-emulator](https://github.com/jsj/api-emulator) - local drop-in replacement services for CI and no-network sandboxes.
+Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
 ## Install
 
@@ -16,37 +16,45 @@ npm install @api-emulator/financialdatasets
 npx -p api-emulator api --plugin ./@financialdatasets/api-emulator.mjs --service financialdatasets
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /prices/tickers` - available price-history tickers.
-- `GET /prices` - historical OHLCV rows for a ticker.
-- `GET /prices/snapshot` - latest quote snapshot for a ticker.
-- `GET /prices/snapshot/market` - latest quote snapshots for all seeded tickers.
-- `GET /company/facts` - company metadata by ticker or CIK.
-- `GET /financials` - income statement, balance sheet, and cash-flow statement groups.
-- `GET /financials/income-statements` - income statement rows.
-- `GET /financials/balance-sheets` - balance sheet rows.
-- `GET /financials/cash-flow-statements` - cash-flow statement rows.
-- `GET /filings` - SEC filing rows.
-- `GET /news` - market news rows.
-- `GET /macro/interest-rates` - central bank rate history.
-- `GET /macro/interest-rates/snapshot` - latest central bank rate.
+- `GET /prices/tickers`
+- `GET /prices/snapshot/tickers`
+- `GET /company/facts/tickers`
+- `GET /company/facts/ciks`
+- `GET /prices`
+- `GET /prices/snapshot`
+- `GET /prices/snapshot/market`
+- `GET /company/facts`
+- `GET /financials/income-statements`
+- `GET /financials/balance-sheets`
+- `GET /financials/cash-flow-statements`
+- `GET /financials`
+- `GET /filings`
+- `GET /filings/tickers`
+- `GET /filings/ciks`
+- `GET /filings/types`
+- `GET /news`
+- `GET /macro/interest-rates/banks`
+- `GET /macro/interest-rates`
+- `GET /macro/interest-rates/snapshot`
+- `GET /inspect/contract`
+- `GET /inspect/state`
 
 ## Auth
 
-Protected routes require `X-API-KEY`. The default accepted keys are `financialdatasets-emulator-key`, `test-key`, and `demo-key`. Discovery endpoints such as ticker lists are intentionally open to match the OpenAPI contract sections marked without security.
+Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
 
 ## Seed Configuration
 
 ```yaml
 financialdatasets:
-  acceptedApiKeys:
-    - financialdatasets-emulator-key
-  companies:
-    AAPL:
-      ticker: AAPL
-      name: Apple Inc.
-      cik: "0000320193"
+  # Add provider-specific seed state here.
 ```
 
 ## Links

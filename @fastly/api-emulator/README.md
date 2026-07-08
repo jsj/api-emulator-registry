@@ -16,6 +16,11 @@ npm install @api-emulator/fastly
 npx -p api-emulator api --plugin ./@fastly/api-emulator.mjs --service fastly
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

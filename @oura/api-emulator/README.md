@@ -16,6 +16,11 @@ npm install @api-emulator/oura
 npx -p api-emulator api --plugin ./@oura/api-emulator.mjs --service oura
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v2/usercollection/personal_info`

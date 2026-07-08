@@ -16,6 +16,11 @@ npm install @api-emulator/upcloud
 npx -p api-emulator api --plugin ./@upcloud/api-emulator.mjs --service upcloud
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/youtube
 npx -p api-emulator api --plugin ./@youtube/api-emulator.mjs --service youtube
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /token`

@@ -16,6 +16,11 @@ npm install @api-emulator/datadog
 npx -p api-emulator api --plugin ./@datadog/api-emulator.mjs --service datadog
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/validate`

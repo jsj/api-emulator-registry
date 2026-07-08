@@ -16,6 +16,11 @@ npm install @api-emulator/devin
 npx -p api-emulator api --plugin ./@devin/api-emulator.mjs --service devin
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v3/self`

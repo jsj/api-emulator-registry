@@ -16,6 +16,11 @@ npm install @api-emulator/brex
 npx -p api-emulator api --plugin ./@brex/api-emulator.mjs --service brex
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/vendors`

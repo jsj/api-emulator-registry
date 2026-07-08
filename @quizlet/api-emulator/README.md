@@ -16,6 +16,11 @@ npm install @api-emulator/quizlet
 npx -p api-emulator api --plugin ./@quizlet/api-emulator.mjs --service quizlet
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /2.0/users/:username`

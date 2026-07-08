@@ -16,6 +16,11 @@ npm install @api-emulator/mobbin
 npx -p api-emulator api --plugin ./@mobbin/api-emulator.mjs --service mobbin
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /.well-known/oauth-protected-resource/mcp`

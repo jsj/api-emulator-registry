@@ -16,41 +16,33 @@ npm install @api-emulator/render
 npx -p api-emulator api --plugin ./@render/api-emulator.mjs --service render
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /v1/users` — returns the authenticated user profile.
-- `GET /v1/owners` — lists user and team workspaces with cursor wrappers.
-- `GET /v1/services` — lists services, optionally scoped by `ownerId`.
-- `POST /v1/services` — creates a deterministic local service.
-- `GET /v1/services/:serviceId` — retrieves a service.
-- `POST /v1/blueprints/validate` — returns a successful blueprint validation result.
-- `GET /render/inspect/state` — returns emulator state for smoke assertions.
+- `GET ${prefix}/users`
+- `GET ${prefix}/owners`
+- `GET ${prefix}/services`
+- `POST ${prefix}/services`
+- `GET ${prefix}/services/:serviceId`
+- `POST ${prefix}/blueprints/validate`
+- `GET /render/inspect/state`
 
 ## Auth
 
-Accepts any fake `Authorization: Bearer <token>` header. Cursor pagination uses Render-style wrapper objects with a per-item `cursor`.
+Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
 
 ## Seed Configuration
 
 ```yaml
 render:
-  user:
-    email: ada@example.com
-    name: Ada Lovelace
-  owners:
-    - id: tea-emulator
-      name: Emulator Team
-      type: team
-  services:
-    - id: srv-emulator-web
-      name: emulator-web
-      type: web_service
-      ownerId: tea-emulator
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Official API docs](https://render.com/docs/api)
-- [OpenAPI spec](https://api-docs.render.com/docs/api-spec)
-- [Render CLI](https://render.com/docs/cli)
+- [Official API docs](https://api-docs.render.com/docs/api-spec)
 - [api-emulator](https://github.com/jsj/api-emulator)

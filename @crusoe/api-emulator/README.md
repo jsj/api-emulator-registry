@@ -16,6 +16,11 @@ npm install @api-emulator/crusoe
 npx -p api-emulator api --plugin ./@crusoe/api-emulator.mjs --service crusoe
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1alpha5/featureflags`

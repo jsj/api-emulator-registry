@@ -16,6 +16,11 @@ npm install @api-emulator/browserbase
 npx -p api-emulator api --plugin ./@browserbase/api-emulator.mjs --service browserbase
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

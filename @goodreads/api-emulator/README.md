@@ -16,6 +16,11 @@ npm install @api-emulator/goodreads
 npx -p api-emulator api --plugin ./@goodreads/api-emulator.mjs --service goodreads
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /search/index.xml`

@@ -16,6 +16,11 @@ npm install @api-emulator/govinfo
 npx -p api-emulator api --plugin ./@govinfo/api-emulator.mjs --service govinfo
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /inspect/contract`

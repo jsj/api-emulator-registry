@@ -16,6 +16,11 @@ npm install @api-emulator/gong
 npx -p api-emulator api --plugin ./@gong/api-emulator.mjs --service gong
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

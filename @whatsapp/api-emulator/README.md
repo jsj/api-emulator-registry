@@ -16,6 +16,11 @@ npm install @api-emulator/whatsapp
 npx -p api-emulator api --plugin ./@whatsapp/api-emulator.mjs --service whatsapp
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /webhook`

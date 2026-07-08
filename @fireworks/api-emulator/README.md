@@ -16,6 +16,11 @@ npm install @api-emulator/fireworks
 npx -p api-emulator api --plugin ./@fireworks/api-emulator.mjs --service fireworks
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

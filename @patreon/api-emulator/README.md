@@ -16,6 +16,11 @@ npm install @api-emulator/patreon
 npx -p api-emulator api --plugin ./@patreon/api-emulator.mjs --service patreon
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /api/oauth2/token`

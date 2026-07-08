@@ -16,6 +16,11 @@ npm install @api-emulator/figma
 npx -p api-emulator api --plugin ./@figma/api-emulator.mjs --service figma
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

@@ -16,6 +16,11 @@ npm install @api-emulator/stripe
 npx -p api-emulator api --plugin ./@stripe/api-emulator/src/index.ts --service stripe
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

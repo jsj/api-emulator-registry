@@ -16,6 +16,11 @@ npm install @api-emulator/coderabbit
 npx -p api-emulator api --plugin ./@coderabbit/api-emulator.mjs --service coderabbit
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/users`

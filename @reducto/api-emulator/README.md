@@ -16,6 +16,11 @@ npm install @api-emulator/reducto
 npx -p api-emulator api --plugin ./@reducto/api-emulator.mjs --service reducto
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /version`

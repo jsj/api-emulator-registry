@@ -16,6 +16,11 @@ npm install @api-emulator/uipath
 npx -p api-emulator api --plugin ./@uipath/api-emulator.mjs --service uipath
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET ${prefix}/Folders`

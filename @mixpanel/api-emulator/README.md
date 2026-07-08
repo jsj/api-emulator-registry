@@ -16,6 +16,11 @@ npm install @api-emulator/mixpanel
 npx -p api-emulator api --plugin ./@mixpanel/api-emulator.mjs --service mixpanel
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

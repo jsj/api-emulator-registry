@@ -16,6 +16,11 @@ npm install @api-emulator/huggingface
 npx -p api-emulator api --plugin ./@huggingface/api-emulator.mjs --service huggingface
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /.well-known/openid-configuration`

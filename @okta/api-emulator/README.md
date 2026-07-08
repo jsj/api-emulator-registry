@@ -16,6 +16,11 @@ npm install @api-emulator/okta
 npx -p api-emulator api --plugin ./@okta/api-emulator/src/index.ts --service okta
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

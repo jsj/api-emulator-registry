@@ -16,6 +16,11 @@ npm install @api-emulator/schwab
 npx -p api-emulator api --plugin ./@schwab/api-emulator.mjs --service schwab
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v1/oauth/token`

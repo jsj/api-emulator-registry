@@ -16,6 +16,11 @@ npm install @api-emulator/mongoatlas
 npx -p api-emulator api --plugin ./@mongoatlas/api-emulator/src/index.ts --service mongoatlas
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

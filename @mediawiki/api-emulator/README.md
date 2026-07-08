@@ -16,6 +16,11 @@ npm install @api-emulator/mediawiki
 npx -p api-emulator api --plugin ./@mediawiki/api-emulator.mjs --service mediawiki
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api.php`

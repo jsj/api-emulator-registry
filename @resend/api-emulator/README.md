@@ -16,6 +16,11 @@ npm install @api-emulator/resend
 npx -p api-emulator api --plugin ./@resend/api-emulator/src/index.ts --service resend
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/unifygtm
 npx -p api-emulator api --plugin ./@unifygtm/api-emulator.mjs --service unifygtm
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

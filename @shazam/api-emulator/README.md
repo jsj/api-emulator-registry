@@ -16,6 +16,11 @@ npm install @api-emulator/shazam
 npx -p api-emulator api --plugin ./@shazam/api-emulator.mjs --service shazam
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/search`

@@ -16,6 +16,11 @@ npm install @api-emulator/stainless
 npx -p api-emulator api --plugin ./@stainless/api-emulator.mjs --service stainless
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /health`

@@ -16,6 +16,11 @@ npm install @api-emulator/silurian
 npx -p api-emulator api --plugin ./@silurian/api-emulator.mjs --service silurian
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /forecast/daily`

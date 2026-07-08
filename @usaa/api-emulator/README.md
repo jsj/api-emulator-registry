@@ -16,6 +16,11 @@ npm install @api-emulator/usaa
 npx -p api-emulator api --plugin ./@usaa/api-emulator.mjs --service usaa
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /fdx/v6/customers/current`

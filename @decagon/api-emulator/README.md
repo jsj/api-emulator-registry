@@ -16,6 +16,11 @@ npm install @api-emulator/decagon
 npx -p api-emulator api --plugin ./@decagon/api-emulator.mjs --service decagon
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /chat/outbound`

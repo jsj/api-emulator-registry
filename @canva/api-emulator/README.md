@@ -16,6 +16,11 @@ npm install @api-emulator/canva
 npx -p api-emulator api --plugin ./@canva/api-emulator.mjs --service canva
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

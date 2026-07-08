@@ -16,6 +16,11 @@ npm install @api-emulator/congress
 npx -p api-emulator api --plugin ./@congress/api-emulator.mjs --service congress
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /inspect/contract`

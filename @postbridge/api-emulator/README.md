@@ -16,6 +16,11 @@ npm install @api-emulator/postbridge
 npx -p api-emulator api --plugin ./@postbridge/api-emulator.mjs --service postbridge
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

@@ -16,6 +16,11 @@ npm install @api-emulator/greptile
 npx -p api-emulator api --plugin ./@greptile/api-emulator.mjs --service greptile
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v2/repositories`

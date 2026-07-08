@@ -16,6 +16,11 @@ npm install @api-emulator/docusign
 npx -p api-emulator api --plugin ./@docusign/api-emulator.mjs --service docusign
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /oauth/userinfo`

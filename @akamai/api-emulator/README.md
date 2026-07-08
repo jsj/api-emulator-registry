@@ -16,6 +16,11 @@ npm install @api-emulator/akamai
 npx -p api-emulator api --plugin ./@akamai/api-emulator.mjs --service akamai
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/linkedin
 npx -p api-emulator api --plugin ./@linkedin/api-emulator.mjs --service linkedin
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /oauth/v2/accessToken`

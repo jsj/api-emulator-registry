@@ -16,6 +16,11 @@ npm install @api-emulator/ramp
 npx -p api-emulator api --plugin ./@ramp/api-emulator.mjs --service ramp
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /developer/v1/reimbursements`

@@ -16,6 +16,11 @@ npm install @api-emulator/vultr
 npx -p api-emulator api --plugin ./@vultr/api-emulator.mjs --service vultr
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

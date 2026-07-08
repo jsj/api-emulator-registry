@@ -16,6 +16,11 @@ npm install @api-emulator/piratebay
 npx -p api-emulator api --plugin ./@piratebay/api-emulator.mjs --service piratebay
 ```
 
+## Fidelity
+
+- Tier: `generated fallback`
+- Evidence: local generated surface; no smoke or conformance manifest yet
+
 ## Endpoints
 
 - `GET /System/Info/Public`

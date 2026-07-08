@@ -16,6 +16,11 @@ npm install @api-emulator/ovhcloud
 npx -p api-emulator api --plugin ./@ovhcloud/api-emulator.mjs --service ovhcloud
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

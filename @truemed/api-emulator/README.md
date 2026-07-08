@@ -16,6 +16,11 @@ npm install @api-emulator/truemed
 npx -p api-emulator api --plugin ./@truemed/api-emulator.mjs --service truemed
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /payments/v1/create_payment_session`

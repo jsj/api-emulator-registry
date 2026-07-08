@@ -16,6 +16,11 @@ npm install @api-emulator/twilio
 npx -p api-emulator api --plugin ./@twilio/api-emulator/src/index.ts --service twilio
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

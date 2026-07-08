@@ -16,6 +16,11 @@ npm install @api-emulator/workato
 npx -p api-emulator api --plugin ./@workato/api-emulator.mjs --service workato
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

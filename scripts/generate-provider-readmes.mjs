@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { classifyProviderFidelity } from './conformance/tier.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const catalogPath = join(root, 'api-emulator.catalog.json');
@@ -52,6 +53,18 @@ function seedBlock(slug) {
   return `\`\`\`yaml\n${slug}:\n  # Add provider-specific seed state here.\n\`\`\``;
 }
 
+function fidelityBlock(slug, entry) {
+  const fidelity = classifyProviderFidelity(root, slug, entry);
+  const lines = [`- Tier: \`${fidelity.tier}\``, `- Evidence: ${fidelity.detail}`];
+  if (fidelity.conformance?.validation?.directSmoke) {
+    lines.push(`- Smoke: \`${fidelity.conformance.validation.directSmoke}\``);
+  }
+  if (fidelity.conformance?.validation?.contractChecks?.length) {
+    lines.push(`- Contract checks: ${fidelity.conformance.validation.contractChecks.map((check) => `\`${check}\``).join(', ')}`);
+  }
+  return lines.join('\n');
+}
+
 function readmeFor(slug, entry) {
   const packageName = entry.packageName ?? `@api-emulator/${slug}`;
   const title = packageName.startsWith('@api-emulator/') ? packageName : `@api-emulator/${slug}`;
@@ -63,7 +76,7 @@ function readmeFor(slug, entry) {
   const officialDocs = source.match(/docs:\s*['"`]([^'"`]+)['"`]/)?.[1];
   const docsLink = officialDocs ? `- [Official API docs](${officialDocs})\n` : '';
 
-  return `# ${title}\n\n${entry.description ?? `${label} API emulator.`}\n\nPart of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Endpoints\n\n${endpoints}\n\n## Auth\n\n${authLine(source)}\n\n## Seed Configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
+  return `# ${title}\n\n${entry.description ?? `${label} API emulator.`}\n\nPart of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Fidelity\n\n${fidelityBlock(slug, entry)}\n\n## Endpoints\n\n${endpoints}\n\n## Auth\n\n${authLine(source)}\n\n## Seed Configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
 }
 
 const stale = [];

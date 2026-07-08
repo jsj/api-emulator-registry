@@ -16,6 +16,11 @@ npm install @api-emulator/coinbase
 npx -p api-emulator api --plugin ./@coinbase/api-emulator.mjs --service coinbase
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v3/brokerage/time`

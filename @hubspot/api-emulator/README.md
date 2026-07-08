@@ -16,6 +16,11 @@ npm install @api-emulator/hubspot
 npx -p api-emulator api --plugin ./@hubspot/api-emulator.mjs --service hubspot
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /oauth/v1/access-tokens/:token`

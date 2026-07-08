@@ -16,6 +16,11 @@ npm install @api-emulator/zapier
 npx -p api-emulator api --plugin ./@zapier/api-emulator.mjs --service zapier
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

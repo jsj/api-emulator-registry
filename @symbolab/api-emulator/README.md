@@ -16,6 +16,11 @@ npm install @api-emulator/symbolab
 npx -p api-emulator api --plugin ./@symbolab/api-emulator.mjs --service symbolab
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /pub_api/bridge/solution`

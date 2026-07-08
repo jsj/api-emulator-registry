@@ -16,6 +16,11 @@ npm install @api-emulator/retool
 npx -p api-emulator api --plugin ./@retool/api-emulator.mjs --service retool
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

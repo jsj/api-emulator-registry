@@ -16,6 +16,11 @@ npm install @api-emulator/facebook-messenger
 npx -p api-emulator api --plugin ./@facebook-messenger/api-emulator.mjs --service facebook-messenger
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /webhook`

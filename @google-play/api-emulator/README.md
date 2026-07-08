@@ -16,6 +16,11 @@ npm install @api-emulator/google-play
 npx -p api-emulator api --plugin ./@google-play/api-emulator.mjs --service google-play
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /androidpublisher/v3/applications/:packageName/edits`

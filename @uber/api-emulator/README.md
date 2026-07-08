@@ -16,6 +16,11 @@ npm install @api-emulator/uber
 npx -p api-emulator api --plugin ./@uber/api-emulator.mjs --service uber
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

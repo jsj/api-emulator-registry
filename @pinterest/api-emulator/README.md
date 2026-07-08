@@ -16,6 +16,11 @@ npm install @api-emulator/pinterest
 npx -p api-emulator api --plugin ./@pinterest/api-emulator.mjs --service pinterest
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v5/user_account`

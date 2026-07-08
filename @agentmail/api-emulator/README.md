@@ -16,6 +16,11 @@ npm install @api-emulator/agentmail
 npx -p api-emulator api --plugin ./@agentmail/api-emulator.mjs --service agentmail
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v0/inboxes`

@@ -16,6 +16,11 @@ npm install @api-emulator/telegram
 npx -p api-emulator api --plugin ./@telegram/api-emulator/src/index.ts --service telegram
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

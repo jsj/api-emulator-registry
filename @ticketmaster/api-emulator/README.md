@@ -1,6 +1,6 @@
 # @api-emulator/ticketmaster
 
-Local deterministic emulator for Ticketmaster Discovery API v2 event, attraction, venue, classification, and suggest workflows.
+Ticketmaster Discovery API v2 provides event, attraction, venue, classification, image, and suggest search APIs.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -16,31 +16,34 @@ npm install @api-emulator/ticketmaster
 npx -p api-emulator api --plugin ./@ticketmaster/api-emulator.mjs --service ticketmaster
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /discovery/v2/events.json` — search events with Ticketmaster-style HAL pagination.
-- `GET /discovery/v2/events/:id.json` — retrieve event details with embedded venue and attraction data.
-- `GET /discovery/v2/events/:id/images.json` — retrieve event images.
-- `GET /discovery/v2/venues.json` — search venues.
-- `GET /discovery/v2/venues/:id.json` — retrieve venue details.
-- `GET /discovery/v2/attractions.json` — search attractions.
-- `GET /discovery/v2/attractions/:id.json` — retrieve attraction details.
-- `GET /discovery/v2/classifications.json` — list music and sports classifications.
-- `GET /discovery/v2/suggest.json` — return matching event, attraction, and venue suggestions.
+- `GET /discovery/v2/events${suffix}`
+- `GET /discovery/v2/venues${suffix}`
+- `GET /discovery/v2/attractions${suffix}`
+- `GET /discovery/v2/classifications${suffix}`
+- `GET /discovery/v2/suggest${suffix}`
+- `GET /discovery/v2/events/:id/images${suffix}`
+- `GET /discovery/v2/events/:id${suffix}`
+- `GET /discovery/v2/venues/:id${suffix}`
+- `GET /discovery/v2/attractions/:id${suffix}`
+- `GET /inspect/contract`
+- `GET /inspect/state`
 
 ## Auth
 
-Pass `apikey=ticketmaster-emulator-key`, `test-key`, or `demo-key` as a query parameter. Missing or unknown keys return the official Ticketmaster `Invalid ApiKey` fault shape.
+Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
 
 ## Seed Configuration
 
 ```yaml
 ticketmaster:
-  acceptedApiKeys:
-    - ticketmaster-emulator-key
-  events:
-    custom_event_id:
-      name: Custom Event
+  # Add provider-specific seed state here.
 ```
 
 ## Links

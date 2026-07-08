@@ -16,6 +16,11 @@ npm install @api-emulator/nytimes
 npx -p api-emulator api --plugin ./@nytimes/api-emulator.mjs --service nytimes
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /svc/search/v2/articlesearch.json`

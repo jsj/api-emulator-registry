@@ -16,6 +16,11 @@ npm install @api-emulator/linode
 npx -p api-emulator api --plugin ./@linode/api-emulator.mjs --service linode
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

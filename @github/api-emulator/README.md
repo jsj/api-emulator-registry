@@ -16,6 +16,13 @@ npm install @api-emulator/github
 npx -p api-emulator api --plugin ./@github/api-emulator/src/index.ts --service github
 ```
 
+## Fidelity
+
+- Tier: `contract-backed`
+- Evidence: 64% low conformance score
+- Smoke: `node @github/smoke.mjs`
+- Contract checks: `node scripts/check-github-openapi-coverage.mjs`
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

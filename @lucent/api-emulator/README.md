@@ -16,6 +16,11 @@ npm install @api-emulator/lucent
 npx -p api-emulator api --plugin ./@lucent/api-emulator.mjs --service lucent
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /api/sdk/init`

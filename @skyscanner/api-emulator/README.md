@@ -16,6 +16,11 @@ npm install @api-emulator/skyscanner
 npx -p api-emulator api --plugin ./@skyscanner/api-emulator.mjs --service skyscanner
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /apiservices/v3/flights/live/search/create`

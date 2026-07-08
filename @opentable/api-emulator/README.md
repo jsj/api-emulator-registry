@@ -1,6 +1,6 @@
 # @api-emulator/opentable
 
-Local deterministic emulator for OpenTable OAuth and Consumer API v2 booking flows.
+OpenTable provides OAuth and Consumer API v2 booking APIs for availability, slot locks, reservations, modification, and cancellation.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -16,31 +16,33 @@ npm install @api-emulator/opentable
 npx -p api-emulator api --plugin ./@opentable/api-emulator.mjs --service opentable
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /api/v2/oauth/token` — issue deterministic OAuth client-credentials tokens.
-- `GET /v2/availability/:rid` — return bookable times and dining areas for one restaurant.
-- `GET /v2/availability-metadata/:rid` — return environments, attributes, and dining-area metadata.
-- `POST /v2/booking/:rid/slot_locks` — reserve a temporary slot lock.
-- `DELETE /v2/booking/:rid/slot_locks/:reservation_token` — release a slot lock.
-- `POST /v2/booking/:rid/reservations` — create a confirmed reservation from a slot lock.
-- `GET /v2/booking/:rid/reservations/:rid-:confirmation_id` — retrieve reservation details.
-- `PUT /v2/booking/:rid/reservations/:rid-:confirmation_id` — modify or cancel a reservation.
+- `GET ${prefix}/v2/availability/:rid`
+- `GET ${prefix}/v2/availability-metadata/:rid`
+- `POST ${prefix}/v2/booking/:rid/slot_locks`
+- `DELETE ${prefix}/v2/booking/:rid/slot_locks/:reservationToken`
+- `POST ${prefix}/v2/booking/:rid/reservations`
+- `GET ${prefix}/v2/booking/:rid/reservations/:id`
+- `PUT ${prefix}/v2/booking/:rid/reservations/:id`
+- `GET /api/v2/oauth/token`
+- `GET /inspect/contract`
+- `GET /inspect/state`
 
 ## Auth
 
-Protected endpoints accept `Authorization: Bearer opentable_emulator_token` or an access token returned by `/api/v2/oauth/token`. Missing tokens are accepted for local compatibility; unknown bearer tokens return OpenTable-shaped `invalid_token` errors.
+Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
 
 ## Seed Configuration
 
 ```yaml
 opentable:
-  acceptedTokens:
-    - opentable_emulator_token
-  restaurants:
-    1074796:
-      rid: 1074796
-      name: Sandbox Trattoria
+  # Add provider-specific seed state here.
 ```
 
 ## Links

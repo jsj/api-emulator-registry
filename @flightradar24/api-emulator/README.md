@@ -16,6 +16,11 @@ npm install @api-emulator/flightradar24
 npx -p api-emulator api --plugin ./@flightradar24/api-emulator.mjs --service flightradar24
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/live/flight-positions/count`

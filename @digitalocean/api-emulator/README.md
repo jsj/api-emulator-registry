@@ -16,6 +16,11 @@ npm install @api-emulator/digitalocean
 npx -p api-emulator api --plugin ./@digitalocean/api-emulator.mjs --service digitalocean
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v2/account`

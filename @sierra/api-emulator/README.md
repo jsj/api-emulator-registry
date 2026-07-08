@@ -16,6 +16,11 @@ npm install @api-emulator/sierra
 npx -p api-emulator api --plugin ./@sierra/api-emulator.mjs --service sierra
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /agent/:token/mobile`

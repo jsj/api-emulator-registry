@@ -16,6 +16,11 @@ npm install @api-emulator/azure
 npx -p api-emulator api --plugin ./@azure/api-emulator.mjs --service azure
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /subscriptions`
@@ -30,12 +35,6 @@ npx -p api-emulator api --plugin ./@azure/api-emulator.mjs --service azure
 - `GET /subscriptions/:subscriptionId/resourceGroups`
 - `GET /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/resources`
 - `GET /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName/resources`
-- `GET /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
-- `GET /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
-- `PUT /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
-- `PUT /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
-- `DELETE /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
-- `DELETE /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
 - `GET /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/Microsoft.Resources/deployments`
 - `GET /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName/providers/Microsoft.Resources/deployments`
 - `GET /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/Microsoft.Resources/deployments/:deploymentName`
@@ -44,6 +43,12 @@ npx -p api-emulator api --plugin ./@azure/api-emulator.mjs --service azure
 - `PUT /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName/providers/Microsoft.Resources/deployments/:deploymentName`
 - `DELETE /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/Microsoft.Resources/deployments/:deploymentName`
 - `DELETE /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName/providers/Microsoft.Resources/deployments/:deploymentName`
+- `GET /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
+- `GET /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
+- `PUT /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
+- `PUT /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
+- `DELETE /subscriptions/:subscriptionId/resourcegroups/:resourceGroupName`
+- `DELETE /subscriptions/:subscriptionId/resourceGroups/:resourceGroupName`
 - `GET /azure/inspect/state`
 
 ## Auth
@@ -54,14 +59,10 @@ Uses fake local credentials only; provide any deterministic bearer token or API 
 
 ```yaml
 azure:
-  subscriptionId: 00000000-0000-0000-0000-000000000000
-  resourceGroups:
-    - name: emulator-rg
-      location: eastus
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
 - [Official API docs](https://learn.microsoft.com/en-us/rest/api/resources/resource-groups)
-- [Azure CLI](https://github.com/Azure/azure-cli)
 - [api-emulator](https://github.com/jsj/api-emulator)

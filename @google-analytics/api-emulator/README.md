@@ -16,6 +16,11 @@ npm install @api-emulator/google-analytics
 npx -p api-emulator api --plugin ./@google-analytics/api-emulator.mjs --service google-analytics
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

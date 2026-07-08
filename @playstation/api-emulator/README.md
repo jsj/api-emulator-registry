@@ -16,6 +16,11 @@ npm install @api-emulator/playstation
 npx -p api-emulator api --plugin ./@playstation/api-emulator.mjs --service playstation
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/concepts/count`

@@ -16,6 +16,11 @@ npm install @api-emulator/substack
 npx -p api-emulator api --plugin ./@substack/api-emulator.mjs --service substack
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/publication`

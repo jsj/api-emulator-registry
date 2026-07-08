@@ -16,6 +16,11 @@ npm install @api-emulator/adp
 npx -p api-emulator api --plugin ./@adp/api-emulator.mjs --service adp
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /hr/v2/workers`

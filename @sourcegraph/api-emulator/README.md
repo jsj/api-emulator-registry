@@ -16,6 +16,11 @@ npm install @api-emulator/sourcegraph
 npx -p api-emulator api --plugin ./@sourcegraph/api-emulator.mjs --service sourcegraph
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /.api/graphql`

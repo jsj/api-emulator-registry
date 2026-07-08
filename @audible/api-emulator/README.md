@@ -16,6 +16,11 @@ npm install @api-emulator/audible
 npx -p api-emulator api --plugin ./@audible/api-emulator.mjs --service audible
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /1.0/catalog/products`
@@ -30,26 +35,16 @@ npx -p api-emulator api --plugin ./@audible/api-emulator.mjs --service audible
 
 ## Auth
 
-No production credentials are required. The emulator accepts fake bearer tokens such as `audible_emulator_token`; marketplace-specific state defaults to `us`.
+No production credentials are required. Use fake local credentials in client tests.
 
 ## Seed Configuration
 
 ```yaml
 audible:
-  marketplace: us
-  products:
-    - asin: B0EMU00001
-      title: Localhost Listening
-      authors:
-        - name: API Emulator
-  library:
-    - asin: B0EMU00001
-      percent_complete: 0
-      is_finished: false
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Unofficial Audible API notes](https://audible.readthedocs.io/en/latest/misc/external_api.html)
-- [mkb79/audible SDK](https://github.com/mkb79/Audible)
+- [Official API docs](https://audible.readthedocs.io/en/latest/misc/external_api.html)
 - [api-emulator](https://github.com/jsj/api-emulator)

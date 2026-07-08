@@ -16,6 +16,11 @@ npm install @api-emulator/bland
 npx -p api-emulator api --plugin ./@bland/api-emulator.mjs --service bland
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

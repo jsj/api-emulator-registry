@@ -16,6 +16,12 @@ npm install @api-emulator/modal
 npx -p api-emulator api --plugin ./@modal/api-emulator.mjs --service modal
 ```
 
+## Fidelity
+
+- Tier: `contract-backed`
+- Evidence: 59% low conformance score
+- Smoke: `node @modal/smoke.mjs`
+
 ## Endpoints
 
 - `GET /modal/inspect/state`

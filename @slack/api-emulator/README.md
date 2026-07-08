@@ -16,6 +16,11 @@ npm install @api-emulator/slack
 npx -p api-emulator api --plugin ./@slack/api-emulator/src/index.ts --service slack
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

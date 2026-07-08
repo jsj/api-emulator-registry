@@ -16,6 +16,11 @@ npm install @api-emulator/paypal
 npx -p api-emulator api --plugin ./@paypal/api-emulator.mjs --service paypal
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v1/oauth2/token`

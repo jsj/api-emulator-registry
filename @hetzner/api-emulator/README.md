@@ -16,6 +16,11 @@ npm install @api-emulator/hetzner
 npx -p api-emulator api --plugin ./@hetzner/api-emulator.mjs --service hetzner
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

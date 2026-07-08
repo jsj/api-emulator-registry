@@ -16,6 +16,11 @@ npm install @api-emulator/eight-sleep
 npx -p api-emulator api --plugin ./@eight-sleep/api-emulator.mjs --service eight-sleep
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v1/tokens`

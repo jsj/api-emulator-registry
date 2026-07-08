@@ -105,6 +105,7 @@ import { plugin as workdayPlugin } from '../@workday/api-emulator.mjs';
 import { plugin as xboxPlugin } from '../@xbox/api-emulator.mjs';
 import { plugin as lightreelPlugin } from '../@lightreel/api-emulator.mjs';
 import { plugin as listenLabsPlugin } from '../@listenlabs/api-emulator.mjs';
+import { plugin as snapprPlugin } from '../@snappr/api-emulator.mjs';
 import { plugin as qualtricsPlugin } from '../@qualtrics/api-emulator.mjs';
 import { plugin as surveyMonkeyPlugin } from '../@surveymonkey/api-emulator.mjs';
 import { plugin as azurePlugin } from '../@azure/api-emulator.mjs';
@@ -3014,6 +3015,7 @@ function registerCoreProviders({ app, store, webhooks, tokenMap }) {
   huggingFacePlugin.register(app, store);
   lightreelPlugin.register(app, store);
   listenLabsPlugin.register(app, store);
+  snapprPlugin.register(app, store);
   qualtricsPlugin.register(app, store);
   surveyMonkeyPlugin.register(app, store);
   akamaiPlugin.register(app, store);
@@ -3458,6 +3460,11 @@ async function main() {
     assert.equal(listenLabsStudies.status, 200);
     assert.equal((await listenLabsStudies.json())[0].link_id, 'study-1');
     console.warn('Listen Labs API docs expose HTTP endpoints but no official CLI/SDK with localhost base URL override; Listen Labs REST route smoke covered');
+
+    const snapprBookings = await fetch(`${baseUrl}/bookings?limit=1`, { headers: { authorization: 'Bearer snappr_emulator_key', 'accept-version': '1.0.0' } });
+    assert.equal(snapprBookings.status, 200);
+    assert.equal((await snapprBookings.json()).results[0].uid, '0ccefa53-b346-4d3e-8dcb-79a914289928');
+    console.warn('Snappr API docs expose shell examples but no public CLI/SDK with documented localhost base URL override; Snappr REST route smoke covered');
 
     const lightreelChat = await fetch(`${baseUrl}/v1/chat`, {
       method: 'POST',

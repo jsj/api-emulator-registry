@@ -16,6 +16,11 @@ npm install @api-emulator/samsara
 npx -p api-emulator api --plugin ./@samsara/api-emulator.mjs --service samsara
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /fleet/routes`

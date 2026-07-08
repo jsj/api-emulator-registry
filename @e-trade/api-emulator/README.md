@@ -16,6 +16,11 @@ npm install @api-emulator/e-trade
 npx -p api-emulator api --plugin ./@e-trade/api-emulator.mjs --service e-trade
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/accounts/list${suffix}`

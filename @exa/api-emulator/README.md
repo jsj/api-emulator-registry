@@ -16,6 +16,11 @@ npm install @api-emulator/exa
 npx -p api-emulator api --plugin ./@exa/api-emulator.mjs --service exa
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

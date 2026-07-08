@@ -16,6 +16,11 @@ npm install @api-emulator/interactive-brokers
 npx -p api-emulator api --plugin ./@interactive-brokers/api-emulator.mjs --service interactive-brokers
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /oauth2/api/v1/token`

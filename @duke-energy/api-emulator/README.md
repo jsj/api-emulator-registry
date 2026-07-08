@@ -16,6 +16,11 @@ npm install @api-emulator/duke-energy
 npx -p api-emulator api --plugin ./@duke-energy/api-emulator.mjs --service duke-energy
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /login/auth-token`

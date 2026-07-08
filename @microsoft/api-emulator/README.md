@@ -16,6 +16,11 @@ npm install @api-emulator/microsoft
 npx -p api-emulator api --plugin ./@microsoft/api-emulator/src/index.ts --service microsoft
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/ionos
 npx -p api-emulator api --plugin ./@ionos/api-emulator.mjs --service ionos
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

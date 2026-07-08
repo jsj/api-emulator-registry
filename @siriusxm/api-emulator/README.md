@@ -16,6 +16,11 @@ npm install @api-emulator/siriusxm
 npx -p api-emulator api --plugin ./@siriusxm/api-emulator.mjs --service siriusxm
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

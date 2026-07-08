@@ -16,6 +16,11 @@ npm install @api-emulator/hostinger
 npx -p api-emulator api --plugin ./@hostinger/api-emulator.mjs --service hostinger
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/listenlabs
 npx -p api-emulator api --plugin ./@listenlabs/api-emulator.mjs --service listenlabs
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/public/list_surveys`

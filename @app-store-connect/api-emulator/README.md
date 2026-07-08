@@ -16,6 +16,11 @@ npm install @api-emulator/app-store-connect
 npx -p api-emulator api --plugin ./@app-store-connect/api-emulator.mjs --service app-store-connect
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

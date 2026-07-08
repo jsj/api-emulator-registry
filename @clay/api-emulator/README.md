@@ -16,6 +16,11 @@ npm install @api-emulator/clay
 npx -p api-emulator api --plugin ./@clay/api-emulator.mjs --service clay
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

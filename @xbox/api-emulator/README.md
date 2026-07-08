@@ -16,6 +16,11 @@ npm install @api-emulator/xbox
 npx -p api-emulator api --plugin ./@xbox/api-emulator.mjs --service xbox
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1.0/my/applications`

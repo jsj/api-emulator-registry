@@ -16,6 +16,11 @@ npm install @api-emulator/x
 npx -p api-emulator api --plugin ./@x/api-emulator.mjs --service x
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /2/oauth2/token`

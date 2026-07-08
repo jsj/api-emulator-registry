@@ -1,6 +1,6 @@
 # @api-emulator/gitlab
 
-GitLab provides a local API v4 emulator for user, project, issue, merge request, note, discussion, and iteration workflows.
+GitLab provides source hosting APIs for users, projects, issues, merge requests, discussions, notes, and iterations.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -16,32 +16,41 @@ npm install @api-emulator/gitlab
 npx -p api-emulator api --plugin ./@gitlab/api-emulator/src/index.js --service gitlab
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /api/v4/user` — returns the authenticated sample user.
-- `GET /api/v4/projects/:project` — returns a project by URL-encoded full path.
-- `GET/POST/PUT /api/v4/projects/:project/issues` — lists, creates, fetches, and updates issues.
-- `GET/POST /api/v4/projects/:project/merge_requests/:iid/notes` — lists and creates merge request notes.
-- `GET/POST /api/v4/projects/:project/merge_requests/:iid/discussions` — lists and creates merge request discussions.
-- `GET /api/v4/projects/:project/merge_requests/:iid` — returns merge request details, changes, diffs, and versions.
-- `GET /api/v4/groups/:group/iterations` — lists group iterations.
+- `GET /api/v4/user`
+- `GET /api/v4/projects/:project`
+- `GET /api/v4/projects/:project/issues`
+- `POST /api/v4/projects/:project/issues`
+- `GET /api/v4/projects/:project/issues/:iid`
+- `PUT /api/v4/projects/:project/issues/:iid`
+- `POST /api/v4/projects/:project/issues/:iid/notes`
+- `GET /api/v4/projects/:project/merge_requests/:iid`
+- `GET /api/v4/projects/:project/merge_requests/:iid/changes`
+- `GET /api/v4/projects/:project/merge_requests/:iid/diffs`
+- `GET /api/v4/projects/:project/merge_requests/:iid/versions`
+- `POST /api/v4/projects/:project/merge_requests/:iid/notes`
+- `GET /api/v4/projects/:project/merge_requests/:iid/notes`
+- `POST /api/v4/projects/:project/merge_requests/:iid/discussions`
+- `GET /api/v4/projects/:project/merge_requests/:iid/discussions`
+- `GET /api/v4/groups/:group/iterations`
 
 ## Auth
 
-No production credentials are required. Clients can use any fake token through `PRIVATE-TOKEN`, `Authorization`, or `glab auth login` with a local API host.
+No production credentials are required. Use fake local credentials in client tests.
 
 ## Seed Configuration
 
 ```yaml
 gitlab:
-  projects: []
-  issues: []
-  iterations: []
-  merge_requests: []
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Official API docs](https://docs.gitlab.com/api/)
-- [glab CLI](https://gitlab.com/gitlab-org/cli)
 - [api-emulator](https://github.com/jsj/api-emulator)

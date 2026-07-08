@@ -16,6 +16,11 @@ npm install @api-emulator/apple-music
 npx -p api-emulator api --plugin ./@apple-music/api-emulator.mjs --service apple-music
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /search`

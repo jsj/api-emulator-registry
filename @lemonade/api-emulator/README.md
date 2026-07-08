@@ -16,6 +16,11 @@ npm install @api-emulator/lemonade
 npx -p api-emulator api --plugin ./@lemonade/api-emulator.mjs --service lemonade
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/customers`

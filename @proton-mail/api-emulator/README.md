@@ -16,6 +16,11 @@ npm install @api-emulator/proton-mail
 npx -p api-emulator api --plugin ./@proton-mail/api-emulator.mjs --service proton-mail
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /core/v4/labels`

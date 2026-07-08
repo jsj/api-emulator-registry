@@ -16,6 +16,11 @@ npm install @api-emulator/aws
 npx -p api-emulator api --plugin ./@aws/api-emulator/src/index.ts --service aws
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

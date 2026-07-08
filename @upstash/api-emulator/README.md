@@ -16,6 +16,11 @@ npm install @api-emulator/upstash
 npx -p api-emulator api --plugin ./@upstash/api-emulator.mjs --service upstash
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

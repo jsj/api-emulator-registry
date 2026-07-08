@@ -16,6 +16,11 @@ npm install @api-emulator/concur
 npx -p api-emulator api --plugin ./@concur/api-emulator.mjs --service concur
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /oauth2/v0/userinfo`

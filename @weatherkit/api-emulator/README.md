@@ -16,6 +16,11 @@ npm install @api-emulator/weatherkit
 npx -p api-emulator api --plugin ./@weatherkit/api-emulator.mjs --service weatherkit
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/availability/:latitude/:longitude`

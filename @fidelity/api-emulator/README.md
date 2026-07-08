@@ -16,6 +16,11 @@ npm install @api-emulator/fidelity
 npx -p api-emulator api --plugin ./@fidelity/api-emulator.mjs --service fidelity
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /wpx/oauth2/token`

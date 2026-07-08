@@ -16,6 +16,11 @@ npm install @api-emulator/surveymonkey
 npx -p api-emulator api --plugin ./@surveymonkey/api-emulator.mjs --service surveymonkey
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v3/users/me`

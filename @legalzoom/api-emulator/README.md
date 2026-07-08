@@ -16,6 +16,11 @@ npm install @api-emulator/legalzoom
 npx -p api-emulator api --plugin ./@legalzoom/api-emulator.mjs --service legalzoom
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/customers`

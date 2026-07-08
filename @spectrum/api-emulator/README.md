@@ -16,6 +16,11 @@ npm install @api-emulator/spectrum
 npx -p api-emulator api --plugin ./@spectrum/api-emulator.mjs --service spectrum
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /auth/oauth/v2/token`

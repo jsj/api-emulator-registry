@@ -16,6 +16,11 @@ npm install @api-emulator/planetscale
 npx -p api-emulator api --plugin ./@planetscale/api-emulator.mjs --service planetscale
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

@@ -16,6 +16,11 @@ npm install @api-emulator/apple-maps
 npx -p api-emulator api --plugin ./@apple-maps/api-emulator.mjs --service apple-maps
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/token`

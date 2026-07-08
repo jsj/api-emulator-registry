@@ -16,6 +16,11 @@ npm install @api-emulator/mintlify
 npx -p api-emulator api --plugin ./@mintlify/api-emulator.mjs --service mintlify
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/agent/:projectId/jobs`

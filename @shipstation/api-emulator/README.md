@@ -16,6 +16,11 @@ npm install @api-emulator/shipstation
 npx -p api-emulator api --plugin ./@shipstation/api-emulator.mjs --service shipstation
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v2/shipments`

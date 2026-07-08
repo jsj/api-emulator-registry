@@ -16,6 +16,11 @@ npm install @api-emulator/craigslist
 npx -p api-emulator api --plugin ./@craigslist/api-emulator.mjs --service craigslist
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /bulkpost/oauth/access-token`

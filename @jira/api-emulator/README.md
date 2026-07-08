@@ -16,6 +16,11 @@ npm install @api-emulator/jira
 npx -p api-emulator api --plugin ./@jira/api-emulator.mjs --service jira
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /rest/api/3/myself`

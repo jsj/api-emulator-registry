@@ -16,6 +16,11 @@ npm install @api-emulator/metlife
 npx -p api-emulator api --plugin ./@metlife/api-emulator.mjs --service metlife
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/products`

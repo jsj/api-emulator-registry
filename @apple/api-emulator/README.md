@@ -16,6 +16,11 @@ npm install @api-emulator/apple
 npx -p api-emulator api --plugin ./@apple/api-emulator/src/index.ts --service apple
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /bag.xml`

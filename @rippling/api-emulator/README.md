@@ -16,6 +16,11 @@ npm install @api-emulator/rippling
 npx -p api-emulator api --plugin ./@rippling/api-emulator.mjs --service rippling
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /apps/api/integrations`

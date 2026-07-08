@@ -16,6 +16,11 @@ npm install @api-emulator/oci
 npx -p api-emulator api --plugin ./@oci/api-emulator.mjs --service oci
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /20160918/regions`

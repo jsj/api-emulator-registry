@@ -16,6 +16,11 @@ npm install @api-emulator/applovin
 npx -p api-emulator api --plugin ./@applovin/api-emulator.mjs --service applovin
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /report`

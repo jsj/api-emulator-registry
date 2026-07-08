@@ -16,6 +16,11 @@ npm install @api-emulator/prime-music
 npx -p api-emulator api --plugin ./@prime-music/api-emulator.mjs --service prime-music
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/me`

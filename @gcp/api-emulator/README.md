@@ -1,6 +1,6 @@
 # @api-emulator/gcp
 
-Google Cloud Platform emulator for gcloud-oriented Cloud Resource Manager, Compute Engine, and Service Usage workflows.
+Google Cloud Platform provides cloud resource, compute, service usage, billing, IAM, and gcloud-oriented infrastructure APIs.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -16,40 +16,41 @@ npm install @api-emulator/gcp
 npx -p api-emulator api --plugin ./@gcp/api-emulator.mjs --service gcp
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
-- `GET /v1/projects` — list active projects
-- `POST /v1/projects` — create a project
-- `GET /v1/projects/:projectId` — get a project
-- `DELETE /v1/projects/:projectId` — mark a project for deletion
-- `GET /v3/projects` — list v3 project resources
-- `POST /v3/projects` — create a v3 project operation
-- `GET /v3/projects/:projectId` — get a v3 project resource
-- `DELETE /v3/projects/:projectId` — delete a v3 project resource
-- `GET /compute/v1/projects/:projectId/zones` — list Compute zones
-- `GET /compute/v1/projects/:projectId/zones/:zone/instances` — list Compute instances
-- `POST /compute/v1/projects/:projectId/zones/:zone/instances` — create a Compute instance operation
-- `GET /compute/v1/projects/:projectId/zones/:zone/instances/:instance` — get a Compute instance
-- `GET /v1/projects/:projectId/services` — list enabled services
-- `GET /v1/projects/:projectId/services/:serviceName` — get a service
-- `GET /gcp/inspect/state` — inspect emulator state
+- `GET /v1/projects`
+- `POST /v1/projects`
+- `GET /v1/projects/:projectId`
+- `DELETE /v1/projects/:projectId`
+- `GET /v3/projects`
+- `POST /v3/projects`
+- `GET /v3/projects/:projectId`
+- `DELETE /v3/projects/:projectId`
+- `GET /compute/v1/projects/:projectId/zones`
+- `GET /compute/v1/projects/:projectId/zones/:zone/instances`
+- `POST /compute/v1/projects/:projectId/zones/:zone/instances`
+- `GET /compute/v1/projects/:projectId/zones/:zone/instances/:instance`
+- `GET /v1/projects/:projectId/services`
+- `GET /v1/projects/:projectId/services/:serviceName`
+- `GET /gcp/inspect/state`
 
 ## Auth
 
-Uses fake local credentials only; provide any deterministic bearer token or gcloud application-default credential expected by the client under test.
+Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
 
 ## Seed Configuration
 
 ```yaml
 gcp:
-  projects:
-    - projectId: emulator-project
-      name: Emulator Project
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Google Cloud CLI install docs](https://docs.cloud.google.com/sdk/docs/install-sdk)
-- [Cloud Resource Manager REST](https://cloud.google.com/resource-manager/reference/rest)
-- [Compute Engine REST](https://cloud.google.com/compute/docs/reference/rest/v1)
+- [Official API docs](https://docs.cloud.google.com/sdk/docs/install-sdk)
 - [api-emulator](https://github.com/jsj/api-emulator)

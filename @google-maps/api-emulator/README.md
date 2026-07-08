@@ -16,6 +16,11 @@ npm install @api-emulator/google-maps
 npx -p api-emulator api --plugin ./@google-maps/api-emulator.mjs --service google-maps
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /v1/places:searchText`

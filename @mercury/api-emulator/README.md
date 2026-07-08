@@ -16,6 +16,11 @@ npm install @api-emulator/mercury
 npx -p api-emulator api --plugin ./@mercury/api-emulator.mjs --service mercury
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET ${prefix}/accounts`

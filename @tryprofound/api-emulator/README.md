@@ -16,6 +16,11 @@ npm install @api-emulator/tryprofound
 npx -p api-emulator api --plugin ./@tryprofound/api-emulator.mjs --service tryprofound
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/org`

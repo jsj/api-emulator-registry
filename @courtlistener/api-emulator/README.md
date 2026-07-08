@@ -16,6 +16,11 @@ npm install @api-emulator/courtlistener
 npx -p api-emulator api --plugin ./@courtlistener/api-emulator.mjs --service courtlistener
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /inspect/contract`

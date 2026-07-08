@@ -16,6 +16,11 @@ npm install @api-emulator/hashicorp-vault
 npx -p api-emulator api --plugin ./@hashicorp-vault/api-emulator.mjs --service hashicorp-vault
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /v1/sys/seal-status`

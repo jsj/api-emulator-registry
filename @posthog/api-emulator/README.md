@@ -16,6 +16,11 @@ npm install @api-emulator/posthog
 npx -p api-emulator api --plugin ./@posthog/api-emulator.mjs --service posthog
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

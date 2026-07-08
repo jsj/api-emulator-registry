@@ -16,6 +16,11 @@ npm install @api-emulator/discord
 npx -p api-emulator api --plugin ./@discord/api-emulator/src/index.ts --service discord
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface without smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

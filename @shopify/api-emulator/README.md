@@ -16,6 +16,11 @@ npm install @api-emulator/shopify
 npx -p api-emulator api --plugin ./@shopify/api-emulator.mjs --service shopify
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /admin/api/:version/shop.json`

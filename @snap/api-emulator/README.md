@@ -16,6 +16,11 @@ npm install @api-emulator/snap
 npx -p api-emulator api --plugin ./@snap/api-emulator.mjs --service snap
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /login/oauth2/access_token`

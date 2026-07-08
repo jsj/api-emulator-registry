@@ -16,6 +16,11 @@ npm install @api-emulator/canvas
 npx -p api-emulator api --plugin ./@canvas/api-emulator.mjs --service canvas
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /api/v1/users/self`

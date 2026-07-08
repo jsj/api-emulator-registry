@@ -16,6 +16,11 @@ npm install @api-emulator/deel
 npx -p api-emulator api --plugin ./@deel/api-emulator.mjs --service deel
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /rest/v2/contracts`

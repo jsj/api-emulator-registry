@@ -16,6 +16,11 @@ npm install @api-emulator/qualtrics
 npx -p api-emulator api --plugin ./@qualtrics/api-emulator.mjs --service qualtrics
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /API/v3/whoami`

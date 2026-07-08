@@ -16,6 +16,11 @@ npm install @api-emulator/google-flights
 npx -p api-emulator api --plugin ./@google-flights/api-emulator.mjs --service google-flights
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

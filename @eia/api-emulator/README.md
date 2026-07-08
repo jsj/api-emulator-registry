@@ -16,6 +16,11 @@ npm install @api-emulator/eia
 npx -p api-emulator api --plugin ./@eia/api-emulator.mjs --service eia
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `GET /inspect/contract`

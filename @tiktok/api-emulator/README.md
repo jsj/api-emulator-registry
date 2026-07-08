@@ -16,6 +16,11 @@ npm install @api-emulator/tiktok
 npx -p api-emulator api --plugin ./@tiktok/api-emulator.mjs --service tiktok
 ```
 
+## Fidelity
+
+- Tier: `stub`
+- Evidence: starter surface with smoke coverage
+
 ## Endpoints
 
 - See the emulator source for the supported local API surface.

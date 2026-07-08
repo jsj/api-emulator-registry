@@ -16,6 +16,11 @@ npm install @api-emulator/unity-ads
 npx -p api-emulator api --plugin ./@unity-ads/api-emulator.mjs --service unity-ads
 ```
 
+## Fidelity
+
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
+
 ## Endpoints
 
 - `POST /auth/v1/token-exchange`

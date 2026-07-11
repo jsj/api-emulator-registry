@@ -1,6 +1,6 @@
 # @api-emulator/robinhood-trading
 
-Robinhood Agentic Trading MCP provides accounts, portfolios, realized P&L, equity and option positions, equity and option historical bars, earnings, quotes with Greeks, option chains, option instruments, saved scanners, watchlists, order review, placement, cancellation, and symbol search.
+Robinhood Agentic Trading MCP provides the verified 46-tool surface: accounts and portfolios, realized P&L and trade history, equity and option positions and tax lots, equity historical bars and technical indicators, earnings, quotes with Greeks, option chains, saved scanners, watchlists, order review, placement, cancellation, and symbol search.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 

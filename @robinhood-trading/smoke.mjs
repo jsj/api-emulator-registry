@@ -37,12 +37,15 @@ const tools = await callHarness('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 43);
+assert.equal(tools.payload.result.structuredContent.tools.length, 46);
 assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'create_scan'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_earnings_calendar'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_historicals'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_technical_indicators'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_pnl_trade_history'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_tax_lots'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_realized_pnl'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_fundamentals'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_equity_historicals'));
@@ -184,6 +187,16 @@ const realizedPnl = await callHarness('POST', '/mcp/trading', {
 assert.equal(data(realizedPnl).account_number, 'RHAGENTIC001');
 assert.ok(Array.isArray(data(realizedPnl).data_points));
 
+const pnlTradeHistory = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'pnl-trade-history',
+  method: 'tools/call',
+  params: { name: 'get_pnl_trade_history', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL' } },
+});
+assert.equal(data(pnlTradeHistory).account_number, 'RHAGENTIC001');
+assert.equal(data(pnlTradeHistory).span, 'week');
+assert.ok(data(pnlTradeHistory).trades.every((trade) => trade.symbol === 'AAPL'));
+
 const earningsCalendar = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
   id: 'earnings-calendar',
@@ -231,6 +244,16 @@ assert.equal(historicalResults[0].symbol, 'AAPL');
 assert.equal(historicalResults[0].interval, 'day');
 assert.ok(historicalResults[0].bars.length > 0);
 assert.ok(historicalResults.some((result) => result.symbol === 'SPY'));
+
+const technicalIndicators = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'technical-indicators',
+  method: 'tools/call',
+  params: { name: 'get_equity_technical_indicators', arguments: { symbol: 'AAPL', type: 'sma', period: 2, start_time: '2025-12-29T00:00:00Z', interval: 'day' } },
+});
+assert.equal(data(technicalIndicators).symbol, 'AAPL');
+assert.equal(data(technicalIndicators).indicators[0].type, 'sma');
+assert.ok(Array.isArray(data(technicalIndicators).indicators[0].series));
 
 const scans = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',
@@ -419,6 +442,15 @@ const selectedChain = data(chain).chains[0];
 const selectedExpirationDate = selectedChain.expiration_dates[0];
 assert.equal(selectedChain.underlying_symbol, 'AAPL');
 assert.ok(selectedExpirationDate);
+
+const equityTaxLots = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'equity-tax-lots',
+  method: 'tools/call',
+  params: { name: 'get_equity_tax_lots', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL' } },
+});
+assert.equal(data(equityTaxLots).symbol, 'AAPL');
+assert.ok(data(equityTaxLots).tax_lots.every((lot) => lot.is_selectable));
 
 const instruments = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',

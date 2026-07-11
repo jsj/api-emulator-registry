@@ -23,9 +23,11 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_earnings_results',
   'get_equity_fundamentals',
   'get_equity_historicals',
+  'get_equity_technical_indicators',
   'get_equity_orders',
   'get_equity_positions',
   'get_equity_quotes',
+  'get_equity_tax_lots',
   'get_equity_tradability',
   'get_index_quotes',
   'get_indexes',
@@ -38,6 +40,7 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_option_watchlist',
   'get_popular_watchlists',
   'get_portfolio',
+  'get_pnl_trade_history',
   'get_realized_pnl',
   'get_scans',
   'get_watchlist_items',
@@ -69,9 +72,11 @@ const TOOL_INPUTS = {
   get_earnings_results: { required: ['symbol'], strings: ['symbol'] },
   get_equity_fundamentals: { required: ['symbols'], arrays: ['symbols'], strings: ['bounds'] },
   get_equity_historicals: { required: ['symbols', 'start_time'], arrays: ['symbols'], strings: ['start_time', 'end_time', 'interval', 'bounds', 'adjustment_type'] },
+  get_equity_technical_indicators: { required: ['symbol', 'type', 'interval', 'start_time'], strings: ['symbol', 'type', 'start_time', 'end_time', 'interval', 'bounds', 'adjustment_type', 'output', 'method'], integers: ['period', 'fast_period', 'slow_period', 'signal_period'], numbers: ['num_std', 'multiplier'] },
   get_equity_orders: { required: ['account_number'], strings: ['account_number', 'order_id', 'state', 'symbol', 'created_at_gte', 'placed_agent', 'cursor'] },
   get_equity_positions: { required: ['account_number'], strings: ['account_number', 'cursor'] },
   get_equity_quotes: { required: ['symbols'], arrays: ['symbols'] },
+  get_equity_tax_lots: { required: ['account_number', 'symbol'], strings: ['account_number', 'symbol', 'cursor'] },
   get_equity_tradability: { required: ['account_number', 'symbols'], strings: ['account_number'], arrays: ['symbols'] },
   get_index_quotes: { required: ['instrument_ids'], arrays: ['instrument_ids'] },
   get_indexes: { strings: ['symbols'] },
@@ -84,15 +89,16 @@ const TOOL_INPUTS = {
   get_option_watchlist: {},
   get_popular_watchlists: {},
   get_portfolio: { required: ['account_number'], strings: ['account_number'] },
+  get_pnl_trade_history: { required: ['account_number'], strings: ['account_number', 'span', 'symbol', 'cursor'] },
   get_realized_pnl: { required: ['account_number'], strings: ['account_number', 'span', 'start_date', 'end_date', 'display_currency', 'timezone'], arrays: ['asset_classes'] },
   get_scans: {},
   get_watchlist_items: { required: ['list_id'], strings: ['list_id'] },
   get_watchlists: {},
-  place_equity_order: { required: ['account_number', 'symbol', 'side', 'type'], strings: ['account_number', 'symbol', 'side', 'type', 'quantity', 'dollar_amount', 'limit_price', 'stop_price', 'time_in_force', 'market_hours', 'ref_id'] },
+  place_equity_order: { required: ['account_number', 'symbol', 'side', 'type'], strings: ['account_number', 'symbol', 'side', 'type', 'quantity', 'dollar_amount', 'limit_price', 'stop_price', 'time_in_force', 'market_hours', 'ref_id'], arrays: ['tax_lots'] },
   place_option_order: { required: ['account_number', 'legs', 'quantity'], strings: ['account_number', 'type', 'quantity', 'price', 'stop_price', 'time_in_force', 'market_hours', 'ref_id'], arrays: ['legs'] },
   remove_from_watchlist: { required: ['list_id'], strings: ['list_id'], arrays: ['symbols', 'currency_pair_ids', 'index_ids'] },
   remove_option_from_watchlist: { required: ['option_ids'], arrays: ['option_ids'], strings: ['position_type'] },
-  review_equity_order: { required: ['account_number', 'symbol', 'side', 'type'], strings: ['account_number', 'symbol', 'side', 'type', 'quantity', 'dollar_amount', 'limit_price', 'stop_price', 'time_in_force', 'market_hours'] },
+  review_equity_order: { required: ['account_number', 'symbol', 'side', 'type'], strings: ['account_number', 'symbol', 'side', 'type', 'quantity', 'dollar_amount', 'limit_price', 'stop_price', 'time_in_force', 'market_hours'], arrays: ['tax_lots'] },
   review_option_order: { required: ['account_number', 'legs', 'quantity'], strings: ['account_number', 'type', 'quantity', 'price', 'stop_price', 'time_in_force', 'market_hours', 'chain_symbol', 'underlying_type'], arrays: ['legs'] },
   run_scan: { required: ['scan_id'], strings: ['scan_id'] },
   search: { required: ['query'], strings: ['query', 'asset_type'], integers: ['limit'] },
@@ -115,9 +121,11 @@ const TOOL_DATA_REQUIRED = {
   get_earnings_results: ['results'],
   get_equity_fundamentals: ['results'],
   get_equity_historicals: ['results'],
+  get_equity_technical_indicators: ['symbol', 'interval', 'bounds', 'indicators'],
   get_equity_orders: ['orders'],
   get_equity_positions: ['positions'],
   get_equity_quotes: ['results'],
+  get_equity_tax_lots: ['symbol', 'tax_lots'],
   get_equity_tradability: ['results'],
   get_index_quotes: ['quotes'],
   get_indexes: ['indexes'],
@@ -130,6 +138,7 @@ const TOOL_DATA_REQUIRED = {
   get_option_watchlist: ['items', 'list_id'],
   get_popular_watchlists: ['lists'],
   get_portfolio: ['total_value', 'equity_value', 'options_value', 'futures_value', 'event_contracts_value', 'crypto_value', 'cash', 'pending_deposits', 'mutual_funds_value', 'fixed_income_value', 'currency', 'buying_power'],
+  get_pnl_trade_history: ['account_number', 'span', 'trades', 'next_cursor'],
   get_realized_pnl: ['account_number', 'window', 'display_currency', 'data_points', 'total_returns', 'total_rate_of_return'],
   get_scans: ['scans'],
   get_watchlist_items: ['items', 'has_futures_contracts'],
@@ -448,6 +457,32 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         number_of_trades: 1,
       },
     ],
+    pnlTradeHistory: [
+      {
+        timestamp: '2025-10-21T15:15:00.000Z',
+        account_number: 'RHAGENTIC001',
+        symbol: 'AAPL',
+        side: 'sell',
+        quantity: '2',
+        price: '228.00',
+        realized_gain: '76.00',
+      },
+      {
+        timestamp: '2025-11-14T16:00:00.000Z',
+        account_number: 'RHAGENTIC001',
+        symbol: 'AAPL',
+        side: 'sell',
+        quantity: '1',
+        price: '7.0542',
+        realized_gain: '125.42',
+      },
+    ],
+    equityTaxLots: {
+      AAPL: [
+        { open_lot_id: 'tax-lot-aapl-1', open_tran_type: 'buy', order_id: 'rh_order_seed_1', quantity: '3', quantity_available: '3', is_selectable: true, cost_per_share: '190.00', tax_cost_basis: '570.00', open_date: '2024-06-10', term: 'lt' },
+        { open_lot_id: 'tax-lot-aapl-2', open_tran_type: 'buy', order_id: 'rh_order_seed_2', quantity: '2', quantity_available: '2', is_selectable: true, cost_per_share: '195.00', tax_cost_basis: '390.00', open_date: '2025-12-15', term: 'st' },
+      ],
+    },
     scans: [
       {
         scan_id: 'scan-daily-gainers',
@@ -552,13 +587,14 @@ function schemaProperty(name, spec) {
     return { type: ['null', 'array'], items: { type: itemType } };
   }
   if (spec.integers?.includes(name)) return { type: 'integer' };
+  if (spec.numbers?.includes(name)) return { type: 'number' };
   if (spec.booleans?.includes(name)) return { type: 'boolean' };
   return { type: 'string' };
 }
 
 function toolSchema(name) {
   const spec = TOOL_INPUTS[name] ?? {};
-  const propertyNames = [...new Set([...(spec.strings ?? []), ...(spec.arrays ?? []), ...(spec.integers ?? []), ...(spec.booleans ?? [])])];
+  const propertyNames = [...new Set([...(spec.strings ?? []), ...(spec.arrays ?? []), ...(spec.integers ?? []), ...(spec.numbers ?? []), ...(spec.booleans ?? [])])];
   return {
     name,
     inputSchema: {
@@ -711,6 +747,38 @@ function equityHistoricalResults(s, args) {
       bars: filteredBars,
     };
   });
+}
+
+function equityTechnicalIndicatorResult(s, args) {
+  const symbol = normalizeSymbol(args.symbol);
+  const type = String(args.type).trim().toLowerCase();
+  const interval = String(args.interval ?? 'day');
+  const bars = equityHistoricalResults(s, { ...args, symbols: [symbol] })[0]?.bars ?? [];
+  const closes = bars.map((bar) => Number(bar.close_price)).filter(Number.isFinite);
+  const period = Math.max(1, Number(args.period ?? 14));
+  const average = closes.length ? closes.slice(-period).reduce((sum, value) => sum + value, 0) / Math.min(period, closes.length) : null;
+  const series = bars.map((bar, index) => ({
+    begins_at: bar.begins_at,
+    value: type === 'sma' || type === 'ema' ? average : Number(bar.close_price),
+    ...(type === 'macd' ? { macd: Number(bar.close_price), signal: average, histogram: Number(bar.close_price) - average } : {}),
+    ...(type === 'bollinger_bands' ? { upper: average + Number(args.num_std ?? 2), middle: average, lower: average - Number(args.num_std ?? 2) } : {}),
+    ...(index === 0 ? { index } : {}),
+  }));
+  return { symbol, interval, bounds: String(args.bounds ?? 'regular'), indicators: [{ type, params: { period }, series }] };
+}
+
+function pnlTradeHistoryResult(s, args) {
+  const accountNumber = String(args.account_number);
+  const symbol = args.symbol ? normalizeSymbol(args.symbol) : null;
+  const trades = (s.pnlTradeHistory ?? []).filter((trade) => {
+    return String(trade.account_number) === accountNumber && (!symbol || normalizeSymbol(trade.symbol) === symbol);
+  });
+  return { account_number: accountNumber, span: String(args.span ?? 'week'), trades, next_cursor: '' };
+}
+
+function equityTaxLotsResult(s, args) {
+  const symbol = normalizeSymbol(args.symbol);
+  return { symbol, tax_lots: s.equityTaxLots?.[symbol] ?? [], next: '' };
 }
 
 function optionHistoricalResults(s, args) {
@@ -1168,7 +1236,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Robinhood Agentic Trading MCP documentation-informed subset plus observed Streamable HTTP MCP tool list, 2026-07-01',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-11',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1314,6 +1382,8 @@ export const plugin = {
           const symbols = requestedSymbols(args);
           return c.json(liveResult(id, { results: s.quotes.filter((quote) => symbols.includes(quote.symbol)) }, 'Real-time equity quotes for requested symbols.'));
         }
+        case 'get_equity_tax_lots':
+          return c.json(liveResult(id, equityTaxLotsResult(s, args), 'Open tax lots for the requested equity holding, newest acquired first.'));
         case 'get_equity_historicals': {
           if (!parseRfc3339(args.start_time ?? args.startTime)) {
             const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
@@ -1324,6 +1394,13 @@ export const plugin = {
             return c.json(error.payload, error.status);
           }
           return c.json(liveResult(id, { results: equityHistoricalResults(s, args) }, "Bars are left-edge labeled in UTC; convert to the user's timezone for presentation."));
+        }
+        case 'get_equity_technical_indicators': {
+          if (!parseRfc3339(args.start_time)) {
+            const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          return c.json(liveResult(id, equityTechnicalIndicatorResult(s, args), 'Technical-indicator values are computed from the returned equity historical bars.'));
         }
         case 'get_equity_fundamentals': {
           const symbols = requestedSymbols(args);
@@ -1405,6 +1482,8 @@ export const plugin = {
           return c.json(liveResult(id, { orders: filteredOptionOrders(s, args), next: null }, 'Option orders for the requested account.'));
         case 'get_realized_pnl':
           return c.json(liveResult(id, realizedPnlResult(s, args), 'Realized P&L over the requested window.'));
+        case 'get_pnl_trade_history':
+          return c.json(liveResult(id, pnlTradeHistoryResult(s, args), 'Trade-by-trade realized P&L history for the requested account.'));
         case 'get_scans':
           return c.json(liveResult(id, { scans: (s.scans ?? []).map(scanData) }, 'Cortex-managed scans are read-only via MCP. Use run_scan to execute a saved scan.'));
         case 'run_scan': {

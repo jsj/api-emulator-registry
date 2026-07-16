@@ -5,6 +5,9 @@ import { fixedNow, getState, readBody, setState } from '../scripts/provider-plug
 
 const STATE_KEY = 'robinhood-trading:state';
 const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sanitized.json');
+const TOOLS_CONTRACT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tools-contract.sanitized.json');
+const observedTools = JSON.parse(readFileSync(TOOLS_CONTRACT_PATH, 'utf8')).tools;
+const observedToolsByName = new Map(observedTools.map((tool) => [tool.name, tool]));
 const fixturePath = () => process.env.ROBINHOOD_EMULATOR_FIXTURE_PATH || FIXTURE_PATH;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_DAYS = 7;
@@ -23,12 +26,14 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_earnings_results',
   'get_equity_fundamentals',
   'get_equity_historicals',
+  'get_equity_price_book',
   'get_equity_technical_indicators',
   'get_equity_orders',
   'get_equity_positions',
   'get_equity_quotes',
   'get_equity_tax_lots',
   'get_equity_tradability',
+  'get_financials',
   'get_index_quotes',
   'get_indexes',
   'get_option_chains',
@@ -42,6 +47,7 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_portfolio',
   'get_pnl_trade_history',
   'get_realized_pnl',
+  'get_scanner_filter_specs',
   'get_scans',
   'get_watchlist_items',
   'get_watchlists',
@@ -72,12 +78,14 @@ const TOOL_INPUTS = {
   get_earnings_results: { required: ['symbol'], strings: ['symbol'] },
   get_equity_fundamentals: { required: ['symbols'], arrays: ['symbols'], strings: ['bounds'] },
   get_equity_historicals: { required: ['symbols', 'start_time'], arrays: ['symbols'], strings: ['start_time', 'end_time', 'interval', 'bounds', 'adjustment_type'] },
+  get_equity_price_book: { required: ['symbols'], arrays: ['symbols'] },
   get_equity_technical_indicators: { required: ['symbol', 'type', 'interval', 'start_time'], strings: ['symbol', 'type', 'start_time', 'end_time', 'interval', 'bounds', 'adjustment_type', 'output', 'method'], integers: ['period', 'fast_period', 'slow_period', 'signal_period'], numbers: ['num_std', 'multiplier'] },
   get_equity_orders: { required: ['account_number'], strings: ['account_number', 'order_id', 'state', 'symbol', 'created_at_gte', 'placed_agent', 'cursor'] },
   get_equity_positions: { required: ['account_number'], strings: ['account_number', 'cursor'] },
   get_equity_quotes: { required: ['symbols'], arrays: ['symbols'] },
   get_equity_tax_lots: { required: ['account_number', 'symbol'], strings: ['account_number', 'symbol', 'cursor'] },
   get_equity_tradability: { required: ['account_number', 'symbols'], strings: ['account_number'], arrays: ['symbols'] },
+  get_financials: { required: ['symbols'], arrays: ['symbols'], strings: ['period'], integers: ['limit'] },
   get_index_quotes: { required: ['instrument_ids'], arrays: ['instrument_ids'] },
   get_indexes: { strings: ['symbols'] },
   get_option_chains: { strings: ['ids', 'underlying_symbol'] },
@@ -91,6 +99,7 @@ const TOOL_INPUTS = {
   get_portfolio: { required: ['account_number'], strings: ['account_number'] },
   get_pnl_trade_history: { required: ['account_number'], strings: ['account_number', 'span', 'symbol', 'cursor'] },
   get_realized_pnl: { required: ['account_number'], strings: ['account_number', 'span', 'start_date', 'end_date', 'display_currency', 'timezone'], arrays: ['asset_classes'] },
+  get_scanner_filter_specs: {},
   get_scans: {},
   get_watchlist_items: { required: ['list_id'], strings: ['list_id'] },
   get_watchlists: {},
@@ -121,12 +130,14 @@ const TOOL_DATA_REQUIRED = {
   get_earnings_results: ['results'],
   get_equity_fundamentals: ['results'],
   get_equity_historicals: ['results'],
+  get_equity_price_book: ['books'],
   get_equity_technical_indicators: ['symbol', 'interval', 'bounds', 'indicators'],
   get_equity_orders: ['orders'],
   get_equity_positions: ['positions'],
   get_equity_quotes: ['results'],
   get_equity_tax_lots: ['symbol', 'tax_lots'],
   get_equity_tradability: ['results'],
+  get_financials: ['results'],
   get_index_quotes: ['quotes'],
   get_indexes: ['indexes'],
   get_option_chains: ['chains'],
@@ -140,6 +151,7 @@ const TOOL_DATA_REQUIRED = {
   get_portfolio: ['total_value', 'equity_value', 'options_value', 'futures_value', 'event_contracts_value', 'crypto_value', 'cash', 'pending_deposits', 'mutual_funds_value', 'fixed_income_value', 'currency', 'buying_power'],
   get_pnl_trade_history: ['account_number', 'span', 'trades', 'next_cursor'],
   get_realized_pnl: ['account_number', 'window', 'display_currency', 'data_points', 'total_returns', 'total_rate_of_return'],
+  get_scanner_filter_specs: ['filter_specs'],
   get_scans: ['scans'],
   get_watchlist_items: ['items', 'has_futures_contracts'],
   get_watchlists: ['watchlists'],
@@ -210,6 +222,16 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         dividend_yield: '0.005',
         description: 'Apple Inc. designs, manufactures, and markets smartphones, computers, tablets, wearables, and services.',
       },
+    ],
+    financials: {
+      AAPL: [
+        { fiscal_year: 2026, fiscal_quarter: 2, period_end_date: '2026-06-27', revenue: '94036000000', gross_profit: '43879000000', net_income: '23636000000', net_margin: '25.13' },
+        { fiscal_year: 2026, fiscal_quarter: 1, period_end_date: '2026-03-28', revenue: '95359000000', gross_profit: '44754000000', net_income: '24780000000', net_margin: '25.99' },
+      ],
+    },
+    scannerFilterSpecs: [
+      { filter_type: 'FILTER_TYPE_RSI', display_name: 'RSI', filter_group: 'TECHNICAL', value_type: 'DECIMAL', unit_type: 'PLAIN', supported_predicates: ['>', '<', 'BETWEEN'], supported_lengths: [9, 14, 21, 50], supported_intervals: ['1m', '5m', '1h', '1d'], supported_plots: [] },
+      { filter_type: 'FILTER_TYPE_PERCENT_CHANGE_FROM_CLOSE', display_name: '% Change From Close', filter_group: 'PRICE_VOLUME', value_type: 'DECIMAL', unit_type: 'PERCENTAGE', supported_predicates: ['>', '<', 'BETWEEN'], supported_lengths: [], supported_intervals: ['1d'], supported_plots: ['close'] },
     ],
     optionChains: {
       AAPL: {
@@ -536,6 +558,54 @@ const mcpResult = (id, structuredContent) => ({
 });
 const mcpError = (id, message, status = 400, code = -32602) => ({ payload: { jsonrpc: '2.0', id, error: { code, message } }, status });
 const liveResult = (id, data, guide = 'Emulator response shaped to match the Robinhood Trading MCP tool contract.') => mcpResult(id, { data, guide });
+
+function schemaDefault(schema) {
+  const types = Array.isArray(schema?.type) ? schema.type : schema?.type ? [schema.type] : [];
+  if (types.includes('null')) return null;
+  if (types.includes('object')) return conformToSchema({}, schema);
+  if (types.includes('array')) return [];
+  if (types.includes('string')) return '';
+  if (types.includes('integer') || types.includes('number')) return 0;
+  if (types.includes('boolean')) return false;
+  return null;
+}
+
+function valueMatchesSchemaType(value, schema) {
+  const types = Array.isArray(schema?.type) ? schema.type : schema?.type ? [schema.type] : [];
+  if (!types.length) return true;
+  return types.some((type) =>
+    (type === 'null' && value === null) ||
+    (type === 'array' && Array.isArray(value)) ||
+    (type === 'object' && value !== null && typeof value === 'object' && !Array.isArray(value)) ||
+    (type === 'integer' && Number.isInteger(value)) ||
+    (type === 'number' && typeof value === 'number' && Number.isFinite(value)) ||
+    (type === 'string' && typeof value === 'string') ||
+    (type === 'boolean' && typeof value === 'boolean'));
+}
+
+function conformToSchema(value, schema) {
+  if (!schema || Object.keys(schema).length === 0) return value;
+  if (!valueMatchesSchemaType(value, schema)) return schemaDefault(schema);
+  if (value === null) return null;
+  if (Array.isArray(value)) return value.map((item) => conformToSchema(item, schema.items));
+  if (typeof value !== 'object') return value;
+  const result = {};
+  for (const [key, childSchema] of Object.entries(schema.properties ?? {})) {
+    if (Object.hasOwn(value, key)) result[key] = conformToSchema(value[key], childSchema);
+    else if ((schema.required ?? []).includes(key)) result[key] = schemaDefault(childSchema);
+  }
+  if (schema.additionalProperties !== false) {
+    for (const [key, child] of Object.entries(value)) {
+      if (!Object.hasOwn(result, key) && !schema.properties?.[key]) result[key] = conformToSchema(child, schema.additionalProperties);
+    }
+  }
+  return result;
+}
+
+function liveToolResult(id, tool, data, guide) {
+  const schema = observedToolsByName.get(tool)?.outputSchema?.properties?.data;
+  return liveResult(id, conformToSchema(data, schema), guide);
+}
 const watchlistGuide =
   "Distinguish lists by owner_type: 'custom' lists are writable with add_to_watchlist, remove_from_watchlist, and update_watchlist; Robinhood-curated lists are read-only and managed via follow_watchlist / unfollow_watchlist.";
 const watchlistItemsGuide =
@@ -593,6 +663,8 @@ function schemaProperty(name, spec) {
 }
 
 function toolSchema(name) {
+  const observed = observedToolsByName.get(name);
+  if (observed) return observed;
   const spec = TOOL_INPUTS[name] ?? {};
   const propertyNames = [...new Set([...(spec.strings ?? []), ...(spec.arrays ?? []), ...(spec.integers ?? []), ...(spec.numbers ?? []), ...(spec.booleans ?? [])])];
   return {
@@ -1236,7 +1308,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-11',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-16',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1367,23 +1439,80 @@ export const plugin = {
 
       switch (tool) {
         case 'get_accounts':
-          return c.json(liveResult(id, { accounts: s.accounts }, 'Use account_number from this response for trading and portfolio tools.'));
+          return c.json(liveToolResult(id, tool, { accounts: s.accounts }, 'Use account_number from this response for trading and portfolio tools.'));
         case 'get_portfolio':
-          return c.json(liveResult(id, portfolioData(s.portfolio), 'Portfolio balances for the requested brokerage account.'));
+          return c.json(liveToolResult(id, tool, portfolioData(s.portfolio), 'Portfolio balances for the requested brokerage account.'));
         case 'get_equity_positions':
-          return c.json(liveResult(id, { positions: s.positions, next: null }, 'Open equity positions for the requested account.'));
+          return c.json(liveToolResult(id, tool, { positions: s.positions, next: null }, 'Open equity positions for the requested account.'));
         case 'get_earnings_calendar':
-          return c.json(liveResult(id, { results: earningsInWindow(s, args) }, 'Each entry is one earnings event within the requested window.'));
+          return c.json(liveToolResult(id, tool, { results: earningsInWindow(s, args) }, 'Each entry is one earnings event within the requested window.'));
         case 'get_earnings_results': {
           const symbol = normalizeSymbol(args.symbol);
-          return c.json(liveResult(id, { results: s.earningsResults?.[symbol] ?? (s.earningsCalendar ?? []).filter((row) => normalizeSymbol(row.symbol) === symbol) }, 'Entries are sorted historical first, upcoming last.'));
+          return c.json(liveToolResult(id, tool, { results: s.earningsResults?.[symbol] ?? (s.earningsCalendar ?? []).filter((row) => normalizeSymbol(row.symbol) === symbol) }, 'Entries are sorted historical first, upcoming last.'));
         }
         case 'get_equity_quotes': {
           const symbols = requestedSymbols(args);
-          return c.json(liveResult(id, { results: s.quotes.filter((quote) => symbols.includes(quote.symbol)) }, 'Real-time equity quotes for requested symbols.'));
+          const results = symbols.map((symbol) => {
+            const row = s.quotes.find((quote) => normalizeSymbol(quote.symbol) === symbol);
+            if (!row) return null;
+            const timestamp = row.updated_at ?? fixedNow;
+            return {
+              quote: {
+                symbol,
+                last_trade_price: String(row.price),
+                venue_last_trade_time: timestamp,
+                last_non_reg_trade_price: null,
+                venue_last_non_reg_trade_time: null,
+                adjusted_previous_close: String(row.prior_close),
+                previous_close: String(row.prior_close),
+                previous_close_date: timestamp.slice(0, 10),
+                bid_price: String(row.bid),
+                venue_bid_time: timestamp,
+                ask_price: String(row.ask),
+                venue_ask_time: timestamp,
+                has_traded: true,
+                state: 'active',
+              },
+              close: null,
+            };
+          });
+          return c.json(liveToolResult(id, tool, { results }, 'Real-time equity quotes for requested symbols.'));
+        }
+        case 'get_equity_price_book': {
+          const symbols = requestedSymbols(args);
+          if (symbols.length > 4) {
+            const error = mcpError(id, 'symbols must contain at most 4 items', 400);
+            return c.json(error.payload, error.status);
+          }
+          const books = [];
+          const errors = [];
+          for (const symbol of symbols) {
+            const quote = (s.quotes ?? []).find((row) => normalizeSymbol(row.symbol) === symbol);
+            if (!quote) {
+              errors.push({ symbol, error: 'Symbol did not resolve to an available equity price book.' });
+              continue;
+            }
+            const ask = Number(quote.ask ?? quote.price);
+            const bid = Number(quote.bid ?? quote.price);
+            books.push({
+              symbol,
+              updated_at: quote.updated_at ?? fixedNow,
+              asks: [
+                { price: ask.toFixed(6), quantity: 140 },
+                { price: (ask + 0.01).toFixed(6), quantity: 270 },
+                { price: (ask + 0.02).toFixed(6), quantity: 209 },
+              ],
+              bids: [
+                { price: bid.toFixed(6), quantity: 100 },
+                { price: (bid - 0.01).toFixed(6), quantity: 5 },
+                { price: (bid - 0.02).toFixed(6), quantity: 30 },
+              ],
+            });
+          }
+          return c.json(liveToolResult(id, tool, { books, errors }, 'asks are lowest-first and bids are highest-first; quantity is resting share size. A symbol appears in books or errors, never both.'));
         }
         case 'get_equity_tax_lots':
-          return c.json(liveResult(id, equityTaxLotsResult(s, args), 'Open tax lots for the requested equity holding, newest acquired first.'));
+          return c.json(liveToolResult(id, tool, equityTaxLotsResult(s, args), 'Open tax lots for the requested equity holding, newest acquired first.'));
         case 'get_equity_historicals': {
           if (!parseRfc3339(args.start_time ?? args.startTime)) {
             const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
@@ -1393,38 +1522,45 @@ export const plugin = {
             const error = mcpError(id, "end_time must be RFC3339 (e.g. '2026-01-08T00:00:00Z')", 400);
             return c.json(error.payload, error.status);
           }
-          return c.json(liveResult(id, { results: equityHistoricalResults(s, args) }, "Bars are left-edge labeled in UTC; convert to the user's timezone for presentation."));
+          return c.json(liveToolResult(id, tool, { results: equityHistoricalResults(s, args) }, "Bars are left-edge labeled in UTC; convert to the user's timezone for presentation."));
         }
         case 'get_equity_technical_indicators': {
           if (!parseRfc3339(args.start_time)) {
             const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
             return c.json(error.payload, error.status);
           }
-          return c.json(liveResult(id, equityTechnicalIndicatorResult(s, args), 'Technical-indicator values are computed from the returned equity historical bars.'));
+          return c.json(liveToolResult(id, tool, equityTechnicalIndicatorResult(s, args), 'Technical-indicator values are computed from the returned equity historical bars.'));
         }
         case 'get_equity_fundamentals': {
           const symbols = requestedSymbols(args);
-          return c.json(liveResult(id, { results: (s.equityFundamentals ?? []).filter((row) => symbols.includes(row.symbol)) }, 'Fundamentals for requested equity symbols.'));
+          return c.json(liveToolResult(id, tool, { results: (s.equityFundamentals ?? []).filter((row) => symbols.includes(row.symbol)) }, 'Fundamentals for requested equity symbols.'));
+        }
+        case 'get_financials': {
+          const symbols = requestedSymbols(args);
+          const period = args.period ?? 'quarterly';
+          const limit = Math.min(Number(args.limit ?? 4), 40);
+          const results = symbols.map((symbol) => ({ symbol, period, financials: (s.financials?.[symbol] ?? []).slice(0, limit) }));
+          return c.json(liveToolResult(id, tool, { results }, 'Financial periods are most-recent-first; net_margin is already a percentage.'));
         }
         case 'get_equity_orders':
-          return c.json(liveResult(id, { orders: s.orders, next: null }, 'Equity orders for the requested account.'));
+          return c.json(liveToolResult(id, tool, { orders: s.orders, next: null }, 'Equity orders for the requested account.'));
         case 'get_equity_tradability': {
           const symbols = requestedSymbols(args);
-          return c.json(liveResult(id, { results: symbols.map((symbol) => ({ symbol, tradable: true, fractionally_tradable: true })) }, 'Tradability by requested symbol.'));
+          return c.json(liveToolResult(id, tool, { results: symbols.map((symbol) => ({ symbol, tradeable: true, fractional_tradability: 'tradable' })) }, 'Tradability by requested symbol.'));
         }
         case 'get_indexes':
-          return c.json(liveResult(id, { indexes: s.indexes ?? [] }, 'Market indexes matching the requested symbols.'));
+          return c.json(liveToolResult(id, tool, { indexes: s.indexes ?? [] }, 'Market indexes matching the requested symbols.'));
         case 'get_index_quotes': {
           const ids = new Set(requestedExplicitOptionIds(args));
           const symbols = new Set((s.indexes ?? []).filter((index) => ids.has(String(index.id))).map((index) => index.symbol));
-          return c.json(liveResult(id, { quotes: (s.indexQuotes ?? []).filter((quote) => symbols.has(quote.symbol) || ids.has(String(quote.instrument_id ?? quote.id))) }, 'Index quotes for requested instrument_ids.'));
+          return c.json(liveToolResult(id, tool, { quotes: (s.indexQuotes ?? []).filter((quote) => symbols.has(quote.symbol) || ids.has(String(quote.instrument_id ?? quote.id))) }, 'Index quotes for requested instrument_ids.'));
         }
         case 'review_equity_order': {
           const accountError = validateTradingAccount(id, s, args);
           if (accountError) return c.json(accountError.payload, accountError.status);
           const shapeError = validateOrderShape(id, args);
           if (shapeError) return c.json(shapeError.payload, shapeError.status);
-          return c.json(liveResult(id, equityReviewData(args), 'Review only; no order was placed.'));
+          return c.json(liveToolResult(id, tool, equityReviewData(args), 'Review only; no order was placed.'));
         }
         case 'place_equity_order': {
           const accountError = validateTradingAccount(id, s, args);
@@ -1436,34 +1572,60 @@ export const plugin = {
           if (isFractionalOrder(args)) s.fractionalOrderCount = Number(s.fractionalOrderCount ?? 0) + 1;
           const order = {
             id: `rh_order_${String(s.nextId++).padStart(6, '0')}`,
+            instrument_id: `instrument-${normalizeSymbol(args.symbol).toLowerCase()}`,
             symbol: args.symbol ?? 'AAPL',
             side: args.side ?? 'buy',
             quantity: args.quantity ?? args.qty ?? '1',
             dollar_amount: args.dollar_amount,
             notional: args.notional,
             type: normalizedEquityOrderType(args),
+            price: args.limit_price ?? args.limitPrice ?? null,
             limit_price: args.limit_price ?? args.limitPrice,
             stop_price: args.stop_price ?? args.stopPrice,
             status: 'accepted',
+            state: 'accepted',
+            trigger: ['stop_market', 'stop_limit'].includes(normalizedEquityOrderType(args)) ? 'stop' : 'immediate',
+            created_at: fixedNow,
             submitted_at: fixedNow,
           };
           s.orders.push(order);
           save(store, s);
-          return c.json(liveResult(id, { order }, 'Order accepted by emulator state.'));
+          return c.json(liveToolResult(id, tool, { order }, 'Order accepted by emulator state.'));
         }
         case 'cancel_equity_order': {
           const order = s.orders.find((row) => row.id === args.order_id || row.id === args.id);
           if (order) order.status = 'canceled';
           save(store, s);
-          return c.json(liveResult(id, { accepted: Boolean(order) }, 'accepted=true means the cancel request was accepted.'));
+          return c.json(liveToolResult(id, tool, { accepted: Boolean(order) }, 'accepted=true means the cancel request was accepted.'));
         }
         case 'get_option_chains':
-          return c.json(liveResult(id, { chains: filteredOptionChains(s, args), next: null }, 'Option chains for requested underlyings or ids.'));
+          return c.json(liveToolResult(id, tool, { chains: filteredOptionChains(s, args), next: null }, 'Option chains for requested underlyings or ids.'));
         case 'get_option_instruments':
-          return c.json(liveResult(id, { instruments: filteredOptionInstruments(s, args), next: null }, 'Option instruments matching the requested filters.'));
+          return c.json(liveToolResult(id, tool, { instruments: filteredOptionInstruments(s, args), next: null }, 'Option instruments matching the requested filters.'));
         case 'get_option_quotes': {
           const optionIds = new Set(requestedOptionIds(args, s));
-          return c.json(liveResult(id, { results: s.optionQuotes.filter((quote) => optionIds.has(quote.instrument_id ?? quote.option_id)) }, 'Option quotes for requested instrument_ids.'));
+          const results = s.optionQuotes.filter((row) => optionIds.has(row.instrument_id ?? row.option_id)).map((row) => ({
+            quote: {
+              instrument_id: row.instrument_id,
+              ask_price: row.ask,
+              ask_size: 1,
+              bid_price: row.bid,
+              bid_size: 1,
+              mark_price: row.mark_price,
+              adjusted_mark_price: row.mark_price,
+              implied_volatility: row.implied_volatility,
+              delta: row.delta,
+              gamma: row.gamma,
+              rho: row.rho,
+              theta: row.theta,
+              vega: row.vega,
+              open_interest: row.open_interest,
+              volume: row.volume,
+              updated_at: row.updated_at,
+            },
+            close: null,
+          }));
+          return c.json(liveToolResult(id, tool, { results }, 'Option quotes for requested instrument_ids.'));
         }
         case 'get_option_historicals': {
           if (!parseRfc3339(args.start_time ?? args.startTime)) {
@@ -1474,22 +1636,24 @@ export const plugin = {
             const error = mcpError(id, "end_time must be RFC3339 (e.g. '2026-01-08T00:00:00Z')", 400);
             return c.json(error.payload, error.status);
           }
-          return c.json(liveResult(id, { results: optionHistoricalResults(s, args) }, 'Bars are left-edge labeled in UTC. instrument_ids must be option contract UUIDs from get_option_instruments.'));
+          return c.json(liveToolResult(id, tool, { results: optionHistoricalResults(s, args) }, 'Bars are left-edge labeled in UTC. instrument_ids must be option contract UUIDs from get_option_instruments.'));
         }
         case 'get_option_positions':
-          return c.json(liveResult(id, { positions: filteredOptionPositions(s, args), next: null }, 'Option positions for the requested account.'));
+          return c.json(liveToolResult(id, tool, { positions: filteredOptionPositions(s, args), next: null }, 'Option positions for the requested account.'));
         case 'get_option_orders':
-          return c.json(liveResult(id, { orders: filteredOptionOrders(s, args), next: null }, 'Option orders for the requested account.'));
+          return c.json(liveToolResult(id, tool, { orders: filteredOptionOrders(s, args), next: null }, 'Option orders for the requested account.'));
         case 'get_realized_pnl':
-          return c.json(liveResult(id, realizedPnlResult(s, args), 'Realized P&L over the requested window.'));
+          return c.json(liveToolResult(id, tool, realizedPnlResult(s, args), 'Realized P&L over the requested window.'));
         case 'get_pnl_trade_history':
-          return c.json(liveResult(id, pnlTradeHistoryResult(s, args), 'Trade-by-trade realized P&L history for the requested account.'));
+          return c.json(liveToolResult(id, tool, pnlTradeHistoryResult(s, args), 'Trade-by-trade realized P&L history for the requested account.'));
         case 'get_scans':
-          return c.json(liveResult(id, { scans: (s.scans ?? []).map(scanData) }, 'Cortex-managed scans are read-only via MCP. Use run_scan to execute a saved scan.'));
+          return c.json(liveToolResult(id, tool, { scans: (s.scans ?? []).map(scanData) }, 'Cortex-managed scans are read-only via MCP. Use run_scan to execute a saved scan.'));
+        case 'get_scanner_filter_specs':
+          return c.json(liveToolResult(id, tool, { filter_specs: s.scannerFilterSpecs ?? [] }, 'Use filter_type and supported predicates, intervals, lengths, and plots exactly as returned.'));
         case 'run_scan': {
           const scan = findScan(s, args);
           if (!scan) return c.json(mcpError(id, 'Scan not found', 404).payload, 404);
-          return c.json(liveResult(id, { result: scanResult(scan) }, 'Results are live market scan rows in the scan sort order.'));
+          return c.json(liveToolResult(id, tool, { result: scanResult(scan) }, 'Results are live market scan rows in the scan sort order.'));
         }
         case 'create_scan': {
           const filters = Array.isArray(args.filters) ? args.filters : [];
@@ -1508,7 +1672,7 @@ export const plugin = {
           };
           s.scans = [...(s.scans ?? []), scan];
           save(store, s);
-          return c.json(liveResult(id, { result: scanResult(scan) }, 'Created saved scanner in emulator state.'));
+          return c.json(liveToolResult(id, tool, { result: scanResult(scan) }, 'Created saved scanner in emulator state.'));
         }
         case 'update_scan_filters': {
           const scan = findScan(s, args);
@@ -1517,7 +1681,7 @@ export const plugin = {
           scan.filters = Array.isArray(args.filters) ? args.filters : [];
           scan.filter_summary = scanFiltersForSummary(scan.filters);
           save(store, s);
-          return c.json(liveResult(id, { result: scanResult(scan) }, 'Filters replaced on the saved scan.'));
+          return c.json(liveToolResult(id, tool, { result: scanResult(scan) }, 'Filters replaced on the saved scan.'));
         }
         case 'update_scan_config': {
           const scan = findScan(s, args);
@@ -1531,17 +1695,27 @@ export const plugin = {
           }
           scan.sorting = { column: sortingColumn || scan.sorting?.column || 'Symbol', direction: sortingDirection === 'desc' ? 'desc' : 'asc' };
           save(store, s);
-          return c.json(liveResult(id, { result: scanResult(scan) }, 'Sort configuration updated on the saved scan.'));
+          return c.json(liveToolResult(id, tool, { result: scanResult(scan) }, 'Sort configuration updated on the saved scan.'));
         }
         case 'get_option_watchlist': {
           const watchlist = findWatchlist(s, args);
           const optionIds = new Set(watchlist?.option_ids ?? []);
-          return c.json(liveResult(id, { list_id: watchlist?.id ?? null, items: s.optionQuotes.filter((quote) => optionIds.has(quote.instrument_id ?? quote.option_id)) }, 'Options watchlist items.'));
+          const items = s.optionQuotes.filter((quote) => optionIds.has(quote.instrument_id ?? quote.option_id)).map((quote) => ({
+            id: `option-watchlist-${quote.instrument_id}`,
+            name: `${quote.symbol} option`,
+            chain_symbol: quote.symbol,
+            contract_type: 'call',
+            expiration_date: '2026-06-22',
+            strike_price: '225.0000',
+            option_ids: [quote.instrument_id],
+          }));
+          return c.json(liveToolResult(id, tool, { list_id: watchlist?.id ?? null, items }, 'Options watchlist items.'));
         }
         case 'get_popular_watchlists':
           return c.json(
-            liveResult(
+            liveToolResult(
               id,
+              tool,
               {
                 lists: [
                 { id: 'popular-tech', display_name: 'Popular Tech', symbols: ['AAPL', 'MSFT', 'NVDA'], followed: false },
@@ -1557,7 +1731,7 @@ export const plugin = {
           if (accountError) return c.json(accountError.payload, accountError.status);
           const shapeError = validateOptionOrderShape(id, args);
           if (shapeError) return c.json(shapeError.payload, shapeError.status);
-          return c.json(liveResult(id, optionReviewData(args), 'Review only; no option order was placed.'));
+          return c.json(liveToolResult(id, tool, optionReviewData(args), 'Review only; no option order was placed.'));
         }
         case 'place_option_order': {
           const accountError = validateTradingAccount(id, s, args);
@@ -1567,19 +1741,19 @@ export const plugin = {
           const order = optionOrder(id, s, args);
           s.optionOrders.push(order);
           save(store, s);
-          return c.json(liveResult(id, { order }, 'Option order accepted by emulator state.'));
+          return c.json(liveToolResult(id, tool, { order }, 'Option order accepted by emulator state.'));
         }
         case 'cancel_option_order': {
           const order = s.optionOrders.find((row) => row.id === args.order_id || row.id === args.id);
           if (order) order.status = 'canceled';
           save(store, s);
-          return c.json(liveResult(id, { accepted: Boolean(order) }, 'accepted=true means the cancel request was accepted.'));
+          return c.json(liveToolResult(id, tool, { accepted: Boolean(order) }, 'accepted=true means the cancel request was accepted.'));
         }
         case 'get_watchlists':
-          return c.json(liveResult(id, { watchlists: s.watchlists.map(watchlistData) }, watchlistGuide));
+          return c.json(liveToolResult(id, tool, { watchlists: s.watchlists.map(watchlistData) }, watchlistGuide));
         case 'get_watchlist_items': {
           const watchlist = findWatchlist(s, args);
-          return c.json(liveResult(id, { items: watchlistItems(watchlist), has_futures_contracts: false }, watchlistItemsGuide));
+          return c.json(liveToolResult(id, tool, { items: watchlistItems(watchlist), has_futures_contracts: false }, watchlistItemsGuide));
         }
         case 'create_watchlist': {
           const displayName = String(args.display_name ?? args.displayName ?? args.name ?? 'New Watchlist');
@@ -1599,7 +1773,7 @@ export const plugin = {
           };
           s.watchlists.push(watchlist);
           save(store, s);
-          return c.json(liveResult(id, { watchlist: watchlistData(watchlist) }, 'On success the response includes the new list_id; pass it to add_to_watchlist to populate the list.'));
+          return c.json(liveToolResult(id, tool, { watchlist: watchlistData(watchlist) }, 'On success the response includes the new list_id; pass it to add_to_watchlist to populate the list.'));
         }
         case 'update_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -1618,7 +1792,7 @@ export const plugin = {
           if (Array.isArray(args.index_ids) || Array.isArray(args.indexIds)) watchlist.index_ids = requestedIndexIds(args);
           if (Array.isArray(args.option_ids) || Array.isArray(args.optionIds)) watchlist.option_ids = requestedOptionIds(args, s);
           save(store, s);
-          return c.json(liveResult(id, { watchlist: watchlistData(watchlist) }, 'On success the response contains the full updated list.'));
+          return c.json(liveToolResult(id, tool, { watchlist: watchlistData(watchlist) }, 'On success the response contains the full updated list.'));
         }
         case 'add_to_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -1628,7 +1802,7 @@ export const plugin = {
           watchlist.currency_pair_ids = upsertIntoArray(watchlist.currency_pair_ids, operation.currency_pair_ids);
           watchlist.index_ids = upsertIntoArray(watchlist.index_ids, operation.index_ids);
           save(store, s);
-          return c.json(liveResult(id, { ...operation, list_id: watchlist.id, operation: 'create', status: 'ok' }, 'On success the response echoes the operations applied.'));
+          return c.json(liveToolResult(id, tool, { ...operation, list_id: watchlist.id, operation: 'create', status: 'ok' }, 'On success the response echoes the operations applied.'));
         }
         case 'add_option_to_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -1636,8 +1810,9 @@ export const plugin = {
           watchlist.option_ids = upsertIntoArray(watchlist.option_ids, requestedOptionIds(args, s));
           save(store, s);
           return c.json(
-            liveResult(
+            liveToolResult(
               id,
+              tool,
               {
                 option_ids: requestedOptionIds(args, s),
                 position_type: args.position_type ?? args.positionType ?? 'long',
@@ -1657,7 +1832,7 @@ export const plugin = {
           watchlist.currency_pair_ids = removeFromArray(watchlist.currency_pair_ids, operation.currency_pair_ids);
           watchlist.index_ids = removeFromArray(watchlist.index_ids, operation.index_ids);
           save(store, s);
-          return c.json(liveResult(id, { ...operation, list_id: watchlist.id, operation: 'delete', status: 'ok' }, 'On success the response echoes the operations applied.'));
+          return c.json(liveToolResult(id, tool, { ...operation, list_id: watchlist.id, operation: 'delete', status: 'ok' }, 'On success the response echoes the operations applied.'));
         }
         case 'remove_option_from_watchlist': {
           const watchlist = findWatchlist(s, args);
@@ -1666,8 +1841,9 @@ export const plugin = {
           watchlist.option_ids = removeFromArray(watchlist.option_ids, optionIds);
           save(store, s);
           return c.json(
-            liveResult(
+            liveToolResult(
               id,
+              tool,
               {
                 option_ids: optionIds,
                 position_type: args.position_type ?? args.positionType ?? 'long',
@@ -1686,8 +1862,9 @@ export const plugin = {
           s.followedWatchlists = upsertIntoArray(s.followedWatchlists, [watchlist.id]);
           save(store, s);
           return c.json(
-            liveResult(
+            liveToolResult(
               id,
+              tool,
               {
                 follower: { list_id: watchlist.id, user_id: 'user-emulator', owner_type: watchlist.owner_type ?? 'custom', created_at: fixedNow },
                 list_id: watchlist.id,
@@ -1704,20 +1881,20 @@ export const plugin = {
           watchlist.followed = false;
           s.followedWatchlists = removeFromArray(s.followedWatchlists, [watchlist.id]);
           save(store, s);
-          return c.json(liveResult(id, { list_id: watchlist.id, action: 'unfollowed', status: 'ok' }, "404 means the user wasn't following that list."));
+          return c.json(liveToolResult(id, tool, { list_id: watchlist.id, action: 'unfollowed', status: 'ok' }, "404 means the user wasn't following that list."));
         }
         case 'search': {
           const query = String(args.query ?? '').toLowerCase();
           const assetType = String(args.asset_type ?? args.assetType ?? 'instrument');
           if (assetType === 'currency_pair') {
             const currencyPairs = (s.currencyPairs ?? []).filter((row) => `${row.symbol} ${row.name}`.toLowerCase().includes(query));
-            return c.json(liveResult(id, { currency_pairs: currencyPairs.length ? currencyPairs : s.currencyPairs ?? [] }, 'Search results for the requested asset type.'));
+            return c.json(liveToolResult(id, tool, { currency_pairs: currencyPairs.length ? currencyPairs : s.currencyPairs ?? [] }, 'Search results for the requested asset type.'));
           }
           if (assetType === 'market_index') {
             const marketIndexes = (s.indexes ?? []).filter((row) => `${row.symbol} ${row.name}`.toLowerCase().includes(query));
-            return c.json(liveResult(id, { market_indexes: marketIndexes.length ? marketIndexes : s.indexes ?? [] }, 'Search results for the requested asset type.'));
+            return c.json(liveToolResult(id, tool, { market_indexes: marketIndexes.length ? marketIndexes : s.indexes ?? [] }, 'Search results for the requested asset type.'));
           }
-          return c.json(liveResult(id, { results: [{ instrument_id: 'instrument-aapl', symbol: 'AAPL', name: 'Apple Inc.' }] }, 'Search results for the requested asset type.'));
+          return c.json(liveToolResult(id, tool, { results: [{ instrument_id: 'instrument-aapl', symbol: 'AAPL', name: 'Apple Inc.' }] }, 'Search results for the requested asset type.'));
         }
         default: {
           const result = mcpError(id, `Unknown tool: ${tool}`);

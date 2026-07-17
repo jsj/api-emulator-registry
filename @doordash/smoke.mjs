@@ -76,4 +76,59 @@ assert.match(menu.payload.id, /^menu_/);
 const promotions = await request('POST', '/api/v2/promotions/stores/store_smoke', { name: 'Smoke promo' });
 assert.equal(promotions.payload.store_id, 'store_smoke');
 
+const stores = await request('GET', '/consumer/v1/stores/search');
+assert.equal(stores.payload.stores[0].id, 'consumer_store_emulator');
+
+const cart = await request('POST', '/consumer/v1/carts', { store_id: 'consumer_store_emulator' });
+assert.equal(cart.status, 201);
+
+const cartWithItem = await request('POST', `/consumer/v1/carts/${cart.payload.id}/items`, { item_id: 'consumer_item_ramen', quantity: 2 });
+assert.equal(cartWithItem.payload.items[0].quantity, 2);
+assert.equal(cartWithItem.payload.subtotal, 3198);
+
+const preview = await request('POST', `/consumer/v1/carts/${cart.payload.id}/preview`);
+assert.equal(preview.payload.checkout_ready, true);
+
+const consumerOrder = await request('POST', `/consumer/v1/carts/${cart.payload.id}/checkout`);
+assert.equal(consumerOrder.status, 201);
+assert.equal(consumerOrder.payload.status, 'confirmed');
+
+const orderHistory = await request('GET', '/consumer/v1/orders');
+assert.equal(orderHistory.payload.orders[0].id, consumerOrder.payload.id);
+
+const mcpSearch = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'doordash_find_restaurants', arguments: { query: 'ramen', max_stores: 5 } },
+});
+assert.equal(mcpSearch.payload.result.structuredContent.stores[0].store_name, 'Emulator Ramen House');
+
+const mcpCart = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'doordash_add_to_cart', arguments: { store_id: 'consumer_store_emulator', menu_id: 'menu_consumer_store_emulator', items: [{ item_id: 'consumer_item_ramen', item_name: 'Tonkotsu Ramen', quantity: 1 }] } },
+});
+assert.equal(mcpCart.payload.result.structuredContent.items[0].name, 'Tonkotsu Ramen');
+
+const mcpPreview = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'internal_preview_order', arguments: { cart_uuid: mcpCart.payload.result.structuredContent.id } },
+});
+assert.equal(mcpPreview.payload.result.structuredContent.delivery_availability.is_available, true);
+
+const mcpAddresses = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'doordash_list_delivery_addresses', arguments: {} },
+});
+assert.equal(mcpAddresses.payload.result.structuredContent.addresses[0].label, 'Home');
+
+const mcpGroceries = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'doordash_create_product_list', arguments: { items: [{ name: 'ramen', quantity: 1 }] } },
+});
+assert.equal(mcpGroceries.payload.result.structuredContent.items[0].name, 'Tonkotsu Ramen');
+
+const mcpOrder = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 6, method: 'tools/call', params: { name: 'internal_submit_order', arguments: { cart_uuid: mcpCart.payload.result.structuredContent.id, tip_amount_cents: 200 } },
+});
+assert.equal(mcpOrder.payload.result.structuredContent.id, mcpOrder.payload.result.structuredContent.order_uuid);
+
+const mcpReorder = await request('POST', '/mcp/consumer', {
+  jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'internal_reorder', arguments: { order_uuid: mcpOrder.payload.result.structuredContent.order_uuid } },
+});
+assert.equal(mcpReorder.payload.result.structuredContent.status, 'open');
+
 console.log('doordash smoke ok');

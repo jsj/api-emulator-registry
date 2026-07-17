@@ -33,6 +33,22 @@ function initialState(config = {}) {
     webhooks: config.webhooks ?? [],
     jobs: config.jobs ?? [{ id: 'job_emulator', status: 'completed', type: 'item_import' }],
     promotions: config.promotions ?? [],
+    consumerStores: config.consumerStores ?? [{
+      id: 'consumer_store_emulator',
+      name: 'Emulator Ramen House',
+      address: '1 Market St, San Francisco, CA',
+      cuisine: ['Japanese', 'Ramen'],
+      delivery_fee: 199,
+      estimated_delivery_minutes: 30,
+      menu: [
+        { id: 'consumer_item_ramen', name: 'Tonkotsu Ramen', description: 'Pork broth, noodles, egg, and scallions.', price: 1599 },
+        { id: 'consumer_item_edamame', name: 'Edamame', description: 'Sea salt.', price: 599 },
+      ],
+    }],
+    carts: config.carts ?? [],
+    consumerOrders: config.consumerOrders ?? [],
+    consumerAddresses: config.consumerAddresses ?? [{ id: 'address_emulator', address_id: 'address_emulator', label: 'Home', printable_address: '1 Market St, San Francisco, CA', is_default: true }],
+    paymentMethods: config.paymentMethods ?? [{ payment_method_id: 'payment_emulator', brand: 'Visa', last4: '4242', exp_month: 12, exp_year: 2030 }],
     nextQuote: 1,
     nextDelivery: 1,
     nextBusiness: 1,
@@ -40,6 +56,8 @@ function initialState(config = {}) {
     nextMenu: 1,
     nextOrder: 1,
     nextPromotion: 1,
+    nextCart: 1,
+    nextConsumerOrder: 1,
   };
 }
 
@@ -115,11 +133,46 @@ function serviceability(body = {}) {
   };
 }
 
+function findConsumerStore(s, id) {
+  return s.consumerStores.find((storeRow) => storeRow.id === id);
+}
+
+function cartSummary(s, cart) {
+  const storeRow = findConsumerStore(s, cart.store_id);
+  const subtotal = cart.items.reduce((total, line) => total + (line.unit_price * line.quantity), 0);
+  const deliveryFee = storeRow?.delivery_fee ?? 0;
+  return {
+    ...cart,
+    store: storeRow ? { id: storeRow.id, name: storeRow.name, address: storeRow.address } : undefined,
+    subtotal,
+    delivery_fee: deliveryFee,
+    tax: Math.round(subtotal * 0.0875),
+    total: subtotal + deliveryFee + Math.round(subtotal * 0.0875),
+    currency: 'USD',
+  };
+}
+
+function mcpResult(id, payload, isError = false) {
+  return {
+    jsonrpc: '2.0',
+    id,
+    result: {
+      content: [{ type: 'text', text: JSON.stringify(payload) }],
+      structuredContent: payload,
+      ...(isError ? { isError: true } : {}),
+    },
+  };
+}
+
+function mcpNotFound(id, message) {
+  return mcpResult(id, { message }, true);
+}
+
 export const contract = {
   provider: 'doordash',
-  source: 'DoorDash Drive, Drive Classic, Developer, and Marketplace API-compatible subset',
+  source: 'DoorDash Drive, Drive Classic, Developer, Marketplace, and dd-cli-style consumer ordering subset',
   docs: 'https://developer.doordash.com/en-US/api/drive/',
-  scope: ['drive-v2', 'drive-classic', 'serviceability', 'address-autocomplete', 'developer-businesses', 'developer-stores', 'marketplace-menus', 'marketplace-orders', 'marketplace-store-status', 'item-management', 'promotions', 'webhooks', 'state-inspection'],
+  scope: ['drive-v2', 'drive-classic', 'serviceability', 'address-autocomplete', 'developer-businesses', 'developer-stores', 'marketplace-menus', 'marketplace-orders', 'marketplace-store-status', 'consumer-store-search', 'consumer-carts', 'consumer-checkout', 'consumer-order-history', 'dd-cli-mcp-json-rpc', 'item-management', 'promotions', 'webhooks', 'state-inspection'],
   fidelity: 'stateful-rest-emulator',
 };
 
@@ -218,6 +271,227 @@ export const plugin = {
       delivery.delivery_status = 'cancelled';
       saveState(store, s);
       return c.json(delivery);
+    });
+
+    // DoorDash CLI v0.2.0 talks to /mcp/consumer with JSON-RPC tools/call.
+    // It accepts this plain JSON envelope in addition to the production SSE form.
+    app.post('/mcp/consumer', async (c) => {
+      const request = await jsonBody(c);
+      if (request.method !== 'tools/call') return c.json({ jsonrpc: '2.0', id: request.id ?? null, error: { code: -32601, message: 'Method not found' } }, 400);
+      const s = state(store);
+      const id = request.id ?? null;
+      const { name, arguments: args = {} } = request.params ?? {};
+      const storeRow = findConsumerStore(s, args.store_id);
+      const cart = s.carts.find((item) => item.id === args.cart_uuid);
+      const item = storeRow?.menu.find((menuItem) => menuItem.id === args.item_id);
+
+      if (name === 'doordash_find_restaurants') {
+        const query = String(args.query ?? '').toLowerCase();
+        const stores = s.consumerStores
+          .filter((candidate) => !query || [candidate.name, candidate.address, ...(candidate.cuisine ?? [])].join(' ').toLowerCase().includes(query))
+          .slice(0, Number(args.max_stores ?? 20))
+          .map((candidate) => ({ store_id: candidate.id, store_name: candidate.name, printable_address: candidate.address, cuisine: candidate.cuisine, delivery_fee: candidate.delivery_fee, estimated_delivery_minutes: candidate.estimated_delivery_minutes }));
+        return c.json(mcpResult(id, { stores }));
+      }
+      if (name === 'doordash_get_restaurant_menu') {
+        if (!storeRow) return c.json(mcpNotFound(id, 'Store not found'));
+        return c.json(mcpResult(id, { store_id: storeRow.id, menu_id: `menu_${storeRow.id}`, store_name: storeRow.name, items: storeRow.menu.map((menuItem) => ({ ...menuItem, id: `i_${menuItem.id}` })) }));
+      }
+      if (name === 'doordash_get_food_item' || name === 'internal_get_item_details') {
+        if (!item) return c.json(mcpNotFound(id, 'Menu item not found'));
+        return c.json(mcpResult(id, { store_id: storeRow.id, menu_id: `menu_${storeRow.id}`, item }));
+      }
+      if (name === 'internal_get_store_info') {
+        if (!storeRow) return c.json(mcpNotFound(id, 'Store not found'));
+        return c.json(mcpResult(id, { store: { store_id: storeRow.id, name: storeRow.name, printable_address: storeRow.address, business_vertical_id: 'restaurant' } }));
+      }
+      if (name === 'internal_find_items_in_store') {
+        if (!storeRow) return c.json(mcpNotFound(id, 'Store not found'));
+        const names = (args.item_names ?? []).map((value) => String(value).toLowerCase());
+        const items = storeRow.menu.filter((candidate) => !names.length || names.some((value) => candidate.name.toLowerCase().includes(value))).map((candidate) => ({ item_id: candidate.id, ...candidate }));
+        return c.json(mcpResult(id, { store_id: storeRow.id, items }));
+      }
+      if (name === 'internal_find_nearby_stores') {
+        const stores = s.consumerStores.slice(0, Number(args.max_stores ?? 20)).map((candidate) => ({ store_id: candidate.id, name: candidate.name, printable_address: candidate.address, vertical_scope: args.vertical_scope ?? 'grocery', delivery_time: `${candidate.estimated_delivery_minutes} min` }));
+        return c.json(mcpResult(id, { stores }));
+      }
+      if (name === 'doordash_list_active_carts') {
+        const carts = s.carts.filter((candidate) => candidate.status === 'open' && (!args.store_id || candidate.store_id === args.store_id)).map((candidate) => cartSummary(s, candidate));
+        return c.json(mcpResult(id, { carts }));
+      }
+      if (name === 'doordash_add_to_cart') {
+        if (!storeRow) return c.json(mcpNotFound(id, 'Store not found'));
+        let target = args.cart_uuid ? s.carts.find((candidate) => candidate.id === args.cart_uuid && candidate.status === 'open') : s.carts.find((candidate) => candidate.store_id === storeRow.id && candidate.status === 'open');
+        if (!target) {
+          target = { id: `cart_${s.nextCart++}`, store_id: storeRow.id, items: [], status: 'open', created_at: now(), updated_at: now(), fulfillment: args.is_pickup ? 'pickup' : 'delivery' };
+          s.carts.push(target);
+        }
+        for (const requested of args.items ?? []) {
+          const menuItem = storeRow.menu.find((candidate) => candidate.id === String(requested.item_id).replace(/^i_/, ''));
+          if (!menuItem) return c.json(mcpNotFound(id, `Menu item not found: ${requested.item_id}`));
+          const line = target.items.find((candidate) => candidate.item_id === menuItem.id);
+          if (line) line.quantity += Number(requested.quantity ?? 1);
+          else target.items.push({ id: `cart_item_${target.items.length + 1}`, item_id: menuItem.id, name: menuItem.name, unit_price: menuItem.price, quantity: Number(requested.quantity ?? 1) });
+        }
+        target.updated_at = now();
+        saveState(store, s);
+        return c.json(mcpResult(id, cartSummary(s, target)));
+      }
+      if (name === 'doordash_get_cart') return c.json(cart ? mcpResult(id, cartSummary(s, cart)) : mcpNotFound(id, 'Cart not found'));
+      if (name === 'doordash_remove_cart_item') {
+        if (!cart || cart.status !== 'open') return c.json(mcpNotFound(id, 'Open cart not found'));
+        cart.items = cart.items.filter((line) => line.id !== args.cart_item_id && line.item_id !== args.cart_item_id);
+        cart.updated_at = now();
+        saveState(store, s);
+        return c.json(mcpResult(id, cartSummary(s, cart)));
+      }
+      if (name === 'doordash_clear_cart') {
+        if (!cart || cart.status !== 'open') return c.json(mcpNotFound(id, 'Open cart not found'));
+        cart.items = [];
+        cart.updated_at = now();
+        saveState(store, s);
+        return c.json(mcpResult(id, cartSummary(s, cart)));
+      }
+      if (name === 'internal_preview_order') {
+        if (!cart) return c.json(mcpNotFound(id, 'Cart not found'));
+        return c.json(mcpResult(id, { quote: cartSummary(s, cart), delivery_availability: { is_available: true } }));
+      }
+      if (name === 'doordash_get_checkout_url') {
+        if (!cart) return c.json(mcpNotFound(id, 'Cart not found'));
+        return c.json(mcpResult(id, { cart_uuid: cart.id, checkout_url: `http://localhost/checkout/${cart.id}` }));
+      }
+      if (name === 'internal_list_eligible_cart_promotions') {
+        if (!storeRow) return c.json(mcpNotFound(id, 'Store not found'));
+        return c.json(mcpResult(id, { store_id: storeRow.id, promotions: s.promotions.filter((promotion) => promotion.store_id === storeRow.id) }));
+      }
+      if (name === 'internal_apply_cart_promotion' || name === 'internal_remove_cart_promotion') {
+        if (!cart) return c.json(mcpNotFound(id, 'Cart not found'));
+        cart.promotions ??= [];
+        if (name === 'internal_apply_cart_promotion') {
+          const promotion = { code: args.promo_code, campaign_id: args.campaign_id, ad_group_id: args.ad_group_id, ad_id: args.ad_id };
+          if (!cart.promotions.some((candidate) => candidate.code === promotion.code)) cart.promotions.push(promotion);
+        } else cart.promotions = cart.promotions.filter((candidate) => candidate.code !== args.promo_code);
+        saveState(store, s);
+        return c.json(mcpResult(id, { cart_uuid: cart.id, applied_promotions: cart.promotions }));
+      }
+      if (name === 'doordash_list_delivery_addresses') return c.json(mcpResult(id, { addresses: s.consumerAddresses }));
+      if (name === 'doordash_set_delivery_address') {
+        const address = s.consumerAddresses.find((candidate) => candidate.address_id === args.address_id || candidate.id === args.address_id);
+        if (!address) return c.json(mcpNotFound(id, 'Address not found'));
+        s.consumerAddresses.forEach((candidate) => { candidate.is_default = candidate === address; });
+        saveState(store, s);
+        return c.json(mcpResult(id, { address_id: address.address_id, is_default: true }));
+      }
+      if (name === 'doordash_get_payment_info') return c.json(mcpResult(id, { cards: s.paymentMethods, default_payment_method_id: s.paymentMethods[0]?.payment_method_id ?? null }));
+      if (name === 'doordash_create_product_list') {
+        const selected = args.store_id ? findConsumerStore(s, args.store_id) : s.consumerStores[0];
+        if (!selected) return c.json(mcpNotFound(id, 'Store not found'));
+        const items = (args.items ?? []).map((requested, index) => {
+          const menuItem = selected.menu.find((candidate) => candidate.name.toLowerCase().includes(String(requested.name ?? '').toLowerCase())) ?? selected.menu[index % selected.menu.length];
+          return { id: menuItem.id, name: menuItem.name, price: menuItem.price, quantity: Number(requested.quantity ?? 1), store_id: selected.id };
+        });
+        return c.json(mcpResult(id, { store_name: selected.name, menu_id: `menu_${selected.id}`, items, available_stores: s.consumerStores.map((candidate) => ({ store_id: candidate.id, name: candidate.name })) }));
+      }
+      if (name === 'internal_get_order_history') return c.json(mcpResult(id, { orders: s.consumerOrders.slice(0, Number(args.max_orders ?? 20)) }));
+      if (name === 'internal_get_order_receipt' || name === 'internal_get_order_status') {
+        const order = s.consumerOrders.find((candidate) => candidate.order_uuid === args.order_uuid || candidate.id === args.order_uuid);
+        return c.json(order ? mcpResult(id, order) : mcpNotFound(id, 'Order not found'));
+      }
+      if (name === 'internal_reorder') {
+        const order = s.consumerOrders.find((candidate) => candidate.order_uuid === args.order_uuid || candidate.id === args.order_uuid);
+        if (!order) return c.json(mcpNotFound(id, 'Order not found'));
+        const reordered = { id: `cart_${s.nextCart++}`, store_id: order.store_id, items: order.items.map((line) => ({ ...line })), status: 'open', created_at: now(), updated_at: now() };
+        s.carts.push(reordered);
+        saveState(store, s);
+        return c.json(mcpResult(id, cartSummary(s, reordered)));
+      }
+      if (name === 'internal_submit_order') {
+        if (!cart || cart.status !== 'open' || !cart.items.length) return c.json(mcpNotFound(id, 'Open cart with items not found'));
+        cart.status = 'checked_out';
+        cart.updated_at = now();
+        const orderId = `consumer_order_${s.nextConsumerOrder++}`;
+        const order = { ...cartSummary(s, cart), id: orderId, order_uuid: orderId, cart_uuid: cart.id, status: 'confirmed', created_at: now() };
+        s.consumerOrders.push(order);
+        saveState(store, s);
+        return c.json(mcpResult(id, order));
+      }
+      return c.json(mcpResult(id, { message: `Unsupported DoorDash CLI tool: ${name}` }, true));
+    });
+
+    // Consumer ordering surface used to model the workflows exposed by dd-cli.
+    app.get('/consumer/v1/stores/search', (c) => {
+      const query = (c.req.query?.('query') ?? c.req.query?.('q') ?? '').toLowerCase();
+      const stores = state(store).consumerStores.filter((storeRow) => !query || [storeRow.name, storeRow.address, ...(storeRow.cuisine ?? [])].join(' ').toLowerCase().includes(query));
+      return c.json({ stores });
+    });
+    app.get('/consumer/v1/stores/:storeId', (c) => {
+      const storeRow = findConsumerStore(state(store), c.req.param('storeId'));
+      return storeRow ? c.json(storeRow) : c.json({ code: 'not_found', message: 'Store not found' }, 404);
+    });
+    app.get('/consumer/v1/stores/:storeId/menu', (c) => {
+      const storeRow = findConsumerStore(state(store), c.req.param('storeId'));
+      return storeRow ? c.json({ store_id: storeRow.id, menu: storeRow.menu }) : c.json({ code: 'not_found', message: 'Store not found' }, 404);
+    });
+    app.post('/consumer/v1/carts', async (c) => {
+      const s = state(store);
+      const body = await jsonBody(c);
+      const storeRow = findConsumerStore(s, body.store_id);
+      if (!storeRow) return c.json({ code: 'not_found', message: 'Store not found' }, 404);
+      const cart = { id: `cart_${s.nextCart++}`, store_id: storeRow.id, items: [], status: 'open', created_at: now(), updated_at: now() };
+      s.carts.push(cart);
+      saveState(store, s);
+      return c.json(cartSummary(s, cart), 201);
+    });
+    app.get('/consumer/v1/carts/:cartId', (c) => {
+      const s = state(store);
+      const cart = s.carts.find((item) => item.id === c.req.param('cartId'));
+      return cart ? c.json(cartSummary(s, cart)) : c.json({ code: 'not_found', message: 'Cart not found' }, 404);
+    });
+    app.post('/consumer/v1/carts/:cartId/items', async (c) => {
+      const s = state(store);
+      const cart = s.carts.find((item) => item.id === c.req.param('cartId'));
+      if (!cart || cart.status !== 'open') return c.json({ code: 'not_found', message: 'Open cart not found' }, 404);
+      const body = await jsonBody(c);
+      const item = findConsumerStore(s, cart.store_id)?.menu.find((menuItem) => menuItem.id === body.item_id);
+      if (!item) return c.json({ code: 'not_found', message: 'Menu item not found' }, 404);
+      const quantity = Math.max(1, Number(body.quantity ?? 1));
+      const existing = cart.items.find((line) => line.item_id === item.id);
+      if (existing) existing.quantity += quantity;
+      else cart.items.push({ item_id: item.id, name: item.name, unit_price: item.price, quantity });
+      cart.updated_at = now();
+      saveState(store, s);
+      return c.json(cartSummary(s, cart));
+    });
+    app.delete('/consumer/v1/carts/:cartId/items/:itemId', (c) => {
+      const s = state(store);
+      const cart = s.carts.find((item) => item.id === c.req.param('cartId'));
+      if (!cart || cart.status !== 'open') return c.json({ code: 'not_found', message: 'Open cart not found' }, 404);
+      cart.items = cart.items.filter((line) => line.item_id !== c.req.param('itemId'));
+      cart.updated_at = now();
+      saveState(store, s);
+      return c.json(cartSummary(s, cart));
+    });
+    app.post('/consumer/v1/carts/:cartId/preview', (c) => {
+      const s = state(store);
+      const cart = s.carts.find((item) => item.id === c.req.param('cartId'));
+      return cart ? c.json({ ...cartSummary(s, cart), checkout_ready: cart.items.length > 0 }) : c.json({ code: 'not_found', message: 'Cart not found' }, 404);
+    });
+    app.post('/consumer/v1/carts/:cartId/checkout', (c) => {
+      const s = state(store);
+      const cart = s.carts.find((item) => item.id === c.req.param('cartId'));
+      if (!cart || cart.status !== 'open') return c.json({ code: 'not_found', message: 'Open cart not found' }, 404);
+      if (!cart.items.length) return c.json({ code: 'invalid_cart', message: 'Cart must contain at least one item' }, 422);
+      cart.status = 'checked_out';
+      cart.updated_at = now();
+      const order = { ...cartSummary(s, cart), id: `consumer_order_${s.nextConsumerOrder++}`, cart_id: cart.id, status: 'confirmed', created_at: now() };
+      s.consumerOrders.push(order);
+      saveState(store, s);
+      return c.json(order, 201);
+    });
+    app.get('/consumer/v1/orders', (c) => c.json({ orders: state(store).consumerOrders }));
+    app.get('/consumer/v1/orders/:orderId', (c) => {
+      const order = state(store).consumerOrders.find((item) => item.id === c.req.param('orderId'));
+      return order ? c.json(order) : c.json({ code: 'not_found', message: 'Order not found' }, 404);
     });
 
     app.get('/developer/v1/businesses', (c) => c.json({ businesses: state(store).businesses }));

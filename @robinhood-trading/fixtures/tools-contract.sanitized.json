@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-07-16T15:11:06.150Z",
+  "captured_at": "2026-07-20T21:47:18.720Z",
   "source": "https://agent.robinhood.com/mcp/trading",
   "tools": [
     {
@@ -3688,6 +3688,56 @@
           "guide": {
             "type": "string",
             "description": "Present chain_symbol, expiration_date, type, strike_price; flag state when not 'active' or tradability when not 'tradable'. Pass id to an order's leg.option_id. Quote sellout_datetime when the user asks \"when will Robinhood force-close this position?\" — it is the authoritative per-contract timestamp covering equity/index, AM/PM settle, and T-1 logic. underlying_type ('equity' or 'index') is informational; mention only when it affects strategy. When next is non-null, extract the cursor query param and call this tool again."
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_option_level_upgrade_info",
+      "description": "Get the upgrade URL to apply for options access on an account. Call when option_level is null. option_level_2 enables long calls/puts, covered calls, and cash-secured puts; option_level_3 adds spreads and complex strategies, though multi-leg orders are not yet supported here.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_number": {
+            "type": "string",
+            "description": "Brokerage account number to generate the upgrade URL for. Obtain from get_accounts."
+          }
+        },
+        "required": [
+          "account_number"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "upgrade_url": {
+                "type": "string",
+                "description": "Direct link to apply for options access. Present this to the user as a tappable link."
+              },
+              "account_number": {
+                "type": "string",
+                "description": "The account this upgrade URL applies to."
+              }
+            },
+            "description": "Tool-specific result payload; see the inner properties for fields.",
+            "required": [
+              "upgrade_url",
+              "account_number"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string",
+            "description": "Send the upgrade_url to the user as a tappable link. The user must click the link, complete the full options application flow, and get approved. Once the user confirms they have been successfully approved: call get_accounts immediately with a fresh request. Do not use any option_level value from a previous get_accounts call — that data is stale until re-fetched. The option_level field on the new get_accounts response will confirm the new access level. If you do not yet have the account_number, call get_accounts first."
           }
         },
         "required": [

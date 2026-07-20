@@ -39,6 +39,7 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_option_chains',
   'get_option_historicals',
   'get_option_instruments',
+  'get_option_level_upgrade_info',
   'get_option_orders',
   'get_option_positions',
   'get_option_quotes',
@@ -91,6 +92,7 @@ const TOOL_INPUTS = {
   get_option_chains: { strings: ['ids', 'underlying_symbol'] },
   get_option_historicals: { required: ['instrument_ids', 'start_time'], arrays: ['instrument_ids'], strings: ['start_time', 'end_time', 'interval', 'bounds'] },
   get_option_instruments: { strings: ['chain_id', 'chain_symbol', 'expiration_dates', 'strike_price', 'type', 'state', 'tradability', 'ids', 'cursor'] },
+  get_option_level_upgrade_info: { required: ['account_number'], strings: ['account_number'] },
   get_option_orders: { required: ['account_number'], strings: ['account_number', 'order_id', 'state', 'created_at_gte', 'chain_ids', 'underlying_type', 'placed_agent', 'cursor'] },
   get_option_positions: { required: ['account_number'], strings: ['account_number', 'chain_ids', 'option_ids', 'type', 'option_type', 'expiration_date', 'expiration_date_lte', 'expiration_date_gte', 'cursor'], booleans: ['nonzero'] },
   get_option_quotes: { required: ['instrument_ids'], arrays: ['instrument_ids'] },
@@ -143,6 +145,7 @@ const TOOL_DATA_REQUIRED = {
   get_option_chains: ['chains'],
   get_option_historicals: ['results'],
   get_option_instruments: ['instruments'],
+  get_option_level_upgrade_info: ['upgrade_url', 'account_number'],
   get_option_orders: ['orders'],
   get_option_positions: ['positions'],
   get_option_quotes: ['results'],
@@ -1308,7 +1311,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-16',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-20',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1602,6 +1605,15 @@ export const plugin = {
           return c.json(liveToolResult(id, tool, { chains: filteredOptionChains(s, args), next: null }, 'Option chains for requested underlyings or ids.'));
         case 'get_option_instruments':
           return c.json(liveToolResult(id, tool, { instruments: filteredOptionInstruments(s, args), next: null }, 'Option instruments matching the requested filters.'));
+        case 'get_option_level_upgrade_info': {
+          const accountNumber = String(args.account_number);
+          const account = s.accounts.find((row) => String(row.account_number) === accountNumber);
+          if (!account) return c.json(mcpError(id, 'Account not found', 404).payload, 404);
+          return c.json(liveToolResult(id, tool, {
+            upgrade_url: `https://applink.robinhood.com/upgrade_options?account_number=${encodeURIComponent(accountNumber)}`,
+            account_number: accountNumber,
+          }, 'Present upgrade_url to the user. After approval, call get_accounts again to refresh option_level.'));
+        }
         case 'get_option_quotes': {
           const optionIds = new Set(requestedOptionIds(args, s));
           const results = s.optionQuotes.filter((row) => optionIds.has(row.instrument_id ?? row.option_id)).map((row) => ({

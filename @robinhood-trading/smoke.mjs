@@ -71,7 +71,7 @@ const tools = await callHarness('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 49);
+assert.equal(tools.payload.result.structuredContent.tools.length, 50);
 liveToolSchemas = new Map(tools.payload.result.structuredContent.tools.map((tool) => [tool.name, tool]));
 assert.deepEqual([...liveToolSchemas.keys()].sort(), [...contract.scope].sort());
 assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
@@ -90,6 +90,7 @@ assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name 
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_scanner_filter_specs'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_chains'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_instruments'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_level_upgrade_info'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'add_option_to_watchlist'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'follow_watchlist'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'unfollow_watchlist'));
@@ -166,6 +167,15 @@ const portfolio = await callHarness('POST', '/mcp/trading', {
   params: { name: 'get_portfolio', arguments: { account_number: 'RHAGENTIC001' } },
 });
 assert.ok(Number.isFinite(Number(data(portfolio).buying_power)));
+
+const optionLevelUpgrade = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'option-level-upgrade',
+  method: 'tools/call',
+  params: { name: 'get_option_level_upgrade_info', arguments: { account_number: 'RHAGENTIC001' } },
+});
+assert.equal(data(optionLevelUpgrade).account_number, 'RHAGENTIC001');
+assert.equal(data(optionLevelUpgrade).upgrade_url, 'https://applink.robinhood.com/upgrade_options?account_number=RHAGENTIC001');
 
 const positions = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',

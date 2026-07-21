@@ -249,6 +249,36 @@ function ascUserRoutes({ app, store, baseUrl }) {
 }
 
 // src/routes/itunes.ts
+var audiobookFixtures = [
+  [1808184252, "The Calamity Club", "Kathryn Stockett", "Fiction"],
+  [1808184253, "Yesteryear", "Caro Claire Burke", "Fiction"],
+  [1808184254, "Dungeon Crawler Carl", "Matt Dinniman", "Fiction"],
+  [1808184255, "Theo of Golden", "Allen Levi", "Fiction"],
+  [1808184256, "The Divorce", "Freida McFadden", "Fiction"],
+  [1808184257, "Whistler", "Ann Patchett", "Fiction"],
+  [1808184258, "Regime Change", "Maggie Haberman and Jonathan Swan", "Nonfiction"],
+  [1808184259, "Strangers", "Belle Burden", "Nonfiction"],
+  [1808184260, "The Land and Its People", "David Sedaris", "Nonfiction"],
+  [1808184261, "Communion", "JD Vance", "Nonfiction"],
+  [1808184262, "Famesick", "Lena Dunham", "Nonfiction"],
+  [1808184263, "London Falling", "Patrick Radden Keefe", "Nonfiction"]
+];
+function getAudiobooks(baseUrl) {
+  return audiobookFixtures.map(([collectionId, collectionName, artistName, genre]) => ({
+    collectionId,
+    collectionName,
+    artistName,
+    artworkUrl100: `${baseUrl}/fixtures/audiobook-covers/${collectionId}/100x100bb.jpg`,
+    collectionViewUrl: `${baseUrl}/us/audiobook/id${collectionId}`,
+    artistViewUrl: `${baseUrl}/us/author/${encodeURIComponent(artistName)}`,
+    description: `A deterministic ${genre.toLowerCase()} audiobook fixture for local development.`,
+    releaseDate: "2026-07-21T00:00:00Z",
+    primaryGenreName: genre,
+    previewUrl: `${baseUrl}/fixtures/audiobook-preview/${collectionId}.m4a`,
+    collectionPrice: 14.99,
+    currency: "USD"
+  }));
+}
 function getApps(store) {
   return store.getData("itunes.apps") ?? [];
 }
@@ -262,12 +292,43 @@ function searchApps(apps, term, limit) {
 function itunesResponse(results) {
   return { resultCount: results.length, results };
 }
-function itunesRoutes({ app, store }) {
+function itunesRoutes({ app, store, baseUrl }) {
   app.get("/search", (c) => {
     const term = c.req.query("term") ?? "";
     const limit = parseInt(c.req.query("limit") ?? "10", 10);
+    if (c.req.query("media") === "audiobook" || c.req.query("entity") === "audiobook") {
+      const words = term.toLowerCase().split(/\s+/).filter(Boolean);
+      const results2 = getAudiobooks(baseUrl).filter((book) => {
+        const haystack = `${book.collectionName} ${book.artistName}`.toLowerCase();
+        return !words.length || words.every((word) => haystack.includes(word));
+      }).slice(0, limit);
+      return c.json({ resultCount: results2.length, results: results2 });
+    }
     const results = searchApps(getApps(store), term, limit);
     return c.json(itunesResponse(results));
+  });
+  app.get("/api/v2/us/audio-books/top/:limit/audio-books.json", (c) => {
+    const limit = Math.max(1, parseInt(c.req.param("limit") ?? "10", 10));
+    const results = getAudiobooks(baseUrl).slice(0, limit).map((book) => ({
+      id: String(book.collectionId),
+      name: book.collectionName,
+      artistName: book.artistName,
+      artworkUrl100: book.artworkUrl100,
+      url: book.collectionViewUrl,
+      genres: [{ name: book.primaryGenreName }, { name: "Audiobooks" }]
+    }));
+    return c.json({ feed: { title: "Top Audiobooks", results } });
+  });
+  app.get("/fixtures/audiobook-covers/:id/:size", (c) => {
+    const id = Number(c.req.param("id"));
+    const book = getAudiobooks(baseUrl).find((item) => item.collectionId === id);
+    if (!book) return c.notFound();
+    const hue = id % 360;
+    const title = book.collectionName.replace(/[&<>]/g, "");
+    const author = book.artistName.replace(/[&<>]/g, "");
+    c.header("content-type", "image/svg+xml; charset=utf-8");
+    c.header("cache-control", "public, max-age=31536000, immutable");
+    return c.body(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="hsl(${hue} 55% 54%)"/><stop offset="1" stop-color="hsl(${(hue + 55) % 360} 52% 20%)"/></linearGradient></defs><rect width="600" height="600" fill="url(#g)"/><rect x="34" y="34" width="532" height="532" rx="18" fill="none" stroke="white" stroke-opacity=".3" stroke-width="3"/><text x="300" y="275" fill="white" font-family="system-ui,sans-serif" font-size="38" font-weight="700" text-anchor="middle">${title}</text><text x="300" y="330" fill="white" fill-opacity=".78" font-family="system-ui,sans-serif" font-size="24" text-anchor="middle">${author}</text><text x="300" y="520" fill="white" fill-opacity=".55" font-family="system-ui,sans-serif" font-size="18" letter-spacing="5" text-anchor="middle">AUDIOBOOK</text></svg>`);
   });
   app.get("/lookup", (c) => {
     const id = c.req.query("id") ?? "";

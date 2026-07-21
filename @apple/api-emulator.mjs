@@ -1,5 +1,6 @@
 // src/jsonapi.ts
 import { randomBytes } from "crypto";
+import { readFileSync } from "node:fs";
 function ascId() {
   return randomBytes(8).toString("hex");
 }
@@ -268,7 +269,7 @@ function getAudiobooks(baseUrl) {
     collectionId,
     collectionName,
     artistName,
-    artworkUrl100: `${baseUrl}/fixtures/audiobook-covers/${collectionId}/100x100bb.jpg`,
+    artworkUrl100: `${baseUrl}/fixtures/audiobook-covers/${collectionId}/100x100bb.jpg?fixture=real-v1`,
     collectionViewUrl: `${baseUrl}/us/audiobook/id${collectionId}`,
     artistViewUrl: `${baseUrl}/us/author/${encodeURIComponent(artistName)}`,
     description: `A deterministic ${genre.toLowerCase()} audiobook fixture for local development.`,
@@ -323,12 +324,10 @@ function itunesRoutes({ app, store, baseUrl }) {
     const id = Number(c.req.param("id"));
     const book = getAudiobooks(baseUrl).find((item) => item.collectionId === id);
     if (!book) return c.notFound();
-    const hue = id % 360;
-    const title = book.collectionName.replace(/[&<>]/g, "");
-    const author = book.artistName.replace(/[&<>]/g, "");
-    c.header("content-type", "image/svg+xml; charset=utf-8");
+    const cover = readFileSync(new URL(`./fixtures/audiobook-covers/${id}.jpg`, import.meta.url));
+    c.header("content-type", "image/jpeg");
     c.header("cache-control", "public, max-age=31536000, immutable");
-    return c.body(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="hsl(${hue} 55% 54%)"/><stop offset="1" stop-color="hsl(${(hue + 55) % 360} 52% 20%)"/></linearGradient></defs><rect width="600" height="600" fill="url(#g)"/><rect x="34" y="34" width="532" height="532" rx="18" fill="none" stroke="white" stroke-opacity=".3" stroke-width="3"/><text x="300" y="275" fill="white" font-family="system-ui,sans-serif" font-size="38" font-weight="700" text-anchor="middle">${title}</text><text x="300" y="330" fill="white" fill-opacity=".78" font-family="system-ui,sans-serif" font-size="24" text-anchor="middle">${author}</text><text x="300" y="520" fill="white" fill-opacity=".55" font-family="system-ui,sans-serif" font-size="18" letter-spacing="5" text-anchor="middle">AUDIOBOOK</text></svg>`);
+    return c.body(cover);
   });
   app.get("/lookup", (c) => {
     const id = c.req.query("id") ?? "";

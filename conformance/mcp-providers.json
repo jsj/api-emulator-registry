@@ -1,0 +1,25 @@
+[
+  {
+    "provider": "robinhood-trading",
+    "url": "https://agent.robinhood.com/mcp/trading",
+    "fixture": "@robinhood-trading/fixtures/tools-contract.sanitized.json",
+    "compare": "schemas"
+  },
+  {
+    "provider": "robinhood-banking",
+    "url": "https://agent.robinhood.com/mcp/banking",
+    "fixture": "@robinhood-banking/fixtures/tools-contract.sanitized.json",
+    "compare": "names",
+    "allowedIssue": {
+      "kind": "http",
+      "statusCode": 405,
+      "reason": "Robinhood Banking MCP is a known degraded upstream"
+    }
+  },
+  {
+    "provider": "mobbin",
+    "url": "https://api.mobbin.com/mcp",
+    "fixture": "@mobbin/fixtures/tools-contract.sanitized.json",
+    "compare": "schemas"
+  }
+]

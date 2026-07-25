@@ -5,6 +5,8 @@ import { fixedNow, getState, readBody, setState } from '../scripts/provider-plug
 
 const STATE_KEY = 'robinhood-banking:state';
 const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sanitized.json');
+const TOOLS_CONTRACT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tools-contract.sanitized.json');
+const observedTools = JSON.parse(readFileSync(TOOLS_CONTRACT_PATH, 'utf8')).tools;
 
 function sanitizedFixtureState() {
   try {
@@ -220,7 +222,7 @@ export const plugin = {
       }
 
       if (body.method === 'notifications/initialized') return c.body(null, 202);
-      if (body.method === 'tools/list') return c.json(mcpResult(id, { tools: contract.scope.map((name) => ({ name })) }));
+      if (body.method === 'tools/list') return c.json(mcpResult(id, { tools: observedTools }));
       if (body.method !== 'tools/call') {
         const result = mcpError(id, 'Method not found', 404, -32601);
         return c.json(result.payload, result.status);

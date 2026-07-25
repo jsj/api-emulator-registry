@@ -4,34 +4,35 @@ const FILE_BYTES = Buffer.from('fal-emulator-file');
 
 const STATE_KEY = 'fal:state';
 
+const MODEL_DATE = '2026-01-01T00:00:00.000Z';
+
+function model(endpointId, displayName, category, tags, description) {
+  return {
+    endpoint_id: endpointId,
+    metadata: {
+      display_name: displayName,
+      category,
+      tags,
+      description,
+      status: 'active',
+      updated_at: MODEL_DATE,
+      is_favorited: null,
+      model_url: `https://fal.run/${endpointId}`,
+      license_type: 'commercial',
+      date: MODEL_DATE,
+      highlighted: false,
+      kind: 'inference',
+      pinned: false,
+    },
+  };
+}
+
 const DEFAULT_MODELS = [
-  {
-    endpoint_id: 'fal-ai/flux/dev',
-    metadata: {
-      name: 'FLUX.1 [dev]',
-      tags: ['image-to-image', 'text-to-image'],
-      category: 'image',
-      description: 'Deterministic fal emulator image generation model.',
-    },
-  },
-  {
-    endpoint_id: 'fal-ai/fast-sdxl',
-    metadata: {
-      name: 'Fast SDXL',
-      tags: ['text-to-image'],
-      category: 'image',
-      description: 'Deterministic fal emulator image model.',
-    },
-  },
-  {
-    endpoint_id: 'bytedance/seedance-2.0/fast/text-to-video',
-    metadata: {
-      name: 'Seedance 2.0 Fast Text to Video',
-      tags: ['text-to-video', 'video'],
-      category: 'video',
-      description: 'Deterministic fal emulator video model.',
-    },
-  },
+  model('fal-ai/flux/dev', 'FLUX.1 [dev]', 'text-to-image', ['image-to-image', 'text-to-image'], 'Deterministic fal emulator image generation model.'),
+  model('fal-ai/fast-sdxl', 'Fast SDXL', 'text-to-image', ['text-to-image'], 'Deterministic fal emulator image model.'),
+  model('bytedance/seedance-2.0/fast/text-to-video', 'Seedance 2.0 Fast Text to Video', 'text-to-video', ['text-to-video', 'video'], 'Deterministic fal emulator video model.'),
+  model('bytedance/seedance-2.0/fast/image-to-video', 'Seedance 2.0 Fast Image to Video', 'image-to-video', ['image-to-video', 'video'], 'Deterministic fal emulator image-to-video model.'),
+  model('bytedance/seedance-2.0/reference-to-video', 'Seedance 2.0 Reference to Video', 'reference-to-video', ['reference-to-video', 'video'], 'Deterministic fal emulator reference-to-video model.'),
 ];
 
 function nowIso() {
@@ -165,8 +166,50 @@ function noContent(c) {
   return c.body ? c.body(null, 204) : c.json({}, 204);
 }
 
+function validationError(c, field, message = 'Field required', type = 'missing') {
+  return c.json({ detail: [{ loc: ['body', field], msg: message, type }] }, 422);
+}
+
+function validateSeedance(c, endpointId, body) {
+  if (!endpointId.startsWith('bytedance/seedance-2.0/')) return null;
+  if (typeof body.prompt !== 'string' || body.prompt.length === 0) return validationError(c, 'prompt');
+  if (endpointId.endsWith('/image-to-video') && (typeof body.image_url !== 'string' || body.image_url.length === 0)) {
+    return validationError(c, 'image_url');
+  }
+  const resolution = body.resolution;
+  const resolutions = endpointId.endsWith('/reference-to-video') ? ['480p', '720p', '1080p', '4k'] : ['480p', '720p'];
+  if (resolution !== undefined && !resolutions.includes(resolution)) {
+    return validationError(c, 'resolution', `Input should be ${resolutions.join(', ')}`, 'enum');
+  }
+  const enums = {
+    aspect_ratio: ['auto', '21:9', '16:9', '4:3', '1:1', '3:4', '9:16'],
+    bitrate_mode: ['standard', 'high'],
+    duration: ['auto', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15'],
+  };
+  for (const [field, values] of Object.entries(enums)) {
+    if (body[field] !== undefined && !values.includes(body[field])) {
+      return validationError(c, field, `Input should be ${values.join(', ')}`, 'enum');
+    }
+  }
+  if (body.generate_audio !== undefined && typeof body.generate_audio !== 'boolean') {
+    return validationError(c, 'generate_audio', 'Input should be a valid boolean', 'bool_type');
+  }
+  if (endpointId.endsWith('/reference-to-video')) {
+    const groups = ['image_urls', 'video_urls', 'audio_urls'];
+    const limits = { image_urls: 9, video_urls: 3, audio_urls: 3 };
+    for (const field of groups) {
+      if (body[field] !== undefined && (!Array.isArray(body[field]) || body[field].length > limits[field])) {
+        return validationError(c, field, `List should have at most ${limits[field]} items`, 'too_long');
+      }
+    }
+    const total = groups.reduce((sum, field) => sum + (body[field]?.length ?? 0), 0);
+    if (total > 12) return validationError(c, 'image_urls', 'Combined reference files must not exceed 12', 'too_long');
+  }
+  return null;
+}
+
 export function registerRoutes(app, store) {
-  app.get('/models', (c) => c.json({ models: state(store).models }));
+  app.get('/models', (c) => c.json(paged('models', state(store).models)));
 
   app.get('/models/pricing', (c) => c.json(paged('prices', state(store).models.map((model) => ({
     endpoint_id: model.endpoint_id,
@@ -308,6 +351,8 @@ export function registerRoutes(app, store) {
 
   app.post('/bytedance/seedance-2.0/fast/text-to-video', async (c) => {
     const body = await c.req.json();
+    const invalid = validateSeedance(c, 'bytedance/seedance-2.0/fast/text-to-video', body);
+    if (invalid) return invalid;
     store.setData('fal:last-submit', body);
     const request = queueRequestPayload(origin(c), 'bytedance/seedance-2.0/fast/text-to-video', 'emu_fal_request_123', body);
     return c.json(queueStatus(request));
@@ -326,6 +371,8 @@ export function registerRoutes(app, store) {
   app.post('/*', async (c) => {
     const body = await jsonBody(c);
     const endpointId = cleanQueuePath(requestPath(c));
+    const invalid = validateSeedance(c, endpointId, body);
+    if (invalid) return invalid;
     const current = state(store);
     const requestId = `emu_fal_request_${Object.keys(current.requests).length + 1}`;
     const request = {

@@ -1,4 +1,10 @@
-import { recordAnswer, recordContents, recordFindSimilar, recordSearch } from '../concepts/search.mjs';
+import {
+  recordAnswer,
+  recordContents,
+  recordFindSimilar,
+  recordSearch,
+  validateSearchRequest,
+} from '../concepts/search.mjs';
 import { saveState, state } from '../store.mjs';
 
 async function jsonBody(c) {
@@ -12,8 +18,22 @@ function persist(store, current, payload) {
 
 export function registerRoutes(app, store, contract) {
   app.post('/search', async (c) => {
+    const body = await jsonBody(c);
+    const requestId = `exa_req_${Date.now()}`;
+    if (c.req.header?.('x-api-key') === 'exa-payment-required') {
+      return c.json({
+        requestId,
+        error: 'Payment required to access this resource',
+        tag: 'X402_PAYMENT_REQUIRED',
+        x402Version: 2,
+      }, 402);
+    }
+    const validationError = validateSearchRequest(body);
+    if (validationError) {
+      return c.json({ requestId, error: validationError, tag: 'INVALID_REQUEST' }, 400);
+    }
     const current = state(store);
-    return c.json(persist(store, current, recordSearch(current, await jsonBody(c))));
+    return c.json(persist(store, current, recordSearch(current, body)));
   });
 
   app.post('/contents', async (c) => {

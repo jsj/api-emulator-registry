@@ -71,11 +71,13 @@ const tools = await callHarness('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 50);
+assert.equal(tools.payload.result.structuredContent.tools.length, 52);
 liveToolSchemas = new Map(tools.payload.result.structuredContent.tools.map((tool) => [tool.name, tool]));
 assert.deepEqual([...liveToolSchemas.keys()].sort(), [...contract.scope].sort());
 assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'place_equity_order'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'exercise_option'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'cancel_option_exercise'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'create_scan'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_earnings_calendar'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_historicals'));
@@ -822,6 +824,32 @@ const scannerFilterSpecs = await callHarness('POST', '/mcp/trading', {
   params: { name: 'get_scanner_filter_specs', arguments: {} },
 });
 assert.ok(data(scannerFilterSpecs).filter_specs.some((spec) => spec.filter_type === 'FILTER_TYPE_RSI'));
+
+const exercisedOption = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0', id: 'exercise-option', method: 'tools/call',
+  params: {
+    name: 'exercise_option',
+    arguments: {
+      account_number: 'RHAGENTIC001',
+      option_id: 'AAPL260116C00200000',
+      quantity: 1,
+      ref_id: '00000000-0000-4000-8000-000000000001',
+    },
+  },
+});
+assert.equal(data(exercisedOption).event.state, 'queued');
+assert.equal(data(exercisedOption).event.direction, 'debit');
+assert.equal(data(exercisedOption).event.total_cash_amount, '20000.00');
+
+const cancelledExercise = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0', id: 'cancel-option-exercise', method: 'tools/call',
+  params: {
+    name: 'cancel_option_exercise',
+    arguments: { account_number: 'RHAGENTIC001', option_id: 'AAPL260116C00200000' },
+  },
+});
+assert.equal(data(cancelledExercise).cancelled_count, 1);
+assert.equal(data(cancelledExercise).events[0].state, 'voided');
 
 assert.deepEqual(conformanceIssues, []);
 assert.deepEqual(contract.scope.filter((name) => !calledToolNames.has(name)), []);

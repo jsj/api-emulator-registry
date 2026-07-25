@@ -17,9 +17,11 @@ const ROBINHOOD_TRADING_TOOLS = [
   'add_option_to_watchlist',
   'add_to_watchlist',
   'cancel_equity_order',
+  'cancel_option_exercise',
   'cancel_option_order',
   'create_scan',
   'create_watchlist',
+  'exercise_option',
   'follow_watchlist',
   'get_accounts',
   'get_earnings_calendar',
@@ -70,9 +72,11 @@ const TOOL_INPUTS = {
   add_option_to_watchlist: { required: ['option_ids'], arrays: ['option_ids'], strings: ['position_type'] },
   add_to_watchlist: { required: ['list_id'], strings: ['list_id'], arrays: ['symbols', 'currency_pair_ids', 'index_ids'] },
   cancel_equity_order: { required: ['account_number', 'order_id'], strings: ['account_number', 'order_id'] },
+  cancel_option_exercise: { required: ['account_number', 'option_id'], strings: ['account_number', 'option_id'] },
   cancel_option_order: { required: ['account_number', 'order_id'], strings: ['account_number', 'order_id'] },
   create_scan: { strings: ['preset', 'title'], arrays: ['filters'] },
   create_watchlist: { required: ['display_name'], strings: ['display_name', 'icon_emoji', 'display_description'] },
+  exercise_option: { required: ['account_number', 'option_id', 'quantity'], strings: ['account_number', 'option_id', 'ref_id', 'reason'], integers: ['quantity'], booleans: ['allow_shorts'] },
   follow_watchlist: { required: ['list_id'], strings: ['list_id'] },
   get_accounts: {},
   get_earnings_calendar: { strings: ['start_date', 'filter'], integers: ['days'] },
@@ -123,9 +127,11 @@ const TOOL_DATA_REQUIRED = {
   add_option_to_watchlist: ['option_ids', 'position_type', 'list_id', 'operation', 'status'],
   add_to_watchlist: ['object_type', 'list_id', 'operation', 'status'],
   cancel_equity_order: ['accepted'],
+  cancel_option_exercise: ['cancelled_count', 'events'],
   cancel_option_order: ['accepted'],
   create_scan: ['result'],
   create_watchlist: ['watchlist'],
+  exercise_option: ['event'],
   follow_watchlist: ['list_id', 'action', 'status'],
   get_accounts: ['accounts'],
   get_earnings_calendar: ['results'],
@@ -403,6 +409,7 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
         ],
       },
     ],
+    optionExercises: [],
     watchlists: [
       {
         id: 'watchlist-default',
@@ -1311,7 +1318,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-20',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-25',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1652,6 +1659,57 @@ export const plugin = {
         }
         case 'get_option_positions':
           return c.json(liveToolResult(id, tool, { positions: filteredOptionPositions(s, args), next: null }, 'Option positions for the requested account.'));
+        case 'exercise_option': {
+          const accountError = validateTradingAccount(id, s, args);
+          if (accountError) return c.json(accountError.payload, accountError.status);
+          const position = (s.optionPositions ?? []).find((row) =>
+            String(row.account_number) === String(args.account_number)
+            && optionPositionOptionId(row) === String(args.option_id)
+            && row.type === 'long');
+          if (!position) return c.json(mcpError(id, 'Long option position not found', 404).payload, 404);
+          const quantity = Number(args.quantity);
+          if (!Number.isInteger(quantity) || quantity < 1 || quantity > Number(position.quantity)) {
+            return c.json(mcpError(id, 'quantity must be a positive integer not exceeding the available contracts', 400).payload, 400);
+          }
+          const existing = args.ref_id && (s.optionExercises ?? []).find((event) => event.ref_id === args.ref_id);
+          if (existing) return c.json(liveToolResult(id, tool, { event: existing }, 'Idempotent replay of the previously submitted exercise.'));
+          const instrument = Object.values(s.optionChains ?? {}).flatMap((chain) => chain.instruments ?? []).find((row) => row.id === args.option_id);
+          const strike = Number(instrument?.strike_price ?? position.strike_price ?? 200);
+          const event = {
+            id: `rh_option_exercise_${String(s.nextId++).padStart(6, '0')}`,
+            state: 'queued',
+            type: 'exercise',
+            quantity: String(quantity),
+            option_id: String(args.option_id),
+            chain_id: position.chain_id,
+            account_number: String(args.account_number),
+            direction: position.option_type === 'put' ? 'credit' : 'debit',
+            total_cash_amount: (strike * 100 * quantity).toFixed(2),
+            event_date: fixedNow.slice(0, 10),
+            ref_id: args.ref_id ?? null,
+            underlying_price: null,
+            created_at: fixedNow,
+            updated_at: fixedNow,
+          };
+          s.optionExercises ??= [];
+          s.optionExercises.push(event);
+          save(store, s);
+          return c.json(liveToolResult(id, tool, { event }, 'Exercise submitted and queued; it remains cancellable until processing begins.'));
+        }
+        case 'cancel_option_exercise': {
+          const accountError = validateTradingAccount(id, s, args);
+          if (accountError) return c.json(accountError.payload, accountError.status);
+          const events = (s.optionExercises ?? []).filter((event) =>
+            event.account_number === String(args.account_number)
+            && event.option_id === String(args.option_id)
+            && event.state === 'queued');
+          for (const event of events) {
+            event.state = 'voided';
+            event.updated_at = fixedNow;
+          }
+          save(store, s);
+          return c.json(liveToolResult(id, tool, { cancelled_count: events.length, events }, 'Queued option exercise requests were cancelled.'));
+        }
         case 'get_option_orders':
           return c.json(liveToolResult(id, tool, { orders: filteredOptionOrders(s, args), next: null }, 'Option orders for the requested account.'));
         case 'get_realized_pnl':

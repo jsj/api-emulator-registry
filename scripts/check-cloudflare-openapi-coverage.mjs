@@ -58,18 +58,20 @@ async function loadOpenApi() {
 function parseOpenApiOperations(openapi) {
   const operations = [];
   let currentPath = null;
+  let pathIndent = null;
 
   for (const line of openapi.split('\n')) {
-    const pathMatch = line.match(/^    (\/[^:]+):$/);
+    const pathMatch = line.match(/^(\s+)(\/[^:]+):\s*$/);
     if (pathMatch) {
-      currentPath = pathMatch[1];
+      pathIndent = pathMatch[1].length;
+      currentPath = pathMatch[2];
       continue;
     }
 
-    const methodMatch = line.match(/^        (get|post|put|patch|delete|head|options):$/);
-    if (currentPath && methodMatch) {
+    const methodMatch = line.match(/^(\s+)(get|post|put|patch|delete|head|options):\s*$/);
+    if (currentPath && pathIndent !== null && methodMatch && methodMatch[1].length > pathIndent) {
       operations.push({
-        method: methodMatch[1],
+        method: methodMatch[2],
         openapiPath: currentPath,
         emulatorPath: `/client/v4${currentPath}`,
       });
@@ -77,14 +79,6 @@ function parseOpenApiOperations(openapi) {
   }
 
   return operations;
-}
-
-function hasOpenApiOperation(openapi, operation) {
-  const pathIndex = openapi.indexOf(`    ${operation.openapiPath}:`);
-  if (pathIndex < 0) return false;
-  const nextPathIndex = openapi.indexOf('\n    /', pathIndex + 1);
-  const pathBlock = openapi.slice(pathIndex, nextPathIndex > pathIndex ? nextPathIndex : undefined);
-  return pathBlock.includes(`        ${operation.method}:`);
 }
 
 const [openapi, pluginSource, routesSource] = await Promise.all([
@@ -117,7 +111,7 @@ for (const operation of uncoveredOperations.slice(0, 20)) {
 }
 
 for (const operation of requiredOperations) {
-  if (!hasOpenApiOperation(openapi, operation)) {
+  if (!operations.some((candidate) => candidate.method === operation.method && candidate.openapiPath === operation.openapiPath)) {
     failures.push(`${operation.name}: missing ${operation.method.toUpperCase()} ${operation.openapiPath} in Cloudflare OpenAPI`);
   }
   if (!routesSource.includes(operation.pluginRoute)) {

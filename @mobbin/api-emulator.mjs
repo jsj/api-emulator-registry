@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { fixedNow, getState, readBody, routeError, setState } from '../scripts/provider-plugin-kit.mjs';
 
 const STATE_KEY = 'mobbin:state';
+const TOOLS_CONTRACT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tools-contract.sanitized.json');
+const observedTools = JSON.parse(readFileSync(TOOLS_CONTRACT_PATH, 'utf8')).tools;
 
 function defaultState(baseUrl = 'https://api.mobbin.com') {
   const screens = [
@@ -108,26 +113,6 @@ function protectedResourceMetadata() {
   };
 }
 
-function toolSchema() {
-  return {
-    name: 'search_screens',
-    description: 'Search Mobbin screens using natural language.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Natural language screen search query.' },
-        platform: { type: 'string', enum: ['ios', 'web'] },
-        mode: { type: 'string', enum: ['fast', 'deep'], default: 'fast' },
-        limit: { type: 'integer', minimum: 1, maximum: 30, default: 20 },
-        exclude_screen_ids: { type: 'array', items: { type: 'string' }, default: [] },
-        image_format: { type: 'string', enum: ['webp', 'jpg'], default: 'webp' },
-      },
-      required: ['query', 'platform'],
-      additionalProperties: false,
-    },
-  };
-}
-
 function rpcResult(id, result) {
   return { jsonrpc: '2.0', id, result };
 }
@@ -148,7 +133,7 @@ async function handleMcp(c, store) {
     }));
   }
   if (method === 'notifications/initialized') return c.json(rpcResult(id, {}));
-  if (method === 'tools/list') return c.json(rpcResult(id, { tools: [toolSchema()] }));
+  if (method === 'tools/list') return c.json(rpcResult(id, { tools: observedTools }));
   if (method === 'resources/list') return c.json(rpcResult(id, { resources: [] }));
   if (method === 'prompts/list') return c.json(rpcResult(id, { prompts: [] }));
   if (method === 'tools/call') {

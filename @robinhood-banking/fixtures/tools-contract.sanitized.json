@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-07-25T00:00:00.000Z",
+  "source": "Robinhood Banking MCP documentation-informed baseline; live endpoint currently degraded",
+  "tools": [
+    { "name": "banking_get_agent_card_balance" },
+    { "name": "banking_get_agent_card_creds" },
+    { "name": "banking_get_agent_card_policy" },
+    { "name": "banking_get_agent_card_status" },
+    { "name": "banking_get_agent_card_transactions" }
+  ]
+}

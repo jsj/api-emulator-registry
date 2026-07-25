@@ -1,21 +1,400 @@
 {
-  "captured_at": "2026-07-25T00:00:00.000Z",
+  "captured_at": "2026-07-25T16:00:00.000Z",
   "source": "https://api.mobbin.com/mcp",
   "tools": [
     {
       "name": "search_screens",
-      "description": "Search Mobbin screens using natural language.",
+      "description": "Search Mobbin for UI screens using natural language. Returns matching screens with inline images and metadata. Examine the returned images to understand each screen's actual content — do not describe or summarize screens based solely on metadata. Each screen has a `mobbin_url` — the canonical Mobbin link for that screen. When you present results to the user, ALWAYS cite each screen you mention as a markdown link to its `mobbin_url` so the user can open it on Mobbin. On hosts that support MCP Apps, also renders an interactive gallery of the results.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "Natural language screen search query." },
-          "platform": { "type": "string", "enum": ["ios", "web"] },
-          "mode": { "type": "string", "enum": ["fast", "deep"], "default": "fast" },
-          "limit": { "type": "integer", "minimum": 1, "maximum": 30, "default": 20 },
-          "exclude_screen_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
-          "image_format": { "type": "string", "enum": ["webp", "jpg"], "default": "webp" }
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Describe one screen in plain language — the UI elements you'd see and how they relate. Be specific; detail helps. Good: \"login screen with biometric authentication\", \"checkout page with promo code field and Apple Pay button\". Avoid: combining multiple screens/intents (search separately), negations (\"without ads\"), vague style words (\"modern\", \"clean\"), disconnected keyword lists. Name a specific app to filter results to it (e.g. \"Spotify now-playing screen\"). Do not include platform (ios/web) — use the dedicated parameter."
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "web"
+            ],
+            "description": "Platform to search"
+          },
+          "mode": {
+            "default": "deep",
+            "description": "Search mode. \"standard\" returns results with low latency. \"deep\" uses an AI-powered pipeline that interprets intent and scores results for relevance — ideal for nuanced queries. \"fast\" is a deprecated alias for \"standard\" and will be removed in a future version — use \"standard\" instead.",
+            "type": "string",
+            "enum": [
+              "deep",
+              "standard",
+              "fast"
+            ]
+          },
+          "exclude_screen_ids": {
+            "description": "Screen IDs to exclude from results",
+            "default": [],
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum number of screens to return. Higher number of screens returned causes increased context usage.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "image_format": {
+            "default": "webp",
+            "description": "Image format. Use jpg if your client does not support webp.",
+            "type": "string",
+            "enum": [
+              "webp",
+              "jpg"
+            ]
+          }
         },
-        "required": ["query", "platform"],
+        "required": [
+          "query",
+          "platform"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The natural language query used for this search."
+          },
+          "screens": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "description": "Unique identifier for the screen."
+                },
+                "image_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Image URL for the screen. Expires after 30 days."
+                },
+                "mobbin_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Link to view this screen on Mobbin."
+                },
+                "app_name": {
+                  "type": "string",
+                  "description": "Name of the app this screen belongs to."
+                },
+                "platform": {
+                  "type": "string",
+                  "enum": [
+                    "ios",
+                    "web"
+                  ],
+                  "description": "Platform of the app."
+                }
+              },
+              "required": [
+                "id",
+                "image_url",
+                "mobbin_url",
+                "app_name",
+                "platform"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "query",
+          "screens"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_flows",
+      "description": "Search Mobbin for multi-step user flows (e.g. onboarding, checkout) using natural language. Returns evenly-spaced preview images inline along with metadata for each flow, including per-screen previews. Examine the returned images to understand each flow's actual content — do not describe screens based solely on metadata. On hosts that support MCP Apps, also renders an interactive gallery of the results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Describe one user journey in plain language — the steps and what you'd see along the way. Be specific; detail helps. Good: \"onboarding with personalization steps\", \"checkout with payment method selection\". Avoid: combining multiple flows (search separately), negations, vague style words, disconnected keyword lists. Name a specific app to filter results to it (e.g. \"Duolingo onboarding\"). Do not include platform (ios/web) — use the dedicated parameter."
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "web"
+            ],
+            "description": "Platform to search."
+          },
+          "limit": {
+            "default": 5,
+            "description": "Maximum number of flows to return. Lower limits are recommended to manage context size.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "page": {
+            "default": 1,
+            "description": "Page number for paginating through results. Maximum 20.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "image_format": {
+            "default": "webp",
+            "description": "Image format. Use jpg if your client does not support webp.",
+            "type": "string",
+            "enum": [
+              "webp",
+              "jpg"
+            ]
+          }
+        },
+        "required": [
+          "query",
+          "platform"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The natural language query used for this search."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "1-based page number of search results."
+          },
+          "has_next_page": {
+            "type": "boolean",
+            "description": "Whether more pages of results are available."
+          },
+          "flows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "description": "Unique identifier for the flow."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the flow."
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Flow action labels associated with this flow."
+                },
+                "mobbin_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Link to view this flow on Mobbin."
+                },
+                "app_name": {
+                  "type": "string",
+                  "description": "Name of the app this flow belongs to."
+                },
+                "platform": {
+                  "type": "string",
+                  "enum": [
+                    "ios",
+                    "web"
+                  ],
+                  "description": "Platform of the app."
+                },
+                "screen_count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991,
+                  "description": "Number of screens in this flow."
+                },
+                "screens": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "screen_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "description": "Unique identifier for the screen."
+                      },
+                      "image_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "description": "Image URL for the screen. Expires after 30 days."
+                      },
+                      "position": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991,
+                        "description": "1-based position of the screen in the flow."
+                      }
+                    },
+                    "required": [
+                      "screen_id",
+                      "image_url",
+                      "position"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "actions",
+                "mobbin_url",
+                "app_name",
+                "platform",
+                "screen_count",
+                "screens"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "query",
+          "page",
+          "has_next_page",
+          "flows"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_sections",
+      "description": "Search Mobbin for website sections (e.g. About, Pricing, Footer) using natural language. Returns section images inline along with metadata. Examine the returned images to understand each section's actual content — do not describe or summarize sections based solely on metadata. On hosts that support MCP Apps, also renders an interactive gallery of the results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Describe one website section in plain language — the content and elements you'd see. Be specific; detail helps. Good: \"pricing page with plan comparison table\", \"hero section with signup form\". Avoid: combining multiple sections (search separately), negations, vague style words, disconnected keyword lists."
+          },
+          "limit": {
+            "default": 20,
+            "description": "Maximum number of sections to return. Higher number of sections returned causes increased context usage.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "page": {
+            "default": 1,
+            "description": "Page number for paginating through results.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "image_format": {
+            "default": "webp",
+            "description": "Image format. Use jpg if your client does not support webp.",
+            "type": "string",
+            "enum": [
+              "webp",
+              "jpg"
+            ]
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The natural language query used for this search."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "1-based page number of this batch of search results."
+          },
+          "has_next_page": {
+            "type": "boolean",
+            "description": "Whether more pages of results are available."
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "description": "Unique identifier for the section."
+                },
+                "image_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Image URL for the section. Expires after 30 days."
+                },
+                "mobbin_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Link to view this section on Mobbin."
+                },
+                "site_name": {
+                  "type": "string",
+                  "description": "Name of the site this section belongs to."
+                }
+              },
+              "required": [
+                "id",
+                "image_url",
+                "mobbin_url",
+                "site_name"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "query",
+          "page",
+          "has_next_page",
+          "sections"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
         "additionalProperties": false
       }
     }

@@ -60,7 +60,54 @@ function defaultState(baseUrl = 'https://api.mobbin.com') {
       created_at: fixedNow,
     },
   ];
-  return { baseUrl, screens };
+  const flows = [
+    {
+      id: 'c4f7755a-36c6-4ddb-a4ad-5a76fa4f6c13',
+      name: 'Personalized onboarding',
+      actions: ['Create account', 'Choose interests', 'Finish onboarding'],
+      mobbin_url: 'https://mobbin.com/flows/c4f7755a-36c6-4ddb-a4ad-5a76fa4f6c13',
+      app_name: 'Duolingo',
+      platform: 'ios',
+      tags: ['onboarding', 'personalization', 'interests', 'account'],
+      screens: [
+        { screen_id: '2ab82046-c5a0-4a3e-b19c-d771b8b8a111', image_url: 'https://mobbin.com/api/mcp/short/flow01', position: 1 },
+        { screen_id: 'd0362f8e-39ed-45bc-aac4-9c02793af222', image_url: 'https://mobbin.com/api/mcp/short/flow02', position: 2 },
+        { screen_id: '3a4c4916-1d45-4990-b283-d5499b57a333', image_url: 'https://mobbin.com/api/mcp/short/flow03', position: 3 },
+      ],
+    },
+    {
+      id: 'c0538a6d-4363-4a70-8c62-14e92f78bf34',
+      name: 'Checkout and payment',
+      actions: ['Review cart', 'Select payment', 'Confirm order'],
+      mobbin_url: 'https://mobbin.com/flows/c0538a6d-4363-4a70-8c62-14e92f78bf34',
+      app_name: 'Shopify',
+      platform: 'web',
+      tags: ['checkout', 'cart', 'payment', 'order'],
+      screens: [
+        { screen_id: '91083608-122d-4ef8-bd1e-6a7e01f0a111', image_url: 'https://mobbin.com/api/mcp/short/flow11', position: 1 },
+        { screen_id: '6d19b746-5846-4939-a544-f45c3083b222', image_url: 'https://mobbin.com/api/mcp/short/flow12', position: 2 },
+      ],
+    },
+  ];
+  const sections = [
+    {
+      id: '48d220ec-5f6f-4403-832e-c893866ee111',
+      image_url: 'https://mobbin.com/api/mcp/short/section01',
+      mobbin_url: 'https://mobbin.com/sections/48d220ec-5f6f-4403-832e-c893866ee111',
+      site_name: 'Linear',
+      title: 'Pricing plans comparison table',
+      tags: ['pricing', 'plans', 'comparison', 'billing'],
+    },
+    {
+      id: '804a8cd6-8c1b-4355-b670-632a0723a222',
+      image_url: 'https://mobbin.com/api/mcp/short/section02',
+      mobbin_url: 'https://mobbin.com/sections/804a8cd6-8c1b-4355-b670-632a0723a222',
+      site_name: 'Vercel',
+      title: 'Product hero with signup call to action',
+      tags: ['hero', 'signup', 'call to action', 'product'],
+    },
+  ];
+  return { baseUrl, screens, flows, sections };
 }
 
 function state(store) {
@@ -70,6 +117,8 @@ function state(store) {
 export function seedFromConfig(store, baseUrl = 'https://api.mobbin.com', config = {}) {
   const seeded = defaultState(baseUrl);
   if (config.screens) seeded.screens = config.screens;
+  if (config.flows) seeded.flows = config.flows;
+  if (config.sections) seeded.sections = config.sections;
   return setState(store, STATE_KEY, seeded);
 }
 
@@ -102,7 +151,34 @@ function searchScreens(s, body = {}) {
     })
     .slice(0, limit)
     .map(screenPayload);
-  return { screens };
+  return { query: String(body.query ?? ''), screens };
+}
+
+function matchesQuery(row, query, fields) {
+  const terms = String(query ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return true;
+  const haystack = fields.map((field) => Array.isArray(row[field]) ? row[field].join(' ') : row[field] ?? '').join(' ').toLowerCase();
+  return terms.some((term) => haystack.includes(term));
+}
+
+function searchFlows(s, body = {}) {
+  const platform = body.platform;
+  if (!['ios', 'web'].includes(platform)) return { error: { message: 'platform must be ios or web' } };
+  const limit = Math.max(1, Math.min(Number(body.limit ?? 5), 10));
+  const page = Math.max(1, Math.min(Number(body.page ?? 1), 20));
+  const matching = s.flows.filter((flow) => flow.platform === platform).filter((flow) => matchesQuery(flow, body.query, ['name', 'app_name', 'actions', 'tags']));
+  const start = (page - 1) * limit;
+  const flows = matching.slice(start, start + limit).map(({ tags: _tags, ...flow }) => ({ ...flow, screen_count: flow.screens.length }));
+  return { query: String(body.query ?? ''), page, has_next_page: start + limit < matching.length, flows };
+}
+
+function searchSections(s, body = {}) {
+  const limit = Math.max(1, Math.min(Number(body.limit ?? 20), 30));
+  const page = Math.max(1, Number(body.page ?? 1));
+  const matching = s.sections.filter((section) => matchesQuery(section, body.query, ['site_name', 'title', 'tags']));
+  const start = (page - 1) * limit;
+  const sections = matching.slice(start, start + limit).map(({ title: _title, tags: _tags, ...section }) => section);
+  return { query: String(body.query ?? ''), page, has_next_page: start + limit < matching.length, sections };
 }
 
 function protectedResourceMetadata() {
@@ -138,8 +214,9 @@ async function handleMcp(c, store) {
   if (method === 'prompts/list') return c.json(rpcResult(id, { prompts: [] }));
   if (method === 'tools/call') {
     const name = body.params?.name;
-    if (name !== 'search_screens') return c.json(rpcError(id, -32602, `Unknown tool: ${name}`));
-    const result = searchScreens(state(store), body.params?.arguments ?? {});
+    const handlers = { search_screens: searchScreens, search_flows: searchFlows, search_sections: searchSections };
+    if (!handlers[name]) return c.json(rpcError(id, -32602, `Unknown tool: ${name}`));
+    const result = handlers[name](state(store), body.params?.arguments ?? {});
     if (result.error) return c.json(rpcError(id, -32602, result.error.message));
     return c.json(rpcResult(id, {
       content: [{ type: 'text', text: JSON.stringify(result) }],
@@ -151,10 +228,10 @@ async function handleMcp(c, store) {
 
 export const contract = {
   provider: 'mobbin',
-  source: 'Mobbin MCP endpoint and public Screens Search API behavior',
+  source: 'Observed authenticated Mobbin MCP tools/list contract and public Screens Search API behavior',
   docs: 'https://api.mobbin.com/mcp',
   baseUrl: 'https://api.mobbin.com',
-  scope: ['mcp', 'screens.search', 'oauth-protected-resource'],
+  scope: ['mcp', 'screens.search', 'flows.search', 'sections.search', 'oauth-protected-resource'],
   fidelity: 'deterministic-mcp-and-rest-subset',
 };
 
@@ -173,7 +250,7 @@ export const plugin = {
 };
 
 export const label = 'Mobbin MCP and Screens API emulator';
-export const endpoints = 'mcp, screens search, oauth metadata';
+export const endpoints = 'mcp screens, flows, and sections search; REST screens search; oauth metadata';
 export const initConfig = { mobbin: { apiKey: 'mobbin_emulator_key' } };
 
 export default plugin;

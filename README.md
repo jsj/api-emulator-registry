@@ -47,6 +47,9 @@ Each provider README declares a fidelity tier so breadth does not hide depth:
     <td align="center"><a href="./@app-store-connect/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=appstoreconnect.apple.com&sz=64" width="36" height="36" alt=""><br>App Store Connect</a></td>
     <td align="center"><a href="./@apple/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=apple.com&sz=64" width="36" height="36" alt=""><br>Apple</a></td>
     <td align="center"><a href="./@apple-maps/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=maps.apple.com&sz=64" width="36" height="36" alt=""><br>Apple Maps</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="./@apple-media/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=books.apple.com&sz=64" width="36" height="36" alt=""><br>Apple Media</a></td>
     <td align="center"><a href="./@apple-music/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=music.apple.com&sz=64" width="36" height="36" alt=""><br>Apple Music</a></td>
     <td align="center"><a href="./@apple-podcasts/api-emulator/README.md"><img src="https://www.google.com/s2/favicons?domain=podcasts.apple.com&sz=64" width="36" height="36" alt=""><br>Apple Podcasts</a></td>
   </tr>

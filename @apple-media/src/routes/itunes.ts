@@ -1,5 +1,5 @@
 import type { RouteContext, Store } from "@api-emulator/core";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 /**
  * iTunes Search / Lookup API emulator.
@@ -128,9 +128,9 @@ export function itunesRoutes({ app, store, baseUrl }: RouteContext): void {
     const id = Number(c.req.param("id"));
     const book = getAudiobooks(baseUrl).find((item) => item.collectionId === id);
     if (!book) return c.notFound();
-    const cover = readFileSync(
-      new URL(`../../fixtures/audiobook-covers/${id}.jpg`, import.meta.url),
-    );
+    const sourceFixture = new URL(`../../fixtures/audiobook-covers/${id}.jpg`, import.meta.url);
+    const bundledFixture = new URL(`./fixtures/audiobook-covers/${id}.jpg`, import.meta.url);
+    const cover = readFileSync(existsSync(sourceFixture) ? sourceFixture : bundledFixture);
     c.header("content-type", "image/jpeg");
     c.header("cache-control", "public, max-age=31536000, immutable");
     return c.body(cover);

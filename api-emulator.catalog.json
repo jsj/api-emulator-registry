@@ -64,13 +64,19 @@
       "kind": "package",
       "packageName": "@api-emulator/apple",
       "specifier": "./@apple/api-emulator/src/index.ts",
-      "description": "Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, app store, device, and platform services for iOS and macOS apps."
+      "description": "Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps."
     },
     "apple-maps": {
       "kind": "package",
       "packageName": "@api-emulator/apple-maps",
       "specifier": "./@apple-maps/api-emulator.mjs",
       "description": "Apple Maps Server API provides map tokens, search, geocoding, and reverse geocoding for location-aware apps."
+    },
+    "apple-media": {
+      "kind": "package",
+      "packageName": "@api-emulator/apple-media",
+      "specifier": "./@apple-media/api-emulator.mjs",
+      "description": "Apple Media provides iTunes Search, App Store storefront metadata, Apple Books audiobook charts, RSS feeds, and deterministic artwork fixtures."
     },
     "apple-music": {
       "kind": "package",

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -141,7 +141,7 @@ function providerPackageJson(slug, entry, version) {
     type: 'module',
     main: './api-emulator.mjs',
     exports: { '.': './api-emulator.mjs' },
-    files: ['api-emulator.mjs', 'README.md'],
+    files: ['api-emulator.mjs', 'README.md', 'fixtures'],
     homepage: 'https://api-emulator.jsj.sh',
     repository: {
       type: 'git',
@@ -164,6 +164,8 @@ async function prepareProvider(slug, entry, version, outRoot) {
 
   const readmePath = join(root, `@${slug}`, 'api-emulator', 'README.md');
   if (existsSync(readmePath)) await writeFile(join(packageDir, 'README.md'), await readFile(readmePath, 'utf8'));
+  const fixturesPath = join(root, `@${slug}`, 'fixtures');
+  if (existsSync(fixturesPath)) await cp(fixturesPath, join(packageDir, 'fixtures'), { recursive: true });
   await writeFile(join(packageDir, 'package.json'), `${JSON.stringify(providerPackageJson(slug, entry, version), null, 2)}\n`);
   return packageDir;
 }

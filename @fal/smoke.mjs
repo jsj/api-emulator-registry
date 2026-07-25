@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { plugin } from './api-emulator.mjs';
+import { contract, plugin } from './api-emulator.mjs';
 
 function createHarness() {
   const routes = new Map();
@@ -43,10 +43,15 @@ function createHarness() {
 }
 
 const harness = createHarness();
+assert.equal(contract.openapi, 'https://api.fal.ai/v1/openapi.json');
 
 const models = await harness.call('GET', '/models');
 assert.equal(models.status, 200);
 assert.ok(models.payload.models.some((model) => model.endpoint_id === 'fal-ai/flux/dev'));
+assert.equal(models.payload.has_more, false);
+assert.equal(models.payload.next_cursor, null);
+assert.equal(models.payload.models[0].metadata.status, 'active');
+assert.ok(models.payload.models[0].metadata.display_name);
 
 const key = await harness.call('POST', '/keys', { name: 'Smoke key' });
 assert.equal(key.payload.key_secret, 'fal-emulator-secret');
@@ -67,7 +72,34 @@ assert.equal(result.payload.images[0].content_type, 'image/png');
 const seedance = await harness.call('POST', '/bytedance/seedance-2.0/fast/text-to-video', { prompt: 'video' });
 assert.equal(seedance.payload.request_id, 'emu_fal_request_123');
 
+const missingPrompt = await harness.call('POST', '/bytedance/seedance-2.0/fast/text-to-video');
+assert.equal(missingPrompt.status, 422);
+assert.deepEqual(missingPrompt.payload.detail[0].loc, ['body', 'prompt']);
+
+const badResolution = await harness.call('POST', '/bytedance/seedance-2.0/fast/text-to-video', { prompt: 'video', resolution: '4k' });
+assert.equal(badResolution.status, 422);
+
+const badDuration = await harness.call('POST', '/bytedance/seedance-2.0/fast/text-to-video', { prompt: 'video', duration: 5 });
+assert.equal(badDuration.status, 422);
+
+const imageToVideo = await harness.call('POST', '/*', {
+  prompt: 'animate product',
+  image_url: 'https://example.com/start.png',
+  end_image_url: 'https://example.com/end.png',
+}, {}, '/bytedance/seedance-2.0/fast/image-to-video');
+assert.equal(imageToVideo.payload.status, 'COMPLETED');
+
+const missingImage = await harness.call('POST', '/*', { prompt: 'animate product' }, {}, '/bytedance/seedance-2.0/fast/image-to-video');
+assert.equal(missingImage.status, 422);
+
+const referenceToVideo = await harness.call('POST', '/*', {
+  prompt: 'combine references',
+  image_urls: ['https://example.com/reference.png'],
+  audio_urls: ['https://example.com/reference.wav'],
+}, {}, '/bytedance/seedance-2.0/reference-to-video');
+assert.equal(referenceToVideo.payload.status, 'COMPLETED');
+
 const requests = await harness.call('GET', '/models/requests/search');
-assert.equal(requests.payload.results.length, 1);
+assert.equal(requests.payload.results.length, 3);
 
 console.log('fal smoke ok');

@@ -2,6 +2,43 @@ function clampCount(value, fallback = 10) {
   return Math.max(0, Math.min(50, Number(value ?? fallback)));
 }
 
+const SEARCH_TYPES = new Set(['instant', 'fast', 'auto', 'deep-lite', 'deep', 'deep-reasoning']);
+
+function validMaxCharacters(value) {
+  return Number.isInteger(value) && value >= 1 && value <= 10_000;
+}
+
+function validateContentOption(value, name, { allowBoolean }) {
+  if (value == null) return null;
+  if (allowBoolean && typeof value === 'boolean') return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return `contents.${name} must be ${allowBoolean ? 'a boolean, object,' : 'an object'} or null`;
+  }
+  if (value.maxCharacters != null && !validMaxCharacters(value.maxCharacters)) {
+    return `contents.${name}.maxCharacters must be an integer between 1 and 10000`;
+  }
+  return null;
+}
+
+export function validateSearchRequest(body) {
+  if (typeof body.query !== 'string' || body.query.trim().length === 0) {
+    return 'query is required and must be a non-empty string';
+  }
+  if (body.type != null && !SEARCH_TYPES.has(body.type)) {
+    return `type must be one of: ${[...SEARCH_TYPES].join(', ')}`;
+  }
+  if (body.numResults != null && (!Number.isInteger(body.numResults) || body.numResults < 1 || body.numResults > 100)) {
+    return 'numResults must be an integer between 1 and 100';
+  }
+  if (body.contents == null) return null;
+  if (typeof body.contents !== 'object' || Array.isArray(body.contents)) {
+    return 'contents must be an object or null';
+  }
+  return validateContentOption(body.contents.text, 'text', { allowBoolean: true })
+    ?? validateContentOption(body.contents.highlights, 'highlights', { allowBoolean: true })
+    ?? validateContentOption(body.contents.summary, 'summary', { allowBoolean: false });
+}
+
 function withQuery(result, query, index) {
   const safeQuery = query || 'empty query';
   return {
@@ -20,10 +57,19 @@ export function recordSearch(current, body) {
   current.searches.push({
     query,
     numResults,
-    type: body.type ?? 'neural',
+    type: body.type ?? 'auto',
+    contents: body.contents ?? null,
     requestedAt: new Date().toISOString(),
   });
-  return { requestId: `exa_req_${current.searches.length}`, autopromptString: query, results };
+  return {
+    requestId: `exa_req_${current.searches.length}`,
+    results: results.map((result) => ({
+      ...result,
+      ...(body.contents?.summary ? { summary: `Deterministic summary for ${query}.` } : {}),
+    })),
+    resolvedSearchType: '',
+    costDollars: { total: 0, search: { [body.type ?? 'auto']: 0 } },
+  };
 }
 
 export function recordContents(current, body) {

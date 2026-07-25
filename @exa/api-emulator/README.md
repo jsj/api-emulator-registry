@@ -18,8 +18,8 @@ npx -p api-emulator api --plugin ./@exa/api-emulator.mjs --service exa
 
 ## Fidelity
 
-- Tier: `stub`
-- Evidence: starter surface with smoke coverage
+- Tier: `deterministic-subset`
+- Evidence: `/search` request validation and response shapes track Exa Public API OpenAPI 2.0.0, with smoke coverage for success, validation, and payment-required responses.
 
 ## Endpoints
 
@@ -28,6 +28,8 @@ npx -p api-emulator api --plugin ./@exa/api-emulator.mjs --service exa
 ## Auth
 
 Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.
+
+Use `x-api-key: exa-payment-required` to exercise Exa's HTTP 402 `X402_PAYMENT_REQUIRED` response.
 
 ## Seed Configuration
 

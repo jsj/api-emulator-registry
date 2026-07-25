@@ -2,8 +2,9 @@ import { registerRoutes } from './src/routes/http.mjs';
 
 export const contract = {
   provider: 'exa',
-  source: 'Exa API compatible search subset',
+  source: 'Exa Public API OpenAPI 2.0.0 compatible search subset',
   docs: 'https://docs.exa.ai',
+  openapi: 'https://api.exa.ai/openapi.json',
   scope: ['search', 'contents', 'findSimilar', 'answer'],
   fidelity: 'deterministic-subset',
 };

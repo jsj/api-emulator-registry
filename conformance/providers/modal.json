@@ -6,6 +6,7 @@
   },
   "sources": {
     "docs": ["https://modal.com/docs"],
+    "protobuf": "https://github.com/modal-labs/modal-client/blob/4f3dadd2e577fa16f00c361da37ee272d252ee9d/modal_proto/api.proto",
     "cli": "modal",
     "sdk": "modal"
   },
@@ -16,13 +17,13 @@
     "baseUrlEnv": "MODAL_SERVER_URL"
   },
   "coverage": {
-    "deepRoutes": 8,
+    "deepRoutes": 40,
     "genericFallback": false,
-    "unsupported": ["full gRPC service surface", "container execution semantics"]
+    "unsupported": ["container execution semantics", "gRPC log streaming", "gRPC volume file transfer", "billing and role administration"]
   },
   "fidelity": {
-    "routes": 0.62,
-    "schemas": 0.55,
+    "routes": 0.82,
+    "schemas": 0.68,
     "auth": 0.6,
     "errors": 0.45,
     "pagination": 0.4,
@@ -31,6 +32,9 @@
   },
   "notes": [
     "Modal is validated with the installed official CLI using MODAL_SERVER_URL.",
-    "Current conformance focuses on token info and app listing flows."
+    "Modal publishes its control-plane contract as protobuf/gRPC, not an official REST OpenAPI; the REST-like routes are an emulator facade over that schema.",
+    "The complete official api.proto is vendored; 31 stateful unary RPCs cover token, workspace, environment, app, secret, and volume lifecycle flows.",
+    "Current conformance focuses on token info and app listing flows.",
+    "The /modal/forge/inference route is a deterministic Forge test seam and does not emulate real container execution."
   ]
 }

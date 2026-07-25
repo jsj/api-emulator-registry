@@ -1,6 +1,6 @@
 # @api-emulator/apple
 
-Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, app store, device, and platform services for iOS and macOS apps.
+Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps. App Store Connect and Apple media discovery are separate providers.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -33,16 +33,6 @@ npx -p api-emulator api --plugin ./@apple/api-emulator/src/index.ts --service ap
 - `GET /inspect/last-sign-sap-setup`
 - `GET /inspect/last-sign-sap-setup-response`
 - `GET /inspect/last-signin`
-- `GET /v1/users`
-- `GET /v1/users/:id`
-- `GET /v1/ciProducts/:productId/additionalRepositories`
-- `GET /v1/userInvitations`
-- `GET /search`
-- `GET /lookup`
-- `GET /v1/app-store/search`
-- `GET /v1/app-store/lookup`
-- `GET /v1/app-store/storefront`
-- `GET /:store/app/id:appId`
 - `POST /3/device/:token`
 - `POST /apns/send`
 - `POST /apns/control/register-team`
@@ -77,5 +67,7 @@ apple:
 
 ## Links
 
-- [Official API docs](https://developer.apple.com/documentation/appstoreconnectapi)
+- [Official CloudKit docs](https://developer.apple.com/icloud/cloudkit/)
+- [App Store Connect emulator](../../@app-store-connect/api-emulator/README.md)
+- [Apple Media emulator](../../@apple-media/api-emulator/README.md)
 - [api-emulator](https://github.com/jsj/api-emulator)

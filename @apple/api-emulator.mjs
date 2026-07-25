@@ -1,6 +1,5 @@
-// src/jsonapi.ts
+// @apple/api-emulator/src/jsonapi.ts
 import { randomBytes } from "crypto";
-import { readFileSync } from "node:fs";
 function ascId() {
   return randomBytes(8).toString("hex");
 }
@@ -59,7 +58,7 @@ async function parseJsonApiBody(c) {
   };
 }
 
-// src/routes/auth.ts
+// @apple/api-emulator/src/routes/auth.ts
 function getUsers(store) {
   return store.getData("asc.users") ?? [];
 }
@@ -249,127 +248,7 @@ function ascUserRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/itunes.ts
-var audiobookFixtures = [
-  [1808184252, "The Calamity Club", "Kathryn Stockett", "Fiction"],
-  [1808184253, "Yesteryear", "Caro Claire Burke", "Fiction"],
-  [1808184254, "Dungeon Crawler Carl", "Matt Dinniman", "Fiction"],
-  [1808184255, "Theo of Golden", "Allen Levi", "Fiction"],
-  [1808184256, "The Divorce", "Freida McFadden", "Fiction"],
-  [1808184257, "Whistler", "Ann Patchett", "Fiction"],
-  [1808184258, "Regime Change", "Maggie Haberman and Jonathan Swan", "Nonfiction"],
-  [1808184259, "Strangers", "Belle Burden", "Nonfiction"],
-  [1808184260, "The Land and Its People", "David Sedaris", "Nonfiction"],
-  [1808184261, "Communion", "JD Vance", "Nonfiction"],
-  [1808184262, "Famesick", "Lena Dunham", "Nonfiction"],
-  [1808184263, "London Falling", "Patrick Radden Keefe", "Nonfiction"]
-];
-function getAudiobooks(baseUrl) {
-  return audiobookFixtures.map(([collectionId, collectionName, artistName, genre]) => ({
-    collectionId,
-    collectionName,
-    artistName,
-    artworkUrl100: `${baseUrl}/fixtures/audiobook-covers/${collectionId}/100x100bb.jpg?fixture=real-v1`,
-    collectionViewUrl: `${baseUrl}/us/audiobook/id${collectionId}`,
-    artistViewUrl: `${baseUrl}/us/author/${encodeURIComponent(artistName)}`,
-    description: `A deterministic ${genre.toLowerCase()} audiobook fixture for local development.`,
-    releaseDate: "2026-07-21T00:00:00Z",
-    primaryGenreName: genre,
-    previewUrl: `${baseUrl}/fixtures/audiobook-preview/${collectionId}.m4a`,
-    collectionPrice: 14.99,
-    currency: "USD"
-  }));
-}
-function getApps(store) {
-  return store.getData("itunes.apps") ?? [];
-}
-function searchApps(apps, term, limit) {
-  const lower = term.toLowerCase();
-  const matched = apps.filter(
-    (a) => a.trackName.toLowerCase().includes(lower) || a.bundleId.toLowerCase().includes(lower) || a.description.toLowerCase().includes(lower)
-  );
-  return matched.slice(0, limit);
-}
-function itunesResponse(results) {
-  return { resultCount: results.length, results };
-}
-function itunesRoutes({ app, store, baseUrl }) {
-  app.get("/search", (c) => {
-    const term = c.req.query("term") ?? "";
-    const limit = parseInt(c.req.query("limit") ?? "10", 10);
-    if (c.req.query("media") === "audiobook" || c.req.query("entity") === "audiobook") {
-      const words = term.toLowerCase().split(/\s+/).filter(Boolean);
-      const results2 = getAudiobooks(baseUrl).filter((book) => {
-        const haystack = `${book.collectionName} ${book.artistName}`.toLowerCase();
-        return !words.length || words.every((word) => haystack.includes(word));
-      }).slice(0, limit);
-      return c.json({ resultCount: results2.length, results: results2 });
-    }
-    const results = searchApps(getApps(store), term, limit);
-    return c.json(itunesResponse(results));
-  });
-  app.get("/api/v2/us/audio-books/top/:limit/audio-books.json", (c) => {
-    const limit = Math.max(1, parseInt(c.req.param("limit") ?? "10", 10));
-    const results = getAudiobooks(baseUrl).slice(0, limit).map((book) => ({
-      id: String(book.collectionId),
-      name: book.collectionName,
-      artistName: book.artistName,
-      artworkUrl100: book.artworkUrl100,
-      url: book.collectionViewUrl,
-      genres: [{ name: book.primaryGenreName }, { name: "Audiobooks" }]
-    }));
-    return c.json({ feed: { title: "Top Audiobooks", results } });
-  });
-  app.get("/fixtures/audiobook-covers/:id/:size", (c) => {
-    const id = Number(c.req.param("id"));
-    const book = getAudiobooks(baseUrl).find((item) => item.collectionId === id);
-    if (!book) return c.notFound();
-    const cover = readFileSync(new URL(`./fixtures/audiobook-covers/${id}.jpg`, import.meta.url));
-    c.header("content-type", "image/jpeg");
-    c.header("cache-control", "public, max-age=31536000, immutable");
-    return c.body(cover);
-  });
-  app.get("/lookup", (c) => {
-    const id = c.req.query("id") ?? "";
-    const apps = getApps(store);
-    const found = apps.filter((a) => String(a.trackId) === id);
-    return c.json(itunesResponse(found));
-  });
-  app.get("/v1/app-store/search", (c) => {
-    const term = c.req.query("term") ?? "";
-    const limit = parseInt(c.req.query("limit") ?? "10", 10);
-    const results = searchApps(getApps(store), term, limit);
-    return c.json(itunesResponse(results));
-  });
-  app.get("/v1/app-store/lookup", (c) => {
-    const appId = c.req.query("appId") ?? "";
-    const apps = getApps(store);
-    const found = apps.filter((a) => String(a.trackId) === appId);
-    return c.json(itunesResponse(found));
-  });
-  app.get("/v1/app-store/storefront", (c) => {
-    const appId = c.req.query("appId") ?? "";
-    const apps = getApps(store);
-    const found = apps.find((a) => String(a.trackId) === appId);
-    if (!found || found.screenshotUrls.length === 0) {
-      return c.html("<html><body></body></html>");
-    }
-    const pictures = found.screenshotUrls.map((url) => `<picture><source srcset="${url} 460w"></picture>`).join("\n");
-    return c.html(`<html><body><section id="product_media_screenshots">${pictures}</section><div class="platform-description"></div></body></html>`);
-  });
-  app.get("/:store/app/id:appId", (c) => {
-    const appId = c.req.param("appId");
-    const apps = getApps(store);
-    const found = apps.find((a) => String(a.trackId) === appId);
-    if (!found) {
-      return c.html("<html><body></body></html>");
-    }
-    const pictures = found.screenshotUrls.map((url) => `<picture><source srcset="${url} 460w"></picture>`).join("\n");
-    return c.html(`<html><body><section id="product_media_screenshots">${pictures}</section><div class="platform-description"></div></body></html>`);
-  });
-}
-
-// src/routes/apns.ts
+// @apple/api-emulator/src/routes/apns.ts
 var APNS_FAILURE_REASONS = /* @__PURE__ */ new Set([
   "BadDeviceToken",
   "BadExpirationDate",
@@ -656,7 +535,7 @@ function apnsRoutes({ app, store }) {
   });
 }
 
-// src/routes/cloudkit.ts
+// @apple/api-emulator/src/routes/cloudkit.ts
 var now3 = () => (/* @__PURE__ */ new Date()).toISOString();
 var token = () => `ck-${Math.random().toString(36).slice(2, 12)}`;
 function recordKey(container, environment, database) {
@@ -793,7 +672,7 @@ function cloudKitRoutes({ app, store }) {
   });
 }
 
-// src/store.ts
+// @apple/api-emulator/src/store.ts
 function getASCStore(store) {
   return {
     apps: store.collection("asc.apps", ["asc_id", "bundle_id"]),
@@ -804,7 +683,7 @@ function getASCStore(store) {
   };
 }
 
-// src/routes/review-submissions.ts
+// @apple/api-emulator/src/routes/review-submissions.ts
 function getScenario(store) {
   return store.getData("asc.review_scenario") ?? "approve";
 }
@@ -943,7 +822,7 @@ function reviewSubmissionRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/reviews.ts
+// @apple/api-emulator/src/routes/reviews.ts
 function getReviews(store) {
   return store.getData("asc.customer_reviews") ?? [];
 }
@@ -1043,7 +922,7 @@ function reviewRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/xcode-cloud.ts
+// @apple/api-emulator/src/routes/xcode-cloud.ts
 function getProducts(store) {
   return store.getData("asc.ci_products") ?? [];
 }
@@ -1302,7 +1181,7 @@ function xcodeCloudRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/testflight.ts
+// @apple/api-emulator/src/routes/testflight.ts
 function getBetaGroups(store) {
   return store.getData("asc.beta_groups") ?? [];
 }
@@ -1509,7 +1388,7 @@ function testflightRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/upload.ts
+// @apple/api-emulator/src/routes/upload.ts
 function getUploads(store) {
   return store.getData("asc.uploads") ?? [];
 }
@@ -1668,7 +1547,7 @@ function uploadRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/analytics.ts
+// @apple/api-emulator/src/routes/analytics.ts
 function getSnapshot(store) {
   return store.getData("asc.analytics_snapshot") ?? null;
 }
@@ -1708,7 +1587,7 @@ function analyticsRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/apps.ts
+// @apple/api-emulator/src/routes/apps.ts
 function appRoutes({ app, store, baseUrl }) {
   const asc = getASCStore(store);
   app.get("/v1/apps", (c) => {
@@ -1910,7 +1789,7 @@ function appRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/metadata.ts
+// @apple/api-emulator/src/routes/metadata.ts
 function getAppInfoLocalizations(store) {
   return store.getData("asc.app_info_localizations") ?? [];
 }
@@ -2063,7 +1942,7 @@ function metadataRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/review-detail.ts
+// @apple/api-emulator/src/routes/review-detail.ts
 function getDetails(store) {
   let map = store.getData("asc.review_details");
   if (!map) {
@@ -2134,7 +2013,7 @@ function reviewDetailRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/review-items.ts
+// @apple/api-emulator/src/routes/review-items.ts
 function getItems(store) {
   return store.getData("asc.review_submission_items") ?? [];
 }
@@ -2252,7 +2131,7 @@ function reviewItemRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/crud.ts
+// @apple/api-emulator/src/crud.ts
 function snakeCase(s) {
   return s.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
 }
@@ -2380,7 +2259,7 @@ function registerNestedList(app, store, baseUrl, parentPath, config, parentParam
   });
 }
 
-// src/routes/stubs.ts
+// @apple/api-emulator/src/routes/stubs.ts
 function stubRoutes({ app, store, baseUrl }) {
   const reg = (config) => registerCrud(app, store, baseUrl, config);
   const nested = (parentPath, config, parentParam, storeField) => registerNestedList(app, store, baseUrl, parentPath, config, parentParam, storeField);
@@ -2873,7 +2752,7 @@ function stubRoutes({ app, store, baseUrl }) {
   });
 }
 
-// src/routes/admin.ts
+// @apple/api-emulator/src/routes/admin.ts
 function adminRoutes({ app, store, baseUrl }) {
   const asc = getASCStore(store);
   app.post("/_admin/reset", (c) => {
@@ -3027,7 +2906,7 @@ function adminRoutes({ app, store, baseUrl }) {
   }));
 }
 
-// src/asc.ts
+// @apple/api-emulator/src/asc.ts
 var ascCapabilities = [
   "asc-apps",
   "asc-build-uploads",
@@ -3130,10 +3009,10 @@ var ascPlugin = {
   }
 };
 
-// src/index.ts
+// @apple/api-emulator/src/index.ts
 var contract = {
   provider: "apple",
-  source: "Apple APNs provider API, App Store Connect JSON:API conventions, and CloudKit Web Services",
+  source: "Sign in with Apple, Apple APNs provider API, and CloudKit Web Services",
   docs: "https://developer.apple.com/icloud/cloudkit/",
   scope: [
     "ams-auth",
@@ -3144,7 +3023,6 @@ var contract = {
     "topics",
     "device-tokens",
     "notifications",
-    ...ascCapabilities,
     "cloudkit-web-services",
     "icloud-app-containers"
   ],
@@ -3156,30 +3034,22 @@ var plugin = {
   }, subscribe: () => () => {
   } }, baseUrl = "", tokenMap) {
     const ctx = { app, store, webhooks, baseUrl, tokenMap };
-    ascPlugin.register(app, store, webhooks, baseUrl, tokenMap);
     appleIdentityRoutes(ctx);
-    itunesRoutes(ctx);
     apnsRoutes(ctx);
     cloudKitRoutes(ctx);
-  },
-  seed(store, baseUrl) {
-    ascPlugin.seed?.(store, baseUrl);
   }
 };
 var index_default = plugin;
-var label = "Apple AMS auth, APNS, App Store Connect, and CloudKit emulator";
-var endpoints = "apps, builds, versions, reviewSubmissions, customerReviews, users, ciProducts, ciWorkflows, ciBuildRuns, betaGroups, betaTesters, uploads, analytics, localizations, reviewDetails, certificates, profiles, screenshots, devices, subscriptions, gameCenter, CloudKit records, zones, subscriptions, current user, local APNS, and 30+ more";
+var label = "Sign in with Apple, APNs, and CloudKit emulator";
+var endpoints = "Sign in with Apple OAuth, AMS auth, APNs notifications, CloudKit records, zones, subscriptions, and iCloud app containers";
 var capabilities = contract.scope;
 var initConfig = {
   apple: {
     emulatorBaseUrl: "same emulator origin",
     apnsProxyPath: "/apns/send",
     apnsDevicePath: "/3/device/:deviceToken",
-    ascBaseUrlEnv: "ASC_API_BASE_URL",
     cloudKitBaseUrlEnv: "CLOUDKIT_API_BASE_URL",
-    oauthBaseUrlEnv: "APPLEID_AUTH_BASE_URL",
-    apps: [{ id: "1234567890", name: "My App", bundle_id: "com.example.app" }],
-    review_scenario: "approve"
+    oauthBaseUrlEnv: "APPLEID_AUTH_BASE_URL"
   }
 };
 export {

@@ -409,6 +409,11 @@ export function createAdPlatformPlugin({ provider, label, docs, source, scope })
         });
       });
 
+      app.get('/:graphVersion/me/businesses', (c) => {
+        hit('meta.business.list');
+        return c.json({ data: [{ id: 'business_123456', name: `${label} Emulator Business` }] });
+      });
+
       app.get('/:graphVersion/:accountId/campaigns', (c) => {
         hit('meta.campaign.list');
         return c.json({ data: state(store, provider).campaigns.map(toMetaCampaign) });

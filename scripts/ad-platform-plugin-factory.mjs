@@ -4,6 +4,10 @@ function now() {
 
 function initialState(provider, config = {}) {
   const seeded = Array.isArray(config.campaigns) ? config.campaigns : [];
+  const seededAds = Array.isArray(config.ads) ? config.ads : [];
+  const sourceAds = seededAds.length > 0 || seeded.length === 0
+    ? seededAds
+    : [{ campaignId: seeded[0].id ?? `${provider}_campaign_1` }];
   return {
     campaigns: seeded.map((campaign, index) => ({
       id: campaign.id ?? `${provider}_campaign_${index + 1}`,
@@ -15,7 +19,19 @@ function initialState(provider, config = {}) {
       createdAt: campaign.createdAt ?? now(),
       updatedAt: campaign.updatedAt ?? now(),
     })),
-    ads: [],
+    ads: sourceAds.map((ad, index) => ({
+      id: ad.id ?? `${provider}_ad_${index + 1}`,
+      campaignId: ad.campaignId ?? seeded[0]?.id ?? `${provider}_campaign_1`,
+      name: ad.name ?? `${provider} Creative ${index + 1}`,
+      status: ad.status ?? 'paused',
+      platform: provider,
+      creative: ad.creative ?? { type: 'video', url: `emulator://${provider}/creative-${index + 1}.mp4` },
+      metrics: ad.metrics ?? {
+        current: { impressions: 12000, spend: 860, frequency: 4.2, hookRate: 0.31, holdRate: 0.2, ctr: 0.009, cpm: 71.67, roas: 1.4 },
+        baseline: { impressions: 10000, spend: 610, frequency: 2.4, hookRate: 0.34, holdRate: 0.22, ctr: 0.014, cpm: 61, roas: 2.1 },
+      },
+      createdAt: ad.createdAt ?? now(),
+    })),
     nextCampaignId: seeded.length + 1,
     nextAdId: 1,
   };
@@ -193,6 +209,68 @@ export function createAdPlatformPlugin({ provider, label, docs, source, scope })
       });
 
       app.post('/reports', async (c) => c.json(metricReport(provider, await c.req.json().catch(() => ({})))));
+
+      app.get('/creative-observations', (c) => {
+        hit('creative.observation.list');
+        const campaignId = c.req.query('campaignId');
+        const ads = state(store, provider).ads.filter((ad) => !campaignId || ad.campaignId === campaignId);
+        return c.json(ads.map((ad) => ({
+          platform: provider,
+          accountId: 'emulator-account',
+          campaignId: ad.campaignId,
+          adId: ad.id,
+          creativeId: ad.id,
+          creativeType: ad.creative?.type ?? 'video',
+          observedAt: now(),
+          current: ad.metrics?.current ?? { impressions: 0 },
+          baseline: ad.metrics?.baseline,
+        })));
+      });
+
+      app.post('/ads', async (c) => {
+        hit('creative.variant.deploy');
+        const next = state(store, provider);
+        const body = await c.req.json().catch(() => ({}));
+        if (!body.campaignId || !body.creative?.path) {
+          return c.json({ message: 'campaignId and creative.path are required' }, 400);
+        }
+        const ad = {
+          id: `${provider}_ad_${next.nextAdId++}`,
+          campaignId: body.campaignId,
+          name: body.name ?? `${provider} Creative Variant`,
+          status: 'paused',
+          platform: provider,
+          creative: { type: body.creative.type ?? 'video', url: body.creative.path },
+          metrics: { current: { impressions: 0 } },
+          createdAt: now(),
+        };
+        next.ads.push(ad);
+        saveState(store, provider, next);
+        return c.json(ad, 201);
+      });
+
+      app.patch('/ads/:adId', async (c) => {
+        hit('creative.variant.update');
+        const next = state(store, provider);
+        const ad = next.ads.find((item) => item.id === c.req.param('adId'));
+        if (!ad) return c.json({ message: 'Ad not found' }, 404);
+        const body = await c.req.json().catch(() => ({}));
+        if (body.status !== 'paused') return c.json({ message: 'Emulator creative variants may only be paused' }, 400);
+        ad.status = 'paused';
+        saveState(store, provider, next);
+        return c.json(ad);
+      });
+
+      app.post('/creative-observations/:adId/metrics', async (c) => {
+        hit('creative.observation.record');
+        const next = state(store, provider);
+        const ad = next.ads.find((item) => item.id === c.req.param('adId'));
+        if (!ad) return c.json({ message: 'Ad not found' }, 404);
+        const body = await c.req.json().catch(() => ({}));
+        ad.metrics = { current: body.current ?? { impressions: 0 }, baseline: body.baseline };
+        saveState(store, provider, next);
+        return c.json({ ok: true, adId: ad.id, metrics: ad.metrics });
+      });
 
       app.get('/inspect/hits', (c) => c.json(store.getData?.(`${provider}:hits`) ?? []));
 

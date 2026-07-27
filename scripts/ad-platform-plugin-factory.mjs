@@ -414,6 +414,90 @@ export function createAdPlatformPlugin({ provider, label, docs, source, scope })
         return c.json({ data: [{ id: 'business_123456', name: `${label} Emulator Business` }] });
       });
 
+      app.post('/auth/oauth2/token', async (c) => {
+        hit('apple.auth.token');
+        return c.json({ access_token: 'apple-emulator-access-token', token_type: 'Bearer', expires_in: 3600, scope: 'searchadsorg' });
+      });
+
+      app.get('/v5/me', (c) => {
+        hit('apple.auth.me');
+        return c.json({ data: { userId: 'apple-user-1', firstName: 'Draper', lastName: 'Emulator' } });
+      });
+
+      app.get('/v5/acls', (c) => {
+        hit('apple.auth.acls');
+        return c.json({ data: [{ orgId: 987654, orgName: `${label} Apple Ads Organization`, currency: 'USD', roleNames: ['API Account Manager'] }] });
+      });
+
+      app.get('/v5/campaigns', (c) => {
+        hit('apple.campaign.list');
+        return c.json({ data: state(store, provider).campaigns.map((campaign) => ({
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status === 'paused' ? 'PAUSED' : 'ENABLED',
+          budgetAmount: { amount: campaign.budget, currency: 'USD' },
+          orgId: 987654,
+          campaignType: 'SEARCH',
+          startTime: campaign.createdAt,
+        })) });
+      });
+
+      app.post('/v5/campaigns', async (c) => {
+        hit('apple.campaign.create');
+        const next = state(store, provider);
+        const body = await c.req.json().catch(() => ({}));
+        const campaign = {
+          id: `apple_campaign_${next.nextCampaignId++}`,
+          name: body.name ?? 'Apple Search Campaign',
+          status: body.status === 'PAUSED' ? 'paused' : 'active',
+          budget: Number(body.budgetAmount?.amount ?? 0),
+          platform: 'apple',
+          objective: 'app-installs',
+          createdAt: now(),
+          updatedAt: now(),
+        };
+        next.campaigns.push(campaign);
+        saveState(store, provider, next);
+        return c.json({ data: { ...campaign, budgetAmount: { amount: campaign.budget, currency: 'USD' }, orgId: 987654 } }, 201);
+      });
+
+      app.get('/v5/campaigns/:campaignId', (c) => {
+        hit('apple.campaign.get');
+        const campaign = state(store, provider).campaigns.find(item => item.id === c.req.param('campaignId'));
+        if (!campaign) return c.json({ error: { message: 'Campaign not found' } }, 404);
+        return c.json({ data: { ...campaign, status: campaign.status === 'paused' ? 'PAUSED' : 'ENABLED', budgetAmount: { amount: campaign.budget, currency: 'USD' }, orgId: 987654 } });
+      });
+
+      app.put('/v5/campaigns/:campaignId', async (c) => {
+        hit('apple.campaign.update');
+        const next = state(store, provider);
+        const campaign = next.campaigns.find(item => item.id === c.req.param('campaignId'));
+        if (!campaign) return c.json({ error: { message: 'Campaign not found' } }, 404);
+        const body = await c.req.json().catch(() => ({}));
+        if (body.name) campaign.name = body.name;
+        if (body.status) campaign.status = body.status === 'PAUSED' ? 'paused' : body.status === 'DELETED' ? 'deleted' : 'active';
+        if (body.budgetAmount?.amount !== undefined) campaign.budget = Number(body.budgetAmount.amount);
+        campaign.updatedAt = now();
+        saveState(store, provider, next);
+        return c.json({ data: campaign });
+      });
+
+      app.delete('/v5/campaigns/:campaignId', (c) => {
+        hit('apple.campaign.delete');
+        const next = state(store, provider);
+        const campaign = next.campaigns.find(item => item.id === c.req.param('campaignId'));
+        if (!campaign) return c.json({ error: { message: 'Campaign not found' } }, 404);
+        campaign.status = 'deleted';
+        campaign.updatedAt = now();
+        saveState(store, provider, next);
+        return c.json({ data: campaign });
+      });
+
+      app.post('/v5/reports/campaigns', (c) => {
+        hit('apple.report');
+        return c.json({ data: { reportingDataResponse: { row: [{ metadata: {}, total: { spend: { amount: 321.45 }, impressions: 12000, taps: 840, conversions: 42 } }] } } });
+      });
+
       app.get('/:graphVersion/:accountId/campaigns', (c) => {
         hit('meta.campaign.list');
         return c.json({ data: state(store, provider).campaigns.map(toMetaCampaign) });

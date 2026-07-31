@@ -41,6 +41,18 @@ npx -p api-emulator api --plugin ./@doordash/api-emulator.mjs --service doordash
 - `GET /drive/v1/deliveries/:deliveryId`
 - `PATCH /drive/v1/deliveries/:deliveryId`
 - `POST /drive/v1/deliveries/:deliveryId/cancel`
+- `POST /mcp/consumer`
+- `GET /consumer/v1/stores/search`
+- `GET /consumer/v1/stores/:storeId`
+- `GET /consumer/v1/stores/:storeId/menu`
+- `POST /consumer/v1/carts`
+- `GET /consumer/v1/carts/:cartId`
+- `POST /consumer/v1/carts/:cartId/items`
+- `DELETE /consumer/v1/carts/:cartId/items/:itemId`
+- `POST /consumer/v1/carts/:cartId/preview`
+- `POST /consumer/v1/carts/:cartId/checkout`
+- `GET /consumer/v1/orders`
+- `GET /consumer/v1/orders/:orderId`
 - `GET /developer/v1/businesses`
 - `POST /developer/v1/businesses`
 - `GET /developer/v1/businesses/:businessId`
@@ -51,18 +63,6 @@ npx -p api-emulator api --plugin ./@doordash/api-emulator.mjs --service doordash
 - `PATCH /developer/v1/businesses/:businessId/stores/:storeId`
 - `POST /api/v1/menus`
 - `GET /api/v1/menus/:menuId`
-- `PATCH /api/v1/menus/:menuId`
-- `DELETE /api/v1/menus/:menuId`
-- `GET /api/v1/orders/:orderId`
-- `POST /api/v1/orders/:orderId/events/:eventType`
-- `POST /api/v1/orders/:orderId/adjustment`
-- `POST /api/v1/orders/:orderId/cancellation`
-- `POST /api/v1/orders/:orderId/return`
-- `GET /api/v1/stores/:storeId/status`
-- `GET /api/v1/stores/:storeId/store_details`
-- `GET /api/v1/stores/:storeId/menu_details`
-- `GET /api/v1/stores/:storeId/store_menu`
-- `PATCH /api/v1/stores/:storeId/items/status`
 
 ## Auth
 

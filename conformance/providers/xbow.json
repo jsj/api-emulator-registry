@@ -1,0 +1,35 @@
+{
+  "provider": "xbow",
+  "catalog": {
+    "slug": "xbow",
+    "specifier": "./@xbow/api-emulator.mjs"
+  },
+  "sources": {
+    "docs": ["https://docs.xbow.com/api/"],
+    "openapi": "https://docs.xbow.com/api/openapi-2026-07-01.json"
+  },
+  "validation": {
+    "directSmoke": "node @xbow/smoke.mjs",
+    "contractChecks": ["node scripts/check-xbow-openapi-coverage.mjs"],
+    "skipReason": "XBOW does not publish an official CLI or SDK; the official OpenAPI document is the compatibility oracle."
+  },
+  "coverage": {
+    "declaredOperations": 40,
+    "deepRoutes": 40,
+    "genericFallback": false,
+    "unsupported": ["live penetration-test execution", "outbound webhook network delivery", "production Ed25519 signatures"]
+  },
+  "fidelity": {
+    "routes": 1,
+    "schemas": 0.82,
+    "auth": 1,
+    "errors": 0.85,
+    "pagination": 0.9,
+    "state": 0.9,
+    "officialClient": 0.2
+  },
+  "notes": [
+    "Every operation in XBOW API version 2026-07-01 is registered and exercised by direct smoke coverage.",
+    "The live official OpenAPI operation matrix is compared with the exported emulator route manifest."
+  ]
+}

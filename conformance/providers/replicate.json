@@ -16,7 +16,7 @@
     "baseUrlEnv": "REPLICATE_BASE_URL"
   },
   "coverage": {
-    "deepRoutes": 9,
+    "deepRoutes": 8,
     "genericFallback": false,
     "unsupported": ["real model execution", "streaming prediction output"]
   },

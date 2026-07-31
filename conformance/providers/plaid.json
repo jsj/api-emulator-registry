@@ -16,7 +16,7 @@
     "skipReason": "Official SDK conformance is represented by OpenAPI coverage and direct smoke today."
   },
   "coverage": {
-    "declaredOperations": 330,
+    "declaredOperations": 335,
     "deepRoutes": 16,
     "genericFallback": true,
     "unsupported": ["webhook retry delivery timing", "institution-specific error edge cases"]

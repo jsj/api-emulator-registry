@@ -35,6 +35,11 @@ function readModuleSource(slug, specifier) {
 
 function routeLines(source) {
   const routes = [];
+  const manifest = source.match(/const routeManifest\s*=\s*\[([\s\S]*?)\n\];/)?.[1] ?? '';
+  const manifestPattern = /\[['"](GET|POST|PUT|PATCH|DELETE)['"],\s*['"]([^'"]+)['"]\]/g;
+  for (const match of manifest.matchAll(manifestPattern)) {
+    routes.push(`- \`${match[1]} ${match[2]}\``);
+  }
   const routePattern = /app\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/g;
   for (const match of source.matchAll(routePattern)) {
     routes.push(`- \`${match[1].toUpperCase()} ${match[2]}\``);

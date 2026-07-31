@@ -16,7 +16,7 @@
     "skipReason": "Official gh CLI coverage is not yet wired into smoke:cli."
   },
   "coverage": {
-    "declaredOperations": 1186,
+    "declaredOperations": 1216,
     "deepRoutes": 6,
     "genericFallback": true,
     "unsupported": ["webhooks delivery semantics", "Git LFS batch behavior"]

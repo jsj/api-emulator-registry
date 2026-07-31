@@ -1,6 +1,6 @@
 # @api-emulator/apple
 
-Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps. App Store Connect and Apple media discovery are separate providers.
+Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps.
 
 Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
 
@@ -33,6 +33,10 @@ npx -p api-emulator api --plugin ./@apple/api-emulator/src/index.ts --service ap
 - `GET /inspect/last-sign-sap-setup`
 - `GET /inspect/last-sign-sap-setup-response`
 - `GET /inspect/last-signin`
+- `GET /v1/users`
+- `GET /v1/users/:id`
+- `GET /v1/ciProducts/:productId/additionalRepositories`
+- `GET /v1/userInvitations`
 - `POST /3/device/:token`
 - `POST /apns/send`
 - `POST /apns/control/register-team`
@@ -53,6 +57,12 @@ npx -p api-emulator api --plugin ./@apple/api-emulator/src/index.ts --service ap
 - `GET /inspect/apns/last-delivery`
 - `GET /inspect/apns/failures`
 - `GET /inspect/apns/notifications`
+- `GET /database/1/:container/:environment/:database/users/current`
+- `POST /database/1/:container/:environment/:database/records/lookup`
+- `POST /database/1/:container/:environment/:database/records/query`
+- `POST /database/1/:container/:environment/:database/records/modify`
+- `POST /database/1/:container/:environment/:database/zones/list`
+- `POST /database/1/:container/:environment/:database/zones/modify`
 
 ## Auth
 
@@ -67,7 +77,5 @@ apple:
 
 ## Links
 
-- [Official CloudKit docs](https://developer.apple.com/icloud/cloudkit/)
-- [App Store Connect emulator](../../@app-store-connect/api-emulator/README.md)
-- [Apple Media emulator](../../@apple-media/api-emulator/README.md)
+- [Official API docs](https://developer.apple.com/documentation/appstoreconnectapi)
 - [api-emulator](https://github.com/jsj/api-emulator)

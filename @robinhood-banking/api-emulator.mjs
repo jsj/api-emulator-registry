@@ -42,6 +42,7 @@ function defaultState() {
       merchant_blocklist: [],
     },
     transactions: [],
+    feedback: [],
     nextId: 1,
   };
 }
@@ -62,14 +63,31 @@ const mcpResult = (id, structuredContent) => ({
   id,
   result: { content: [{ type: 'text', text: JSON.stringify(structuredContent) }], structuredContent },
 });
+const mcpTextResult = (id, text) => ({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text }] } });
 const mcpError = (id, message, status = 400, code = -32602) => ({ payload: { jsonrpc: '2.0', id, error: { code, message } }, status });
 
-function activeCard(s) {
-  return s.cards.find((card) => card.id === s.settings.card_id) ?? s.cards[0] ?? {};
+function validateArgs(args, allowed, required = []) {
+  const unknown = Object.keys(args).find((key) => !allowed.includes(key));
+  if (unknown) return `unknown argument: ${unknown}`;
+  const missing = required.find((key) => typeof args[key] !== 'string' || !args[key].trim());
+  if (missing) return `${missing} is required`;
+  return null;
 }
 
-function balancePayload(s) {
-  const totalSpend = s.transactions.reduce((sum, txn) => sum + Math.round(Number(txn.amount ?? 0) * 100), 0);
+function selectCard(s, last4) {
+  if (last4 !== undefined && !/^\d{4}$/.test(String(last4))) return { error: 'last4 must be exactly 4 digits' };
+  if (last4 !== undefined) {
+    const card = s.cards.find((candidate) => candidate.last4 === String(last4));
+    return card ? { card } : { error: `no agent card ending in ${last4} found` };
+  }
+  if (s.cards.length > 1) return { error: `multiple agent cards found; specify last4: [${s.cards.map((card) => `****${card.last4}`).join(', ')}]` };
+  return { card: s.cards.find((card) => card.id === s.settings.card_id) ?? s.cards[0] ?? {} };
+}
+
+function balancePayload(s, card) {
+  const totalSpend = s.transactions
+    .filter((txn) => !txn.card_id || txn.card_id === card.id)
+    .reduce((sum, txn) => sum + Math.round(Number(txn.amount ?? 0) * 100), 0);
   return {
     availableBalance: null,
     monthlyLimit: Number(s.settings.monthly_limit ?? 0),
@@ -77,8 +95,7 @@ function balancePayload(s) {
   };
 }
 
-function cardCredsPayload(s) {
-  const card = activeCard(s);
+function cardCredsPayload(card) {
   return {
     billing: {
       address: {
@@ -101,34 +118,44 @@ function cardCredsPayload(s) {
   };
 }
 
-function cardStatusPayload(s) {
-  const card = activeCard(s);
+function cardStatusPayload(card) {
   return {
     cardStatus: card.status === 'active' ? 'NORMAL' : String(card.status ?? 'UNKNOWN').toUpperCase(),
     status: 'UNSET',
   };
 }
 
-function transactionsPayload(s) {
+function transactionsPayload(s, card, args) {
+  const limit = args.limit ?? 20;
+  const offset = args.cursor ? Number(args.cursor) : 0;
+  const allItems = s.transactions
+    .filter((txn) => !txn.card_id || txn.card_id === card.id)
+    .sort((a, b) => String(b.authorized_at ?? '').localeCompare(String(a.authorized_at ?? '')));
+  const items = allItems.slice(offset, offset + limit);
+  const nextCursor = offset + items.length < allItems.length ? String(offset + items.length) : '';
+  const pending = allItems.find((txn) => txn.declineReason === 'AGENT_PENDING' && !['AUTHORIZED', 'UNAUTHORIZED'].includes(txn.ack_status));
   return {
     data: {
       transactionSearch: {
-        cursor: '',
-        items: s.transactions,
-        total: s.transactions.length,
+        cursor: nextCursor,
+        items,
+        total: allItems.length,
       },
     },
+    ...(pending ? { required_next_action: { tool: 'banking_wait_for_agent_card_approval', transaction_id: pending.id } } : {}),
   };
 }
 
-export function seedFromConfig(store, _baseUrl = 'https://agent.robinhood.com/mcp/banking', config = {}) {
+const approvalGuide = 'AUTHORIZED means retry the merchant checkout once; UNAUTHORIZED means do not retry; UNKNOWN means approval is still pending.';
+
+export function seedFromConfig(store, _baseUrl = 'https://banking-agent.robinhood.com/mcp/banking', config = {}) {
   return save(store, { ...defaultState(), ...config });
 }
 
 export const contract = {
   provider: 'robinhood-banking',
-  source: 'Robinhood Banking MCP documentation-informed subset',
-  mcpUrl: 'https://agent.robinhood.com/mcp/banking',
+  source: 'Authenticated Robinhood Banking MCP tools/list contract, verified 2026-07-30',
+  mcpUrl: 'https://banking-agent.robinhood.com/mcp/banking',
   oauth: {
     authorizePath: '/oauth/authorize',
     tokenPath: '/oauth/token',
@@ -139,6 +166,8 @@ export const contract = {
     'banking_get_agent_card_policy',
     'banking_get_agent_card_status',
     'banking_get_agent_card_transactions',
+    'banking_submit_feedback',
+    'banking_wait_for_agent_card_approval',
   ],
   fidelity: 'stateful-streamable-http-mcp-emulator',
 };
@@ -228,17 +257,62 @@ export const plugin = {
         return c.json(result.payload, result.status);
       }
 
+      const args = body.params?.arguments ?? {};
+      const reject = (message) => {
+        const result = mcpError(id, message);
+        return c.json(result.payload, result.status);
+      };
+      const cardFor = (allowed, required = []) => {
+        const invalid = validateArgs(args, allowed, required);
+        if (invalid) return { error: invalid };
+        return selectCard(s, args.last4);
+      };
+
       switch (body.params?.name) {
-        case 'banking_get_agent_card_balance':
-          return c.json(mcpResult(id, balancePayload(s)));
-        case 'banking_get_agent_card_creds':
-          return c.json(mcpResult(id, cardCredsPayload(s)));
-        case 'banking_get_agent_card_policy':
-          return c.json(mcpResult(id, balancePayload(s)));
-        case 'banking_get_agent_card_status':
-          return c.json(mcpResult(id, cardStatusPayload(s)));
-        case 'banking_get_agent_card_transactions':
-          return c.json(mcpResult(id, transactionsPayload(s)));
+        case 'banking_get_agent_card_balance': {
+          const selected = cardFor(['last4']);
+          return selected.error ? reject(selected.error) : c.json(mcpResult(id, balancePayload(s, selected.card)));
+        }
+        case 'banking_get_agent_card_creds': {
+          const selected = cardFor(['last4', 'purchaseIntent'], ['purchaseIntent']);
+          return selected.error ? reject(selected.error) : c.json(mcpResult(id, cardCredsPayload(selected.card)));
+        }
+        case 'banking_get_agent_card_policy': {
+          const selected = cardFor(['last4']);
+          return selected.error ? reject(selected.error) : c.json(mcpResult(id, balancePayload(s, selected.card)));
+        }
+        case 'banking_get_agent_card_status': {
+          const selected = cardFor(['last4']);
+          return selected.error ? reject(selected.error) : c.json(mcpResult(id, cardStatusPayload(selected.card)));
+        }
+        case 'banking_get_agent_card_transactions': {
+          const selected = cardFor(['last4', 'limit', 'cursor']);
+          if (selected.error) return reject(selected.error);
+          if (args.limit !== undefined && (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 50)) return reject('limit must be an integer between 1 and 50');
+          if (args.cursor !== undefined && !/^\d+$/.test(args.cursor)) return reject('cursor must be a pagination cursor from a previous response');
+          return c.json(mcpResult(id, transactionsPayload(s, selected.card, args)));
+        }
+        case 'banking_submit_feedback': {
+          const invalid = validateArgs(args, ['feedback', 'transaction_id'], ['feedback']);
+          if (invalid) return reject(invalid);
+          if (args.feedback.length > 1000) return reject('feedback must be at most 1000 characters');
+          if (args.transaction_id && !s.transactions.some((txn) => txn.id === args.transaction_id)) return reject(`transaction ${args.transaction_id} not found`);
+          const feedback = { id: `feedback_${String(s.nextId ?? 1).padStart(3, '0')}`, feedback: args.feedback, ...(args.transaction_id ? { transaction_id: args.transaction_id } : {}), created_at: fixedNow };
+          save(store, { ...s, feedback: [...(s.feedback ?? []), feedback], nextId: (s.nextId ?? 1) + 1 });
+          return c.json(mcpResult(id, { data: { feedback_id: feedback.id, status: 'received' }, guide: 'Feedback submitted to the Robinhood Banking emulator.' }));
+        }
+        case 'banking_wait_for_agent_card_approval': {
+          const selected = cardFor(['last4', 'transaction_id', 'timeout_seconds']);
+          if (selected.error) return reject(selected.error);
+          if (args.timeout_seconds !== undefined && (!Number.isInteger(args.timeout_seconds) || args.timeout_seconds < 1 || args.timeout_seconds > 60)) return reject('timeout_seconds must be an integer between 1 and 60');
+          const cardTransactions = s.transactions.filter((txn) => !txn.card_id || txn.card_id === selected.card.id);
+          const transaction = args.transaction_id
+            ? cardTransactions.find((txn) => txn.id === args.transaction_id)
+            : cardTransactions.find((txn) => txn.declineReason === 'AGENT_PENDING' && !['AUTHORIZED', 'UNAUTHORIZED'].includes(txn.ack_status));
+          if (!transaction || transaction.declineReason !== 'AGENT_PENDING') return c.json(mcpTextResult(id, 'No agent-card transaction is currently waiting for approval.'));
+          const ackStatus = ['AUTHORIZED', 'UNAUTHORIZED'].includes(transaction.ack_status) ? transaction.ack_status : 'UNKNOWN';
+          return c.json(mcpResult(id, { data: { transaction_id: transaction.id, ack_status: ackStatus, timed_out: ackStatus === 'UNKNOWN' }, guide: approvalGuide }));
+        }
         default: {
           const result = mcpError(id, `Unknown tool: ${body.params?.name}`);
           return c.json(result.payload, result.status);

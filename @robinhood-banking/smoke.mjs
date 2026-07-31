@@ -1,9 +1,25 @@
 import assert from 'node:assert/strict';
 import { createHarness } from '../scripts/provider-smoke-harness.mjs';
-import { contract, plugin } from './api-emulator.mjs';
+import { contract, plugin, seedFromConfig } from './api-emulator.mjs';
 
 const harness = createHarness(plugin);
 assert.equal(contract.provider, 'robinhood-banking');
+seedFromConfig(harness.store, undefined, {
+  transactions: [
+    {
+      id: 'txn_pending_001',
+      card_id: 'card_agentic_001',
+      merchant_name: 'Approval Test Merchant',
+      amount: '15.00',
+      currency: 'USD',
+      status: 'declined',
+      declineReason: 'AGENT_PENDING',
+      authorized_at: '2026-01-02T00:00:00.000Z',
+    },
+  ],
+  feedback: [],
+  nextId: 2,
+});
 
 const initialized = await harness.call('POST', '/mcp/banking', {
   jsonrpc: '2.0',
@@ -60,7 +76,8 @@ const tools = await harness.call('POST', '/mcp/banking', {
   method: 'tools/list',
   params: {},
 });
-assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'banking_get_agent_card_creds'));
+assert.deepEqual(tools.payload.result.structuredContent.tools.map((tool) => tool.name), contract.scope);
+assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.description && tool.inputSchema));
 
 const balance = await harness.call('POST', '/mcp/banking', {
   jsonrpc: '2.0',
@@ -74,9 +91,18 @@ const creds = await harness.call('POST', '/mcp/banking', {
   jsonrpc: '2.0',
   id: 'creds',
   method: 'tools/call',
-  params: { name: 'banking_get_agent_card_creds', arguments: {} },
+  params: { name: 'banking_get_agent_card_creds', arguments: { purchaseIntent: 'Buy a test subscription for $10' } },
 });
 assert.equal(creds.payload.result.structuredContent.cardNumber, '4242424242424242');
+
+const missingIntent = await harness.call('POST', '/mcp/banking', {
+  jsonrpc: '2.0',
+  id: 'missing-intent',
+  method: 'tools/call',
+  params: { name: 'banking_get_agent_card_creds', arguments: {} },
+});
+assert.equal(missingIntent.status, 400);
+assert.match(missingIntent.payload.error.message, /purchaseIntent is required/);
 
 const status = await harness.call('POST', '/mcp/banking', {
   jsonrpc: '2.0',
@@ -93,5 +119,37 @@ const transactions = await harness.call('POST', '/mcp/banking', {
   params: { name: 'banking_get_agent_card_transactions', arguments: {} },
 });
 assert.ok(Array.isArray(transactions.payload.result.structuredContent.data.transactionSearch.items));
+assert.equal(transactions.payload.result.structuredContent.required_next_action.transaction_id, 'txn_pending_001');
+
+const waitForApproval = await harness.call('POST', '/mcp/banking', {
+  jsonrpc: '2.0',
+  id: 'wait',
+  method: 'tools/call',
+  params: { name: 'banking_wait_for_agent_card_approval', arguments: { timeout_seconds: 1 } },
+});
+assert.deepEqual(waitForApproval.payload.result.structuredContent.data, {
+  transaction_id: 'txn_pending_001',
+  ack_status: 'UNKNOWN',
+  timed_out: true,
+});
+
+const feedback = await harness.call('POST', '/mcp/banking', {
+  jsonrpc: '2.0',
+  id: 'feedback',
+  method: 'tools/call',
+  params: { name: 'banking_submit_feedback', arguments: { feedback: 'The approval prompt was confusing.', transaction_id: 'txn_pending_001' } },
+});
+assert.equal(feedback.payload.result.structuredContent.data.status, 'received');
+const inspected = await harness.call('GET', '/inspect/state');
+assert.equal(inspected.payload.feedback[0].feedback, 'The approval prompt was confusing.');
+
+const invalidLast4 = await harness.call('POST', '/mcp/banking', {
+  jsonrpc: '2.0',
+  id: 'invalid-last4',
+  method: 'tools/call',
+  params: { name: 'banking_get_agent_card_status', arguments: { last4: '42' } },
+});
+assert.equal(invalidLast4.status, 400);
+assert.match(invalidLast4.payload.error.message, /exactly 4 digits/);
 
 console.log('robinhood-banking smoke ok');

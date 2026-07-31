@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { rootPath } from './load.mjs';
 
+const MCPORTER_PACKAGE = 'mcporter@0.12.3';
+
 function cleanJson(output) {
   const clean = output.replaceAll('\r', '').replace(/\u001b\[[0-9;]*[A-Za-z]/g, '');
   const start = clean.indexOf('{');
@@ -36,7 +38,7 @@ function sameContract(actual, expected) {
 function listLiveTools(url) {
   const result = spawnSync(
     'npx',
-    ['-y', 'mcporter', 'list', url, '--schema', '--json'],
+    ['-y', MCPORTER_PACKAGE, 'list', url, '--schema', '--json'],
     { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
   );
   if (result.error) throw result.error;
@@ -77,7 +79,7 @@ export async function analyzeMcpDrift({ strictAuth = false, offline = false } = 
 
     const allowed = provider.allowedIssue;
     if (allowed && payload.issue?.kind === allowed.kind && payload.issue?.statusCode === allowed.statusCode) {
-      reports.push({ provider: provider.provider, status: 'degraded', message: `${allowed.reason} (${allowed.statusCode})` });
+      reports.push({ provider: provider.provider, status: allowed.status ?? 'degraded', message: `${allowed.reason} (${allowed.statusCode})` });
       continue;
     }
 

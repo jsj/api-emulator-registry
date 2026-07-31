@@ -19,13 +19,14 @@ npx -p api-emulator api --plugin ./@modal/api-emulator.mjs --service modal
 ## Fidelity
 
 - Tier: `contract-backed`
-- Evidence: 59% low conformance score
+- Evidence: 65% medium conformance score
 - Smoke: `node @modal/smoke.mjs`
 
 ## Endpoints
 
 - `GET /modal/inspect/state`
 - `POST /modal/inspect/reset`
+- `POST /modal/forge/inference`
 - `GET /modal/v1/token/info`
 - `GET /modal/v1/workspace`
 - `GET /modal/v1/environments`

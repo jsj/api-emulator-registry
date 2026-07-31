@@ -8,6 +8,7 @@ const checkFiles = [
   'scripts/check-github-openapi-coverage.mjs',
   'scripts/check-google-workspace-coverage.mjs',
   'scripts/check-plaid-openapi-coverage.mjs',
+  'scripts/check-xbow-openapi-coverage.mjs',
   'scripts/check-restored-provider-packages.mjs',
 ];
 

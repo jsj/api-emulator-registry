@@ -26,7 +26,9 @@ npx -p api-emulator api --plugin ./@nytimes/api-emulator.mjs --service nytimes
 - `GET /svc/search/v2/articlesearch.json`
 - `GET /svc/archive/v1/:year/:month.json`
 - `GET /svc/topstories/v2/:section{.+}`
+- `GET /svc/books/v3/lists/overview.json`
 - `GET /svc/books/v3/lists/current/:list.json`
+- `GET /fixtures/books/:isbn.svg`
 - `GET /nytimes/inspect/state`
 
 ## Auth

@@ -1,11 +1,55 @@
 {
-  "captured_at": "2026-07-25T00:00:00.000Z",
-  "source": "Robinhood Banking MCP documentation-informed baseline; live endpoint currently degraded",
+  "captured_at": "2026-07-31T02:31:00.000Z",
+  "source": "Authenticated Robinhood Banking MCP tools/list contract",
   "tools": [
-    { "name": "banking_get_agent_card_balance" },
-    { "name": "banking_get_agent_card_creds" },
-    { "name": "banking_get_agent_card_policy" },
-    { "name": "banking_get_agent_card_status" },
-    { "name": "banking_get_agent_card_transactions" }
+    {
+      "name": "banking_get_agent_card_balance",
+      "description": "Get the current month's spending balance for the user's Robinhood agent virtual credit card.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" } }, "additionalProperties": false }
+    },
+    {
+      "name": "banking_get_agent_card_creds",
+      "description": "Get the PAN, expiry, CVV, and cardholder billing details for the user's Robinhood agent virtual credit card.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" }, "purchaseIntent": { "type": "string" } }, "required": ["purchaseIntent"], "additionalProperties": false }
+    },
+    {
+      "name": "banking_get_agent_card_policy",
+      "description": "Get the spending policy for the user's Robinhood agent virtual credit card.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" } }, "additionalProperties": false }
+    },
+    {
+      "name": "banking_get_agent_card_status",
+      "description": "Get the current status of the user's Robinhood agent virtual credit card.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" } }, "additionalProperties": false }
+    },
+    {
+      "name": "banking_get_agent_card_transactions",
+      "description": "Get transaction history for the user's Robinhood agent virtual credit card.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" }, "limit": { "type": "integer" }, "cursor": { "type": "string" } }, "additionalProperties": false }
+    },
+    {
+      "name": "banking_submit_feedback",
+      "description": "Submit feedback about the Robinhood banking MCP tools or the user's agent virtual card.",
+      "inputSchema": { "type": "object", "properties": { "feedback": { "type": "string" }, "transaction_id": { "type": "string" } }, "required": ["feedback"], "additionalProperties": false }
+    },
+    {
+      "name": "banking_wait_for_agent_card_approval",
+      "description": "Wait for the user to approve or reject a skippably-declined agent-card transaction.",
+      "inputSchema": { "type": "object", "properties": { "last4": { "type": "string" }, "transaction_id": { "type": "string" }, "timeout_seconds": { "type": "integer" } }, "additionalProperties": false },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": { "transaction_id": { "type": "string" }, "ack_status": { "type": "string" }, "timed_out": { "type": "boolean" } },
+            "required": ["transaction_id", "ack_status", "timed_out"],
+            "additionalProperties": false
+          },
+          "guide": { "type": "string" }
+        },
+        "required": ["data", "guide"],
+        "additionalProperties": false
+      }
+    }
   ]
 }

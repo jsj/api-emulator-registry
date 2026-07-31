@@ -40,6 +40,7 @@ function providerPaths(slug) {
   return {
     dir,
     readme: existsSync(join(nested, 'README.md')) ? join(nested, 'README.md') : null,
+    rootReadme: existsSync(join(dir, 'README.md')) ? join(dir, 'README.md') : null,
     module: existsSync(join(dir, 'api-emulator.mjs')) ? join(dir, 'api-emulator.mjs') : null,
     packageJson: existsSync(join(nested, 'package.json')) ? join(nested, 'package.json') : null,
   };
@@ -47,6 +48,7 @@ function providerPaths(slug) {
 
 function providerLink(slug, paths) {
   if (paths.readme) return `./@${slug}/api-emulator/README.md`;
+  if (paths.rootReadme) return `./@${slug}/README.md`;
   if (paths.module) return `./@${slug}/api-emulator.mjs`;
   return `./@${slug}/api-emulator/package.json`;
 }
@@ -57,7 +59,7 @@ const providers = readdirSync(root)
   .filter((slug) => statSync(join(root, `@${slug}`)).isDirectory())
   .map((slug) => {
     const paths = providerPaths(slug);
-    if (!paths.readme && !paths.module && !paths.packageJson) return null;
+    if (!paths.readme && !paths.rootReadme && !paths.module && !paths.packageJson) return null;
     const label = readLabel(slug);
     const domain = inferDomain(slug);
     return {

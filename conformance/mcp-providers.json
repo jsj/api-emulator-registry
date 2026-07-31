@@ -7,13 +7,14 @@
   },
   {
     "provider": "robinhood-banking",
-    "url": "https://agent.robinhood.com/mcp/banking",
+    "url": "https://banking-agent.robinhood.com/mcp/banking",
     "fixture": "@robinhood-banking/fixtures/tools-contract.sanitized.json",
     "compare": "names",
     "allowedIssue": {
       "kind": "http",
       "statusCode": 405,
-      "reason": "Robinhood Banking MCP is a known degraded upstream"
+      "status": "skipped",
+      "reason": "Unauthenticated mcporter probes may fall back to the unsupported legacy SSE GET transport"
     }
   },
   {

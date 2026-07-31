@@ -840,6 +840,12 @@
       "specifier": "./@planetscale/api-emulator.mjs",
       "description": "PlanetScale provides MySQL database branching, organizations, deploy requests, passwords, and workflows."
     },
+    "plaid": {
+      "kind": "package",
+      "packageName": "@api-emulator/plaid",
+      "specifier": "./@plaid/api-emulator/src/index.ts",
+      "description": "Plaid provides financial APIs for Link, accounts, balances, identity, transactions, institutions, auth, and transfer workflows."
+    },
     "playstation": {
       "kind": "package",
       "packageName": "@api-emulator/playstation",
@@ -923,6 +929,12 @@
       "packageName": "@api-emulator/render",
       "specifier": "./@render/api-emulator.mjs",
       "description": "Render provides hosting control-plane APIs for users, workspaces, services, and blueprint validation."
+    },
+    "replicate": {
+      "kind": "package",
+      "packageName": "@api-emulator/replicate",
+      "specifier": "./@replicate/api-emulator.mjs",
+      "description": "Replicate provides model metadata and deterministic prediction APIs with local image and video outputs."
     },
     "rentahuman": {
       "kind": "package",
@@ -1313,6 +1325,12 @@
       "packageName": "@api-emulator/x",
       "specifier": "./@x/api-emulator.mjs",
       "description": "X API provides OAuth, users, tweets, timelines, and social publishing workflows."
+    },
+    "xbow": {
+      "kind": "package",
+      "packageName": "@api-emulator/xbow",
+      "specifier": "./@xbow/api-emulator.mjs",
+      "description": "XBOW provides automated penetration-testing APIs for organizations, assets, assessments, findings, reports, resources, and webhooks."
     },
     "xbox": {
       "kind": "package",

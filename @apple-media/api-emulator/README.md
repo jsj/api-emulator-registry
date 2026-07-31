@@ -18,8 +18,8 @@ npx -p api-emulator api --plugin ./@apple-media/api-emulator.mjs --service apple
 
 ## Fidelity
 
-- Tier: `generated fallback`
-- Evidence: local generated surface; no smoke or conformance manifest yet
+- Tier: `smoke-only`
+- Evidence: direct smoke test exists; no conformance manifest yet
 
 ## Endpoints
 

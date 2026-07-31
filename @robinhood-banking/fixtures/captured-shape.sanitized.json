@@ -1,7 +1,7 @@
 {
   "source": {
     "provider": "robinhood-banking",
-    "sanitizedAt": "2026-05-27T23:32:12.129Z"
+    "sanitizedAt": "2026-07-31T02:31:00.000Z"
   },
   "tools": {
     "banking_get_agent_card_balance": {
@@ -46,6 +46,21 @@
           "total": 0
         }
       }
+    },
+    "banking_submit_feedback": {
+      "data": {
+        "feedback_id": "feedback_001",
+        "status": "received"
+      },
+      "guide": "Feedback submitted to the Robinhood Banking emulator."
+    },
+    "banking_wait_for_agent_card_approval": {
+      "data": {
+        "transaction_id": "txn_agentic_001",
+        "ack_status": "UNKNOWN",
+        "timed_out": true
+      },
+      "guide": "Approval is still pending."
     }
   }
 }

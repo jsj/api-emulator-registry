@@ -2,29 +2,33 @@
 
 # api-emulator-registry
 
-The plugin registry for [`api-emulator`](https://github.com/jsj/api-emulator): stateful local clones of the APIs your app, workflow, or agent depends on.
+This repository contains public provider plugins for [`api-emulator`](https://github.com/jsj/api-emulator).
 
-If you want to know what your software will do with access to payments, tickets, source control, analytics, messages, or customer data, one way to find out is to point it at the real service. Too often, that is the only way teams get confidence.
+Each plugin runs a stateful copy of a provider API on your computer. Use these copies before your software connects to a production service.
 
-`api-emulator` moves that loop earlier. Pick a provider from this registry, run it on localhost, seed realistic state, and test against a stable API surface before touching production, burning sandbox quota, or depending on someone else's server.
+Select a provider from this registry. Add test data to the provider.
 
-These plugins are more than request stubs:
+Then run your integration against the stable local API.
 
-- they keep state across calls
-- they model object relationships and edge cases
-- they return familiar response and error shapes
-- they reset cleanly between scenarios
+These plugins can provide the following behavior:
 
-Use this repo like an app store for API clones. Start one service for local integration work, combine several for end-to-end tests, or put them behind agent evals where mocks are too thin and real systems are too risky.
+- Store state across requests.
+- Model object relationships and edge cases.
+- Return provider-specific responses and errors.
+- Reset all state between test scenarios.
+
+Start one provider for an integration test. Start multiple providers when a test uses more than one service.
+
+You can also use the providers in agent evaluations and CI.
 
 ## Fidelity tiers
 
-Each provider README declares a fidelity tier so breadth does not hide depth:
+Each provider README declares one fidelity tier:
 
-- `contract-backed`: has a conformance manifest with scored fidelity dimensions and declared smoke or contract checks
-- `smoke-only`: has a direct smoke test, but no conformance manifest yet
-- `stub`: starter or health-check-level surface
-- `generated fallback`: generated local surface without smoke or conformance evidence yet
+- `contract-backed`: The provider has a conformance manifest and declared smoke or contract checks.
+- `smoke-only`: The provider has a direct smoke test but does not have a conformance manifest.
+- `stub`: The provider implements a starter or health-check API.
+- `generated fallback`: The provider has a generated API without smoke or conformance evidence.
 
 ## Provider wall
 
@@ -339,7 +343,7 @@ Each provider README declares a fidelity tier so breadth does not hide depth:
 
 ## Quick start
 
-Clone this registry next to the app or agent you want to exercise:
+Clone this registry next to the software that you want to test:
 
 ```bash
 git clone https://github.com/jsj/api-emulator-plugins.git
@@ -353,7 +357,7 @@ npx -p api-emulator api \
   --service posthog
 ```
 
-Run multiple providers when the behavior crosses service boundaries:
+If a test uses multiple services, run the providers together:
 
 ```bash
 npx -p api-emulator api \
@@ -361,7 +365,7 @@ npx -p api-emulator api \
   --service github,apple
 ```
 
-Generate starter seed config so every run starts from a known world:
+Generate a starter configuration with repeatable test data:
 
 ```bash
 npx -p api-emulator api init \
@@ -379,15 +383,16 @@ api-emulator on localhost
 Provider plugins from this registry
 ```
 
-`api-emulator` is the runtime. This registry keeps provider behavior in separate plugins so public, private, and internal APIs can evolve independently.
+`api-emulator` is the runtime. This registry stores public provider behavior in separate plugins.
 
-The goal is not to replace production APIs. The goal is to make realistic integration behavior cheap enough to run during development, review, and CI:
+Use the following workflow during development, review, or CI:
 
-1. choose the service surfaces your code depends on
-2. start the matching emulator plugins locally
-3. seed the state your scenario needs
-4. run your code against the clone
-5. inspect what changed, reset, and run it again
+1. Select the provider APIs that your software uses.
+2. Start the matching plugins on your computer.
+3. Add the state that your test requires.
+4. Run your software against the local providers.
+5. Examine the result.
+6. Reset the providers before another test.
 
 ## Provider layout
 
@@ -399,11 +404,11 @@ Most providers live under a scoped folder:
 @cloudflare/api-emulator/src/index.ts
 ```
 
-New provider generation is handled by the repo's `create-api-emulator-plugin` agent skill; this README focuses on discovery and usage.
+Use the `create-api-emulator-plugin` agent skill to generate a new provider.
 
 ## Fixtures
 
-Stateful or stochastic providers can export a fixture after a useful run and restore it later:
+Export a fixture after a stateful or nondeterministic run. Restore the fixture before another test:
 
 ```ts
 const fixture = openai.exportFixture({ metadata: { name: "happy-path-chat" } })
@@ -413,8 +418,15 @@ openai.resetToFixture(fixture)
 
 ## Smoke testing
 
+Run all provider smoke tests and contract checks:
+
 ```bash
 bun run smoke
+```
+
+Run one provider smoke test:
+
+```bash
 node ./@posthog/smoke.mjs
 ```
 

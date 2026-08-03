@@ -1,0 +1,62 @@
+# @api-emulator/piratebay
+
+Pirate Bay provides generic media index fixtures for search, item metadata, playback, and library-style workflows.
+
+This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+
+## Install
+
+```bash
+npm install @api-emulator/piratebay
+```
+
+## Run
+
+```bash
+npx -p api-emulator api --plugin ./providers/@piratebay/api-emulator.mjs --service piratebay
+```
+
+## Fidelity
+
+- Tier: `generated fallback`
+- Evidence: a local generated API exists, but smoke and conformance evidence does not exist
+
+## Endpoints
+
+- `GET /System/Info/Public`
+- `POST /Users/AuthenticateByName`
+- `GET /Users/Public`
+- `GET /Users/:userId/Views`
+- `GET /Users/:userId/Items`
+- `GET /Users/:userId/Items/Latest`
+- `GET /Users/:userId/Items/Resume`
+- `POST /Users/:userId/FavoriteItems/:itemId`
+- `DELETE /Users/:userId/FavoriteItems/:itemId`
+- `GET /Users/:userId/Items/:itemId`
+- `GET /Search/Hints`
+- `POST /Items/:itemId/PlaybackInfo`
+- `GET /Videos/:itemId/stream`
+- `POST /Sessions/Playing`
+- `POST /Sessions/Playing/Progress`
+- `POST /Sessions/Playing/Stopped`
+- `GET /Items/:itemId/Images/:imageType`
+- `GET /inspect/last-authenticate`
+- `GET /inspect/last-playback-info`
+- `GET /inspect/last-playing`
+- `GET /inspect/last-progress`
+- `GET /inspect/last-stopped`
+
+## Authentication
+
+The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+
+## Seed configuration
+
+```yaml
+piratebay:
+  # Add provider-specific seed state here.
+```
+
+## Links
+
+- [api-emulator](https://github.com/jsj/api-emulator)

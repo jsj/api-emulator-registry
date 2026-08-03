@@ -1,4 +1,4 @@
-import { contract } from '../@google/api-emulator.mjs';
+import { contract } from '../providers/@google/api-emulator.mjs';
 
 const expectedServices = [
   'drive',

@@ -2,7 +2,7 @@
   "provider": "replicate",
   "catalog": {
     "slug": "replicate",
-    "specifier": "./@replicate/api-emulator.mjs"
+    "specifier": "./providers/@replicate/api-emulator.mjs"
   },
   "sources": {
     "docs": ["https://replicate.com/docs/reference/http"],
@@ -10,7 +10,7 @@
     "sdk": "replicate"
   },
   "validation": {
-    "directSmoke": "node @replicate/smoke.mjs",
+    "directSmoke": "node providers/@replicate/smoke.mjs",
     "cliSmoke": "bun scripts/cli-verification-smoke.mjs",
     "contractChecks": [],
     "baseUrlEnv": "REPLICATE_BASE_URL"

@@ -36,8 +36,8 @@ function allPackageProviders() {
 }
 
 function providerPathPrefixes(slug, entry) {
-  const specifier = entry.specifier ?? `./@${slug}/api-emulator.mjs`;
-  return [`@${slug}/`, specifier.replace(/^\.\//, '')];
+  const specifier = entry.specifier ?? `./providers/@${slug}/api-emulator.mjs`;
+  return [`providers/@${slug}/`, specifier.replace(/^\.\//, '')];
 }
 
 async function changedFiles(baseRef) {
@@ -76,14 +76,24 @@ function run(command, args, options = {}) {
 const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
 async function runWithRetry(command, args, options = {}) {
-  const attempts = options.attempts ?? 5;
-  const retryDelayMs = options.retryDelayMs ?? 60_000;
+  const {
+    attempts = 5,
+    retryDelayMs = 60_000,
+    isComplete,
+    beforeAttempt,
+    ...runOptions
+  } = options;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await run(command, args, options);
+      await beforeAttempt?.();
+      return await run(command, args, runOptions);
     } catch (error) {
       const rateLimited = /E429|Too Many Requests|rate limited/i.test(error.message);
       if (!rateLimited || attempt === attempts) throw error;
+      if (await isComplete?.()) {
+        console.log(`${command} ${args.join(' ')} completed before the rate-limit response`);
+        return;
+      }
       const delay = retryDelayMs * attempt;
       console.warn(`${command} ${args.join(' ')} rate limited; retrying in ${Math.round(delay / 1000)}s (${attempt}/${attempts})`);
       await sleep(delay);
@@ -120,12 +130,20 @@ async function packageHash(packageDir) {
   return hash.digest('hex');
 }
 
+function filenameFromPackJson(packJson) {
+  const result = JSON.parse(packJson);
+  const pack = Array.isArray(result) ? result[0] : Object.values(result)[0];
+  return pack?.filename ?? null;
+}
+
 async function publishedPackageHash(name, outRoot) {
   const dir = await mkdtemp(join(outRoot, 'published-'));
   try {
     const packJson = await run('npm', ['pack', `${name}@latest`, '--json', '--pack-destination', dir], { capture: true }).catch(() => null);
     if (!packJson) return null;
-    const tarball = join(dir, JSON.parse(packJson)[0].filename);
+    const filename = filenameFromPackJson(packJson);
+    if (!filename) return null;
+    const tarball = join(dir, filename);
     await run('tar', ['-xzf', tarball, '-C', dir], { capture: true });
     return await packageHash(join(dir, 'package'));
   } finally {
@@ -146,7 +164,7 @@ function providerPackageJson(slug, entry, version) {
     repository: {
       type: 'git',
       url: 'https://github.com/jsj/api-emulator-registry.git',
-      directory: `@${slug}`,
+      directory: `providers/@${slug}`,
     },
     bugs: { url: 'https://github.com/jsj/api-emulator/issues' },
     peerDependencies: { 'api-emulator': '>=0.6.0' },
@@ -155,16 +173,16 @@ function providerPackageJson(slug, entry, version) {
 }
 
 async function prepareProvider(slug, entry, version, outRoot) {
-  const specifier = entry.specifier ?? `./@${slug}/api-emulator.mjs`;
+  const specifier = entry.specifier ?? `./providers/@${slug}/api-emulator.mjs`;
   const entryPath = resolve(root, specifier);
   if (!existsSync(entryPath)) throw new Error(`missing provider entry for ${slug}: ${specifier}`);
 
   const packageDir = join(outRoot, slug);
   await run('bun', ['build', entryPath, '--packages', 'external', '--format', 'esm', '--target', 'node', '--outfile', join(packageDir, 'api-emulator.mjs')]);
 
-  const readmePath = join(root, `@${slug}`, 'api-emulator', 'README.md');
+  const readmePath = join(root, `providers/@${slug}`, 'api-emulator', 'README.md');
   if (existsSync(readmePath)) await writeFile(join(packageDir, 'README.md'), await readFile(readmePath, 'utf8'));
-  const fixturesPath = join(root, `@${slug}`, 'fixtures');
+  const fixturesPath = join(root, `providers/@${slug}`, 'fixtures');
   if (existsSync(fixturesPath)) await cp(fixturesPath, join(packageDir, 'fixtures'), { recursive: true });
   await writeFile(join(packageDir, 'package.json'), `${JSON.stringify(providerPackageJson(slug, entry, version), null, 2)}\n`);
   return packageDir;
@@ -177,7 +195,9 @@ const requestedProviders = listArg('providers', process.env.PROVIDERS ?? '');
 const changedOnly = process.argv.includes('--changed-only') || process.env.CHANGED_ONLY === 'true';
 const changedBase = arg('changed-base') ?? process.env.CHANGED_BASE ?? '';
 const providers = requestedProviders.length > 0 ? requestedProviders : changedOnly ? await changedPackageProviders(changedBase) : allPackageProviders();
-const publishConcurrency = Math.min(numberArg('publish-concurrency', process.env.PUBLISH_CONCURRENCY ?? '2'), providers.length);
+const requestedConcurrency = numberArg('publish-concurrency', process.env.PUBLISH_CONCURRENCY ?? '8');
+const publishConcurrency = Math.min(requestedConcurrency, 8, providers.length);
+const publishIntervalMs = numberArg('publish-interval-ms', process.env.PUBLISH_INTERVAL_MS ?? '2000');
 
 if (!version) throw new Error('Missing provider package version. Pass --version=<semver> or PROVIDER_VERSION.');
 if (providers.length === 0) {
@@ -187,9 +207,28 @@ if (providers.length === 0) {
 
 console.log(`Preparing ${providers.length} provider package${providers.length === 1 ? '' : 's'}: ${providers.join(', ')}`);
 console.log(`Publishing with concurrency ${publishConcurrency}`);
+if (requestedConcurrency > publishConcurrency) {
+  console.warn(`Reduced publish concurrency from ${requestedConcurrency} to ${publishConcurrency}`);
+}
+console.log(`Starting one npm publication every ${publishIntervalMs}ms`);
 
 const outRoot = await mkdtemp(join(tmpdir(), 'api-emulator-provider-packages-'));
 const failures = [];
+let publishGate = Promise.resolve();
+let nextPublishAt = 0;
+
+async function waitForPublishSlot() {
+  const previous = publishGate;
+  let releaseGate;
+  publishGate = new Promise((resolvePromise) => {
+    releaseGate = resolvePromise;
+  });
+  await previous;
+  const delay = Math.max(0, nextPublishAt - Date.now());
+  if (delay > 0) await sleep(delay);
+  nextPublishAt = Date.now() + publishIntervalMs;
+  releaseGate();
+}
 
 async function publishProvider(slug) {
   const entry = catalog[slug];
@@ -211,10 +250,16 @@ async function publishProvider(slug) {
   }
 
   const packJson = await run('npm', ['pack', '--json', '--pack-destination', outRoot], { cwd: packageDir, capture: true });
-  const tarball = join(outRoot, JSON.parse(packJson)[0].filename);
+  const packFilename = filenameFromPackJson(packJson);
+  if (!packFilename) throw new Error(`npm pack did not create a tarball for ${name}: ${packJson}`);
+  const tarball = join(outRoot, packFilename);
   const publishArgs = dryRun ? ['publish', tarball, '--dry-run', '--access', 'public'] : ['publish', tarball, '--provenance', '--access', 'public'];
   try {
-    await runWithRetry('npm', publishArgs);
+    await runWithRetry('npm', publishArgs, {
+      capture: true,
+      beforeAttempt: waitForPublishSlot,
+      isComplete: async () => !dryRun && await registryVersion(name) === version,
+    });
   } catch (error) {
     failures.push(name);
     console.error(error.message);

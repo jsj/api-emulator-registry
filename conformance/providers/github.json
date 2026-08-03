@@ -2,7 +2,7 @@
   "provider": "github",
   "catalog": {
     "slug": "github",
-    "specifier": "./@github/api-emulator/src/index.ts"
+    "specifier": "./providers/@github/api-emulator/src/index.ts"
   },
   "sources": {
     "docs": ["https://docs.github.com/rest"],
@@ -10,7 +10,7 @@
     "cli": "gh"
   },
   "validation": {
-    "directSmoke": "node @github/smoke.mjs",
+    "directSmoke": "node providers/@github/smoke.mjs",
     "contractChecks": ["node scripts/check-github-openapi-coverage.mjs"],
     "baseUrlEnv": "GITHUB_API_URL",
     "skipReason": "Official gh CLI coverage is not yet wired into smoke:cli."

@@ -33,9 +33,9 @@ on:
         default: false
         type: boolean
       publish_concurrency:
-        description: Number of provider packages to pack/publish in parallel; keep low to avoid npm rate limits
+        description: Number of provider workers; the release script limits this value to 8 and spaces npm publication starts
         required: false
-        default: 2
+        default: 8
         type: number
 
 concurrency:

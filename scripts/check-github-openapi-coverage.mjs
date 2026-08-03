@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 
 const OPENAPI_URL = 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json';
-const PLUGIN_SOURCE = new URL('../@github/api-emulator.mjs', import.meta.url);
-const ROUTES_SOURCE = new URL('../@github/src/routes/http.mjs', import.meta.url);
+const PLUGIN_SOURCE = new URL('../providers/@github/api-emulator.mjs', import.meta.url);
+const ROUTES_SOURCE = new URL('../providers/@github/src/routes/http.mjs', import.meta.url);
 
 const deepRoutes = [
   {

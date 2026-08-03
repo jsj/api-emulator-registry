@@ -23,7 +23,7 @@ function titleize(slug) {
 
 function readModuleSource(slug, specifier) {
   const candidates = [
-    join(root, `@${slug}/api-emulator.mjs`),
+    join(root, `providers/@${slug}/api-emulator.mjs`),
     specifier ? join(root, specifier) : null,
   ].filter(Boolean);
 
@@ -49,9 +49,9 @@ function routeLines(source) {
 
 function authLine(source) {
   if (/authorization|bearer|api[-_ ]?key|x-api-key/i.test(source)) {
-    return 'Uses fake local credentials only; provide any deterministic bearer token or API key expected by the client under test.';
+    return 'The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.';
   }
-  return 'No production credentials are required. Use fake local credentials in client tests.';
+  return 'The emulator does not require production credentials. Use fake local credentials in each client test.';
 }
 
 function seedBlock(slug) {
@@ -76,12 +76,12 @@ function readmeFor(slug, entry) {
   const label = titleize(slug);
   const source = readModuleSource(slug, entry.specifier);
   const routes = routeLines(source);
-  const endpoints = routes.length ? routes.join('\n') : '- See the emulator source for the supported local API surface.';
-  const runSpecifier = entry.specifier ?? `./@${slug}/api-emulator.mjs`;
+  const endpoints = routes.length ? routes.join('\n') : 'The emulator source lists the supported local API endpoints.';
+  const runSpecifier = entry.specifier ?? `./providers/@${slug}/api-emulator.mjs`;
   const officialDocs = source.match(/docs:\s*['"`]([^'"`]+)['"`]/)?.[1];
   const docsLink = officialDocs ? `- [Official API docs](${officialDocs})\n` : '';
 
-  return `# ${title}\n\n${entry.description ?? `${label} API emulator.`}\n\nPart of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Fidelity\n\n${fidelityBlock(slug, entry)}\n\n## Endpoints\n\n${endpoints}\n\n## Auth\n\n${authLine(source)}\n\n## Seed Configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
+  return `# ${title}\n\n${entry.description ?? `${label} provides a local API emulator.`}\n\nThis package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.\n\n## Install\n\n\`\`\`bash\nnpm install ${packageName}\n\`\`\`\n\n## Run\n\n\`\`\`bash\nnpx -p api-emulator api --plugin ${runSpecifier} --service ${slug}\n\`\`\`\n\n## Fidelity\n\n${fidelityBlock(slug, entry)}\n\n## Endpoints\n\n${endpoints}\n\n## Authentication\n\n${authLine(source)}\n\n## Seed configuration\n\n${seedBlock(slug)}\n\n## Links\n\n${docsLink}- [api-emulator](https://github.com/jsj/api-emulator)\n`;
 }
 
 const stale = [];
@@ -90,7 +90,7 @@ let written = 0;
 for (const [slug, entry] of Object.entries(catalog).sort(([a], [b]) => a.localeCompare(b))) {
   if (entry.kind !== 'package') continue;
 
-  const readmePath = join(root, `@${slug}/api-emulator/README.md`);
+  const readmePath = join(root, `providers/@${slug}/api-emulator/README.md`);
   const next = readmeFor(slug, entry);
   const current = existsSync(readmePath) ? readFileSync(readmePath, 'utf8') : null;
 
@@ -110,7 +110,7 @@ for (const [slug, entry] of Object.entries(catalog).sort(([a], [b]) => a.localeC
 if (check) {
   const missing = Object.entries(catalog)
     .filter(([, entry]) => entry.kind === 'package')
-    .map(([slug]) => join(root, `@${slug}/api-emulator/README.md`))
+    .map(([slug]) => join(root, `providers/@${slug}/api-emulator/README.md`))
     .filter((readmePath) => !existsSync(readmePath));
   if (missing.length || stale.length) {
     console.error(`Provider README check failed: ${missing.length} missing, ${stale.length} stale.`);

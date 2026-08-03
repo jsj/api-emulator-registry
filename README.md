@@ -4,7 +4,9 @@
 
 ## Quick start
 
-This registry provides local API emulators for integration tests, agent evaluations, and CI.
+This registry provides provider plugins for [api-emulator](https://github.com/jsj/api-emulator).
+
+Use the plugins to run local API emulators for integration tests, agent evaluations, and CI.
 
 Each emulator stores state and returns responses for one provider. You do not need production credentials.
 

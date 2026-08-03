@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const readmePath = join(root, 'README.md');
-const configPath = join(root, '.README/provider-wall.json');
+const configPath = join(root, 'scripts/provider-wall.json');
 const check = process.argv.includes('--check');
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));

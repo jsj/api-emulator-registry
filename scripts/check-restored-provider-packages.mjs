@@ -39,7 +39,7 @@ function run(command, args) {
 }
 
 for (const provider of providers) {
-  const packageRoot = join(`@${provider}`, 'api-emulator');
+  const packageRoot = join(`providers/@${provider}`, 'api-emulator');
   const packagePath = join(packageRoot, 'package.json');
   assert.ok(existsSync(packagePath), `missing ${packagePath}`);
 
@@ -47,7 +47,7 @@ for (const provider of providers) {
   assert.deepEqual(catalog.plugins?.[provider], {
     kind: 'package',
     packageName: `@api-emulator/${provider}`,
-    specifier: `./@${provider}/api-emulator/src/index.ts`,
+    specifier: `./providers/@${provider}/api-emulator/src/index.ts`,
     description: catalog.plugins[provider].description,
   });
   assert.equal(pkg.name, `@api-emulator/${provider}`);

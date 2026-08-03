@@ -20,13 +20,13 @@
     "contract:plaid": "node scripts/check-plaid-openapi-coverage.mjs",
     "smoke": "node scripts/smoke-all.mjs",
     "smoke:cli": "bun scripts/cli-verification-smoke.mjs",
-    "smoke:db-workspaces": "node @supabase/smoke-db-workspace.mjs && node @neon/smoke-db-workspace.mjs && node @planetscale/smoke-db-workspace.mjs && node @supabase/smoke-postgres-thin-clone.mjs",
-    "supabase:pg:clone": "node @supabase/local-postgres/workspace.mjs clone",
-    "supabase:pg:dispose": "node @supabase/local-postgres/workspace.mjs dispose",
-    "supabase:dev": "node @supabase/dev.mjs",
-    "supabase:pg": "node @supabase/local-postgres/branch.mjs start",
-    "supabase:pg:reset": "node @supabase/local-postgres/branch.mjs reset",
-    "planetscale:mysql": "node @planetscale/local-mysql/branch.mjs start",
-    "planetscale:mysql:reset": "node @planetscale/local-mysql/branch.mjs reset"
+    "smoke:db-workspaces": "node providers/@supabase/smoke-db-workspace.mjs && node providers/@neon/smoke-db-workspace.mjs && node providers/@planetscale/smoke-db-workspace.mjs && node providers/@supabase/smoke-postgres-thin-clone.mjs",
+    "supabase:pg:clone": "node providers/@supabase/local-postgres/workspace.mjs clone",
+    "supabase:pg:dispose": "node providers/@supabase/local-postgres/workspace.mjs dispose",
+    "supabase:dev": "node providers/@supabase/dev.mjs",
+    "supabase:pg": "node providers/@supabase/local-postgres/branch.mjs start",
+    "supabase:pg:reset": "node providers/@supabase/local-postgres/branch.mjs reset",
+    "planetscale:mysql": "node providers/@planetscale/local-mysql/branch.mjs start",
+    "planetscale:mysql:reset": "node providers/@planetscale/local-mysql/branch.mjs reset"
   }
 }

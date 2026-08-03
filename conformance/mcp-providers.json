@@ -2,13 +2,13 @@
   {
     "provider": "robinhood-trading",
     "url": "https://agent.robinhood.com/mcp/trading",
-    "fixture": "@robinhood-trading/fixtures/tools-contract.sanitized.json",
+    "fixture": "providers/@robinhood-trading/fixtures/tools-contract.sanitized.json",
     "compare": "schemas"
   },
   {
     "provider": "robinhood-banking",
     "url": "https://banking-agent.robinhood.com/mcp/banking",
-    "fixture": "@robinhood-banking/fixtures/tools-contract.sanitized.json",
+    "fixture": "providers/@robinhood-banking/fixtures/tools-contract.sanitized.json",
     "compare": "names",
     "allowedIssue": {
       "kind": "http",
@@ -20,7 +20,7 @@
   {
     "provider": "mobbin",
     "url": "https://api.mobbin.com/mcp",
-    "fixture": "@mobbin/fixtures/tools-contract.sanitized.json",
+    "fixture": "providers/@mobbin/fixtures/tools-contract.sanitized.json",
     "compare": "schemas"
   }
 ]

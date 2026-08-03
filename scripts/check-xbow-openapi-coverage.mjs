@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { routeManifest } from '../@xbow/api-emulator.mjs';
+import { routeManifest } from '../providers/@xbow/api-emulator.mjs';
 
 const OPENAPI_URL = 'https://docs.xbow.com/api/openapi-2026-07-01.json';
 const methods = new Set(['get', 'post', 'put', 'patch', 'delete']);

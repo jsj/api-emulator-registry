@@ -2,14 +2,14 @@
   "provider": "xbow",
   "catalog": {
     "slug": "xbow",
-    "specifier": "./@xbow/api-emulator.mjs"
+    "specifier": "./providers/@xbow/api-emulator.mjs"
   },
   "sources": {
     "docs": ["https://docs.xbow.com/api/"],
     "openapi": "https://docs.xbow.com/api/openapi-2026-07-01.json"
   },
   "validation": {
-    "directSmoke": "node @xbow/smoke.mjs",
+    "directSmoke": "node providers/@xbow/smoke.mjs",
     "contractChecks": ["node scripts/check-xbow-openapi-coverage.mjs"],
     "skipReason": "XBOW does not publish an official CLI or SDK; the official OpenAPI document is the compatibility oracle."
   },

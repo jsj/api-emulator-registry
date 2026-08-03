@@ -8,6 +8,7 @@ const configPath = join(root, '.README/provider-wall.json');
 const check = process.argv.includes('--check');
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
+const providersRoot = join(root, 'providers');
 const columns = config.columns ?? 8;
 const domains = config.domains ?? {};
 const names = config.names ?? {};
@@ -35,7 +36,7 @@ function inferDomain(slug) {
 }
 
 function providerPaths(slug) {
-  const dir = join(root, `@${slug}`);
+  const dir = join(root, `providers/@${slug}`);
   const nested = join(dir, 'api-emulator');
   return {
     dir,
@@ -47,16 +48,16 @@ function providerPaths(slug) {
 }
 
 function providerLink(slug, paths) {
-  if (paths.readme) return `./@${slug}/api-emulator/README.md`;
-  if (paths.rootReadme) return `./@${slug}/README.md`;
-  if (paths.module) return `./@${slug}/api-emulator.mjs`;
-  return `./@${slug}/api-emulator/package.json`;
+  if (paths.readme) return `./providers/@${slug}/api-emulator/README.md`;
+  if (paths.rootReadme) return `./providers/@${slug}/README.md`;
+  if (paths.module) return `./providers/@${slug}/api-emulator.mjs`;
+  return `./providers/@${slug}/api-emulator/package.json`;
 }
 
-const providers = readdirSync(root)
+const providers = readdirSync(providersRoot)
   .filter((name) => name.startsWith('@'))
   .map((name) => name.slice(1))
-  .filter((slug) => statSync(join(root, `@${slug}`)).isDirectory())
+  .filter((slug) => statSync(join(root, `providers/@${slug}`)).isDirectory())
   .map((slug) => {
     const paths = providerPaths(slug);
     if (!paths.readme && !paths.rootReadme && !paths.module && !paths.packageJson) return null;

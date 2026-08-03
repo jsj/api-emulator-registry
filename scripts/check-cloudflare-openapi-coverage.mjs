@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 
 const OPENAPI_URL = 'https://raw.githubusercontent.com/cloudflare/api-schemas/main/openapi.yaml';
-const PLUGIN_SOURCE = new URL('../@cloudflare/api-emulator/src/index.ts', import.meta.url);
-const ROUTES_SOURCE = new URL('../@cloudflare/api-emulator/src/routes/http.ts', import.meta.url);
+const PLUGIN_SOURCE = new URL('../providers/@cloudflare/api-emulator/src/index.ts', import.meta.url);
+const ROUTES_SOURCE = new URL('../providers/@cloudflare/api-emulator/src/routes/http.ts', import.meta.url);
 
 const requiredOperations = [
   {

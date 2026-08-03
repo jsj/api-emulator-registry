@@ -93,7 +93,7 @@ npm install @api-emulator/<provider>
 ## Run
 
 \`\`\`bash
-npx -p api-emulator api --plugin ./@<provider>/api-emulator.mjs --service <provider>
+npx -p api-emulator api --plugin ./providers/@<provider>/api-emulator.mjs --service <provider>
 \`\`\`
 
 ## Endpoints

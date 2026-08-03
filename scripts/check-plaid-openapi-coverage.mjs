@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 
 const OPENAPI_URL = 'https://raw.githubusercontent.com/plaid/plaid-openapi/master/2020-09-14.yml';
-const PLUGIN_SOURCE = new URL('../@plaid/api-emulator/src/index.ts', import.meta.url);
-const ROUTES_SOURCE = new URL('../@plaid/api-emulator/src/routes/http.ts', import.meta.url);
-const FALLBACK_SOURCE = new URL('../@plaid/api-emulator/src/spec/fallback.ts', import.meta.url);
+const PLUGIN_SOURCE = new URL('../providers/@plaid/api-emulator/src/index.ts', import.meta.url);
+const ROUTES_SOURCE = new URL('../providers/@plaid/api-emulator/src/routes/http.ts', import.meta.url);
+const FALLBACK_SOURCE = new URL('../providers/@plaid/api-emulator/src/spec/fallback.ts', import.meta.url);
 
 const deepRoutes = [
   '/link/token/create',

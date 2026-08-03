@@ -15,7 +15,7 @@ function routeCount(source) {
 
 function providerSource(root, slug, specifier) {
   const candidates = [
-    join(root, `@${slug}/api-emulator.mjs`),
+    join(root, `providers/@${slug}/api-emulator.mjs`),
     specifier ? join(root, specifier) : null,
   ].filter(Boolean);
 
@@ -45,7 +45,7 @@ export function classifyProviderFidelity(root, slug, entry = {}) {
   }
 
   const source = providerSource(root, slug, entry.specifier);
-  const smokePath = join(root, `@${slug}/smoke.mjs`);
+  const smokePath = join(root, `providers/@${slug}/smoke.mjs`);
   const hasSmoke = existsSync(smokePath);
   const routes = routeCount(source);
 
@@ -59,13 +59,12 @@ export function classifyProviderFidelity(root, slug, entry = {}) {
   if (hasSmoke) {
     return {
       tier: fidelityTiers.smokeOnly,
-      detail: 'direct smoke test exists; no conformance manifest yet',
+      detail: 'a direct smoke test exists, but a conformance manifest does not exist',
     };
   }
 
   return {
     tier: fidelityTiers.generatedFallback,
-    detail: 'local generated surface; no smoke or conformance manifest yet',
+    detail: 'a local generated API exists, but smoke and conformance evidence does not exist',
   };
 }
-

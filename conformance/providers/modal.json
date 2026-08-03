@@ -2,7 +2,7 @@
   "provider": "modal",
   "catalog": {
     "slug": "modal",
-    "specifier": "./@modal/api-emulator.mjs"
+    "specifier": "./providers/@modal/api-emulator.mjs"
   },
   "sources": {
     "docs": ["https://modal.com/docs"],
@@ -11,7 +11,7 @@
     "sdk": "modal"
   },
   "validation": {
-    "directSmoke": "node @modal/smoke.mjs",
+    "directSmoke": "node providers/@modal/smoke.mjs",
     "cliSmoke": "bun scripts/cli-verification-smoke.mjs",
     "contractChecks": [],
     "baseUrlEnv": "MODAL_SERVER_URL"

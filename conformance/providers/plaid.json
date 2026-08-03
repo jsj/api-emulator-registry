@@ -2,7 +2,7 @@
   "provider": "plaid",
   "catalog": {
     "slug": "plaid",
-    "specifier": "./@plaid/api-emulator/src/index.ts"
+    "specifier": "./providers/@plaid/api-emulator/src/index.ts"
   },
   "sources": {
     "docs": ["https://plaid.com/docs/api/"],
@@ -10,7 +10,7 @@
     "sdk": "plaid"
   },
   "validation": {
-    "directSmoke": "node @plaid/smoke.mjs",
+    "directSmoke": "node providers/@plaid/smoke.mjs",
     "contractChecks": ["node scripts/check-plaid-openapi-coverage.mjs"],
     "baseUrlEnv": "PLAID_API_HOST",
     "skipReason": "Official SDK conformance is represented by OpenAPI coverage and direct smoke today."

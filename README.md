@@ -1,4 +1,4 @@
-![api-emulator cover](./.README/cover.png)
+![api-emulator cover](./.github/assets/cover.png)
 
 # api-emulator-registry
 

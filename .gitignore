@@ -4,8 +4,6 @@
 **/dist/
 **/.api-emulator/
 .emu/
-SPECS/*
-!SPECS/.gitkeep
 .env
 *.log
 .DS_Store

@@ -2,35 +2,122 @@
 
 # api-emulator-registry
 
-This repository contains public provider plugins for [`api-emulator`](https://github.com/jsj/api-emulator).
+## Quick start
 
-Each plugin runs a stateful copy of a provider API on your computer. Use these copies before your software connects to a production service.
+This registry provides local API emulators for integration tests, agent evaluations, and CI.
 
-## Use the registry
+Each emulator stores state and returns responses for one provider. You do not need production credentials.
 
-1. Select a provider from this registry.
-2. Add test data to the provider.
-3. Run your integration against the stable local API.
+1. Clone the registry.
 
-These plugins can provide the following behavior:
+```bash
+git clone https://github.com/jsj/api-emulator-registry.git
+cd api-emulator-registry
+```
+
+2. Start the PostHog emulator.
+
+```bash
+npx -p api-emulator api \
+  --plugin ./providers/@posthog/api-emulator.mjs \
+  --service posthog
+```
+
+The PostHog emulator starts at `http://localhost:4000/posthog`.
+
+3. Set the PostHog API host to `http://localhost:4000/posthog`.
+
+4. Run your integration test.
+
+5. Reset the emulator before the next test.
+
+## Run multiple providers
+
+If a test uses GitHub and Apple, start both emulators.
+
+```bash
+npx -p api-emulator api \
+  --plugin ./providers/@github/api-emulator.mjs,./providers/@apple/api-emulator.mjs \
+  --service github,apple
+```
+
+## Create test data
+
+Generate a starter configuration for repeatable test data.
+
+```bash
+npx -p api-emulator api init \
+  --plugin ./providers/@alpaca/api-emulator/src/index.ts \
+  --service alpaca
+```
+
+## What the registry provides
+
+An emulator can provide these functions:
 
 - Store state across requests.
 - Model object relationships and edge cases.
 - Return provider-specific responses and errors.
 - Reset all state between test scenarios.
 
-Start one provider for an integration test. If a test uses multiple services, start the applicable providers.
+`api-emulator` runs the local server. This registry contains the provider plugins.
 
-The providers also support agent evaluations and CI.
+```text
+Your app, workflow, or agent
+  ↓
+api-emulator on localhost
+  ↓
+Provider plugins from this registry
+```
 
 ## Fidelity tiers
 
 Each provider README declares one fidelity tier:
 
-- `contract-backed`: The provider has a conformance manifest and declared smoke or contract checks.
+- `contract-backed`: The provider has a conformance manifest and smoke tests or contract tests.
 - `smoke-only`: The provider has a direct smoke test but does not have a conformance manifest.
-- `stub`: The provider implements a starter or health-check API.
-- `generated fallback`: The provider has a generated API without smoke or conformance evidence.
+- `stub`: The provider implements a starter API or health API.
+- `generated fallback`: The provider has a generated API without smoke-test or conformance evidence.
+
+## Provider layout
+
+Each provider has a scoped folder under `providers/`.
+
+```text
+providers/@posthog/api-emulator.mjs
+providers/@github/api-emulator.mjs
+providers/@cloudflare/api-emulator/src/index.ts
+```
+
+Use the [`create-api-emulator-plugin`](./.agents/skills/create-api-emulator-plugin/SKILL.md) skill to create a provider.
+
+## Fixtures
+
+Export a fixture after a stateful run. Restore the fixture before another test.
+
+```ts
+const fixture = openai.exportFixture({ metadata: { name: "happy-path-chat" } })
+
+openai.resetToFixture(fixture)
+```
+
+## Run the tests
+
+Run all smoke tests and contract tests.
+
+```bash
+bun run smoke
+```
+
+Run one provider smoke test.
+
+```bash
+node ./providers/@posthog/smoke.mjs
+```
+
+## Support
+
+Open an [issue](https://github.com/jsj/api-emulator/issues) for an error, missing endpoint, or provider request.
 
 ## Provider wall
 
@@ -343,94 +430,6 @@ Each provider README declares one fidelity tier:
 </table>
 <!-- provider-wall:end -->
 
-## Quick start
-
-Clone this registry next to the software that you want to test:
-
-```bash
-git clone https://github.com/jsj/api-emulator-plugins.git
-```
-
-Run one provider on localhost:
-
-```bash
-npx -p api-emulator api \
-  --plugin ./api-emulator-plugins/providers/@posthog/api-emulator.mjs \
-  --service posthog
-```
-
-If a test uses multiple services, run the providers together:
-
-```bash
-npx -p api-emulator api \
-  --plugin ./api-emulator-plugins/providers/@github/api-emulator.mjs,./api-emulator-plugins/providers/@apple/api-emulator.mjs \
-  --service github,apple
-```
-
-Generate a starter configuration with repeatable test data:
-
-```bash
-npx -p api-emulator api init \
-  --plugin ./api-emulator-plugins/providers/@alpaca/api-emulator/src/index.ts \
-  --service alpaca
-```
-
-## How it fits together
-
-```text
-Your app, workflow, or agent
-  ↓
-api-emulator on localhost
-  ↓
-Provider plugins from this registry
-```
-
-`api-emulator` is the runtime. This registry stores public provider behavior in separate plugins.
-
-Use the following workflow during development, review, or CI:
-
-1. Select the provider APIs that your software uses.
-2. Start the matching plugins on your computer.
-3. Add the state that your test requires.
-4. Run your software against the local providers.
-5. Examine the result.
-6. Reset the providers before another test.
-
-## Provider layout
-
-Most providers live under a scoped folder:
-
-```text
-@posthog/api-emulator.mjs
-@github/api-emulator.mjs
-@cloudflare/api-emulator/src/index.ts
-```
-
-Use the `create-api-emulator-plugin` agent skill to generate a new provider.
-
-## Fixtures
-
-Export a fixture after a stateful or nondeterministic run. Restore the fixture before another test:
-
-```ts
-const fixture = openai.exportFixture({ metadata: { name: "happy-path-chat" } })
-
-openai.resetToFixture(fixture)
-```
-
-## Smoke testing
-
-Run all provider smoke tests and contract checks:
-
-```bash
-bun run smoke
-```
-
-Run one provider smoke test:
-
-```bash
-node ./providers/@posthog/smoke.mjs
-```
 
 ## License
 

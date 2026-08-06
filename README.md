@@ -10,7 +10,8 @@
 ```text
 Set up api-emulator for this repository.
 First, read https://api-emulator.jsj.sh/agent.txt.
-Inspect the repository and identify the external APIs that its tests use.
+Inspect the repository and identify the APIs that its tests use.
+For a private internal API, keep its provider in a private repository and use synthetic test data with no PII.
 Before you edit files, describe the smallest setup plan.
 Keep the existing provider SDKs.
 Change only their base URLs and test credentials.
@@ -394,8 +395,8 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before you send a change.
 | <img src="https://www.google.com/s2/favicons?domain=vultr.com&sz=64" width="32" height="32" alt=""> | [Vultr](./providers/@vultr/api-emulator/README.md) | `@api-emulator/vultr` | Cloud: account, regions, instances, VPCs, images, DNS, and load balancers. |
 | <img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="32" height="32" alt=""> | [Workato](./providers/@workato/api-emulator/README.md) | `@api-emulator/workato` | Automation: recipes, connections, folders, jobs, and manifest export workflows. |
 | <img src="https://www.google.com/s2/favicons?domain=zapier.com&sz=64" width="32" height="32" alt=""> | [Zapier](./providers/@zapier/api-emulator/README.md) | `@api-emulator/zapier` | Automation: apps, Zaps, task history, and webhook trigger workflows. |
-
-Don't see the service you need? [Open a provider request](https://github.com/jsj/api-emulator-registry/issues/new?template=provider.yml).
+|  | **Need a private service?** |  | [Build an internal provider](./docs/INTERNAL_PROVIDER_PROMPT.md) |
+|  | **Need another service?** |  | [Request a provider](https://github.com/jsj/api-emulator-registry/issues/new?template=provider.yml) |
 <!-- provider-wall:end -->
 
 <hr>
@@ -410,7 +411,8 @@ Don't see the service you need? [Open a provider request](https://github.com/jsj
 ```text
 Set up api-emulator for this repository.
 First, read https://api-emulator.jsj.sh/agent.txt.
-Inspect the repository and identify the external APIs that its tests use.
+Inspect the repository and identify the APIs that its tests use.
+For a private internal API, keep its provider in a private repository and use synthetic test data with no PII.
 Before you edit files, describe the smallest setup plan.
 Keep the existing provider SDKs.
 Change only their base URLs and test credentials.

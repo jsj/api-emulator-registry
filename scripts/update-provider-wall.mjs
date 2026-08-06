@@ -125,8 +125,8 @@ const table = [
     (provider) =>
       `| <img src="${provider.icon}" width="32" height="32" alt=""> | [${provider.label}](${provider.link}) | \`${provider.packageName}\` | ${provider.description} |`,
   ),
-  '',
-  "Don't see the service you need? [Open a provider request](https://github.com/jsj/api-emulator-registry/issues/new?template=provider.yml).",
+  "|  | **Need a private service?** |  | [Build an internal provider](./docs/INTERNAL_PROVIDER_PROMPT.md) |",
+  "|  | **Need another service?** |  | [Request a provider](https://github.com/jsj/api-emulator-registry/issues/new?template=provider.yml) |",
   '<!-- provider-wall:end -->',
 ].join('\n');
 

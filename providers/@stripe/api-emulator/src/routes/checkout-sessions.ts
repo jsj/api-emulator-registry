@@ -80,7 +80,7 @@ export function checkoutSessionRoutes({ app, store, webhooks, baseUrl }: RouteCo
             `line_items[${i}][price]`,
           );
         }
-        const qty = typeof li.quantity === "number" ? li.quantity : parseInt(li.quantity as string, 10);
+        const qty = li.quantity === undefined ? 1 : typeof li.quantity === "number" ? li.quantity : parseInt(li.quantity as string, 10);
         if (!Number.isFinite(qty) || qty < 1) {
           return stripeError(
             c,

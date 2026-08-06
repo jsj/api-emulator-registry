@@ -2,28 +2,25 @@
 
 XBOW provides automated penetration-testing APIs for organizations, assets, assessments, findings, reports, resources, and webhooks.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/xbow
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@xbow/api-emulator.mjs --service xbow
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `contract-backed`
-- Evidence: 83% medium conformance score
-- Smoke: `node @xbow/smoke.mjs`
-- Contract checks: `node scripts/check-xbow-openapi-coverage.mjs`
-
-## Endpoints
+## Supported API
 
 - `GET /api/v1/assessments/{assessmentId}`
 - `POST /api/v1/assessments/{assessmentId}/cancel`
@@ -66,11 +63,21 @@ npx -p api-emulator api --plugin ./providers/@xbow/api-emulator.mjs --service xb
 - `GET /api/v1/webhooks/{webhookId}/deliveries`
 - `POST /api/v1/webhooks/{webhookId}/ping`
 
-## Authentication
+## Coverage
 
-The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+- Level: `contract-backed`
+- Meaning: Automated tests compare this emulator with a defined API contract.
+- Evidence: 83% medium conformance score.
+- Smoke: `node providers/@xbow/smoke.mjs`
+- Contract checks: `node scripts/check-xbow-openapi-coverage.mjs`
 
-## Seed configuration
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 xbow:

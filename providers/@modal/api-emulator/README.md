@@ -2,27 +2,25 @@
 
 Modal provides serverless Python compute control-plane APIs for apps, environments, secrets, volumes, workspaces, and tokens.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/modal
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@modal/api-emulator.mjs --service modal
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `contract-backed`
-- Evidence: 65% medium conformance score
-- Smoke: `node @modal/smoke.mjs`
-
-## Endpoints
+## Supported API
 
 - `GET /modal/inspect/state`
 - `POST /modal/inspect/reset`
@@ -41,11 +39,20 @@ npx -p api-emulator api --plugin ./providers/@modal/api-emulator.mjs --service m
 - `GET /modal/v1/volumes`
 - `POST /modal/v1/volumes`
 
-## Authentication
+## Coverage
 
-The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+- Level: `contract-backed`
+- Meaning: Automated tests compare this emulator with a defined API contract.
+- Evidence: 65% medium conformance score.
+- Smoke: `node providers/@modal/smoke.mjs`
 
-## Seed configuration
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 modal:

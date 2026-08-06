@@ -2,26 +2,25 @@
 
 Qualtrics XM provides survey, survey definition, response, and response export APIs for experience management workflows.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/qualtrics
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@qualtrics/api-emulator.mjs --service qualtrics
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `smoke-only`
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist
-
-## Endpoints
+## Supported API
 
 - `GET /API/v3/whoami`
 - `GET /API/v3/surveys`
@@ -36,11 +35,19 @@ npx -p api-emulator api --plugin ./providers/@qualtrics/api-emulator.mjs --servi
 - `GET /qualtrics/inspect/contract`
 - `GET /qualtrics/inspect/state`
 
-## Authentication
+## Coverage
 
-The emulator does not require production credentials. Use fake local credentials in each client test.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-## Seed configuration
+## Credentials
+
+You do not need production credentials. Use fixed local credentials if your client requires them.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 qualtrics:

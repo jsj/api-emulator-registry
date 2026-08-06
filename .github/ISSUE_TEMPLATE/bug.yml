@@ -1,0 +1,57 @@
+name: Bug report
+description: Report incorrect emulator behavior or a repository error.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include production credentials, private contracts, or customer data.
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      description: Name the provider or shared component.
+      placeholder: github
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest sequence that causes the error.
+      placeholder: |
+        1. Start the provider with this command.
+        2. Send this request.
+        3. Observe this response.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the response or state that you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Describe the response, state, or error that occurred.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the operating system, runtime version, and api-emulator version.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Add safe logs, test output, or a minimal repository link.
+    validations:
+      required: false

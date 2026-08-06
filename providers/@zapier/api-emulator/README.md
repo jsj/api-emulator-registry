@@ -2,34 +2,41 @@
 
 Zapier provides automation APIs for apps, Zaps, task history, and webhook trigger workflows.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/zapier
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@zapier/api-emulator.mjs --service zapier
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `stub`
-- Evidence: starter surface with smoke coverage
-
-## Endpoints
+## Supported API
 
 The emulator source lists the supported local API endpoints.
 
-## Authentication
+## Coverage
 
-The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+- Level: `stub`
+- Meaning: This emulator has a small starter API.
+- Evidence: starter surface with smoke coverage.
 
-## Seed configuration
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 zapier:

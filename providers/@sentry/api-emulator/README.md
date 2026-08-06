@@ -2,37 +2,41 @@
 
 Sentry provides error tracking, projects, issues, events, releases, organizations, and alerting APIs.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/sentry
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@sentry/api-emulator.mjs --service sentry
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `sdk-ingestion-and-rest-subset`
-- Evidence: contract smoke coverage for envelopes, store requests, grouping, releases, webhooks, and rate limits
+## Supported API
 
-## Endpoints
+The emulator source lists the supported local API endpoints.
 
-- SDK ingestion: `/api/{project_id}/envelope/` and `/api/{project_id}/store/`
-- Resources: organizations, projects, releases, and release files
-- Webhooks: signed issue webhook delivery
-- Inspection and control: `/inspect/*` and `/control/*`
+## Coverage
 
-## Authentication
+- Level: `stub`
+- Meaning: This emulator has a small starter API.
+- Evidence: starter surface with smoke coverage.
 
-Use `sentry-emulator-key` for project `1` by default. Configure other fake keys through the control API.
+## Credentials
 
-## Seed configuration
+You do not need production credentials. Use fixed local credentials if your client requires them.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 sentry:

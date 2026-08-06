@@ -420,6 +420,29 @@ describe("Stripe plugin", () => {
     });
   });
 
+  describe("billing portal sessions", () => {
+    it("creates a portal session for an existing customer", async () => {
+      const customerResponse = await app.request(`${base}/v1/customers`, {
+        method: "POST",
+        headers: auth(),
+        body: JSON.stringify({ email: "billing@test.com" }),
+      });
+      const customer = (await customerResponse.json()) as { id: string };
+      const response = await app.request(`${base}/v1/billing_portal/sessions`, {
+        method: "POST",
+        headers: auth(),
+        body: JSON.stringify({ customer: customer.id, return_url: "https://better.test" }),
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: "billing_portal.session",
+        customer: customer.id,
+        return_url: "https://better.test",
+        livemode: false,
+      });
+    });
+  });
+
   describe("payment methods", () => {
     it("lists payment methods for a customer", async () => {
       const custRes = await app.request(`${base}/v1/customers`, {

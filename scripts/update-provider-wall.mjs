@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { classifyProviderFidelity } from './conformance/tier.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const readmePath = join(root, 'README.md');
@@ -8,8 +9,8 @@ const configPath = join(root, 'scripts/provider-wall.json');
 const check = process.argv.includes('--check');
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
+const catalog = JSON.parse(readFileSync(join(root, 'api-emulator.catalog.json'), 'utf8')).plugins ?? {};
 const providersRoot = join(root, 'providers');
-const columns = config.columns ?? 8;
 const domains = config.domains ?? {};
 const names = config.names ?? {};
 
@@ -54,6 +55,40 @@ function providerLink(slug, paths) {
   return `./providers/@${slug}/api-emulator/package.json`;
 }
 
+function readiness(slug, entry) {
+  const fidelity = classifyProviderFidelity(root, slug, entry);
+  const rank = {
+    'contract-backed': 0,
+    'smoke-only': 1,
+    'generated fallback': 2,
+    stub: 3,
+  }[fidelity.tier] ?? 4;
+  return { rank, score: fidelity.score ?? 0 };
+}
+
+function compactDescription(description, label) {
+  let text = description.replace(/\.$/, '');
+  const providerAction = text.match(/^.+?\s+(?:provide|provides)\s+(.+)$/i);
+  if (providerAction) text = providerAction[1];
+
+  const platformPurpose = text.match(/^(?:an?\s+)?[^.]+?\s+for\s+(.+)$/i);
+  if (!providerAction && platformPurpose) text = platformPurpose[1];
+
+  text = text
+    .replace(/^APIs?\s+for\s+/i, '')
+    .replace(/\s+APIs?\s+for\s+/i, ': ')
+    .replace(/^a local API emulator$/i, 'Local API');
+
+  const words = text.split(/\s+/);
+  if (words.length > 14 && text.includes(',')) {
+    const items = text.split(',').map((item) => item.trim());
+    text = `${items.slice(0, 4).join(', ')}, and more`;
+  }
+
+  if (!text || text.toLowerCase() === label.toLowerCase()) return 'Local API';
+  return `${text[0].toUpperCase()}${text.slice(1)}.`;
+}
+
 const providers = readdirSync(providersRoot)
   .filter((name) => name.startsWith('@'))
   .map((name) => name.slice(1))
@@ -63,43 +98,43 @@ const providers = readdirSync(providersRoot)
     if (!paths.readme && !paths.rootReadme && !paths.module && !paths.packageJson) return null;
     const label = readLabel(slug);
     const domain = inferDomain(slug);
+    const entry = catalog[slug] ?? {};
+    const providerReadiness = readiness(slug, entry);
     return {
       slug,
       label,
       link: providerLink(slug, paths),
       icon: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+      packageName: entry.packageName ?? `@api-emulator/${slug}`,
+      description: compactDescription(entry.description ?? `${label} provides a local API emulator.`, label),
+      readinessRank: providerReadiness.rank,
+      coverageScore: providerReadiness.score,
     };
   })
   .filter(Boolean)
-  .sort((a, b) => a.label.localeCompare(b.label));
-
-const rows = [];
-for (let i = 0; i < providers.length; i += columns) {
-  rows.push(providers.slice(i, i + columns));
-}
+  .sort((a, b) =>
+    a.readinessRank - b.readinessRank
+      || b.coverageScore - a.coverageScore
+      || a.label.localeCompare(b.label));
 
 const table = [
   '<!-- provider-wall:start -->',
-  '<table>',
-  ...rows.flatMap((row) => [
-    '  <tr>',
-    ...row.map(
-      (provider) =>
-        `    <td align="center"><a href="${provider.link}"><img src="${provider.icon}" width="36" height="36" alt=""><br>${provider.label}</a></td>`,
-    ),
-    '  </tr>',
-  ]),
-  '</table>',
+  '| Logo | Provider | Package | What it emulates |',
+  '| --- | --- | --- | --- |',
+  ...providers.map(
+    (provider) =>
+      `| <img src="${provider.icon}" width="32" height="32" alt=""> | [${provider.label}](${provider.link}) | \`${provider.packageName}\` | ${provider.description} |`,
+  ),
   '<!-- provider-wall:end -->',
 ].join('\n');
 
 const readme = readFileSync(readmePath, 'utf8');
 let replaced = false;
 const next = readme.replace(
-  /## Provider wall\n\n(?:<!-- provider-wall:start -->\n)?<table>[\s\S]*?<\/table>\n(?:<!-- provider-wall:end -->\n)?/,
+  /## (?:Provider wall|Providers)\n\n(?:(?:Browse the providers|Providers with|Test coverage)[^\n]*\n\n)?<!-- provider-wall:start -->\n[\s\S]*?<!-- provider-wall:end -->\n?/,
   () => {
     replaced = true;
-    return `## Provider wall\n\n${table}\n`;
+    return `## Providers\n\n${table}\n`;
   },
 );
 

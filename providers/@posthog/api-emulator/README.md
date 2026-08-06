@@ -2,38 +2,41 @@
 
 PostHog provides product analytics, event capture, feature flags, persons, and project APIs.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/posthog
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@posthog/api-emulator.mjs --service posthog
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `sdk-ingestion-and-resource-subset`
-- Evidence: contract smoke coverage for authentication, duplicate events, batches, flags, and rate limits
+## Supported API
 
-## Endpoints
+The emulator source lists the supported local API endpoints.
 
-- Capture: `/capture`, `/batch`, `/e`, and `/track`
-- Identity: `/identify`, `/alias`, and `/groupidentify`
-- Flags: `/decide` and `/flags`
-- Resources: persons, groups, feature flags, experiments, cohorts, and queries
-- Inspection and control: `/inspect/*` and `/control/*`
+## Coverage
 
-## Authentication
+- Level: `stub`
+- Meaning: This emulator has a small starter API.
+- Evidence: starter surface with smoke coverage.
 
-Use `posthog-emulator-key` by default. Configure other fake keys through the control API.
+## Credentials
 
-## Seed configuration
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 posthog:

@@ -1,0 +1,54 @@
+name: Provider request
+description: Request a new provider or missing provider behavior.
+title: "[Provider]: "
+labels:
+  - provider-request
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request only public provider behavior. Do not include private contracts, credentials, or customer data.
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      description: Name the provider.
+      placeholder: GitHub
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: Describe the workflow that the emulator must support.
+      placeholder: Create a repository, add a webhook, and inspect its delivery.
+    validations:
+      required: true
+  - type: textarea
+    id: endpoints
+    attributes:
+      label: Endpoints
+      description: List the required routes or SDK methods.
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Public documentation
+      description: Link to the official public API documentation.
+    validations:
+      required: true
+  - type: textarea
+    id: client
+    attributes:
+      label: Client
+      description: Name the SDK, CLI, application, or agent that will use the emulator.
+    validations:
+      required: false
+  - type: textarea
+    id: success
+    attributes:
+      label: Success criteria
+      description: Describe the test that proves this workflow works.
+    validations:
+      required: true

@@ -2,26 +2,25 @@
 
 Listen Labs provides AI research APIs for studies, questions, participant responses, transcripts, summaries, and research insights.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/listenlabs
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@listenlabs/api-emulator.mjs --service listenlabs
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `smoke-only`
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist
-
-## Endpoints
+## Supported API
 
 - `GET /api/public/list_surveys`
 - `GET /api/public/list_studies`
@@ -34,11 +33,19 @@ npx -p api-emulator api --plugin ./providers/@listenlabs/api-emulator.mjs --serv
 - `GET /listenlabs/inspect/contract`
 - `GET /listenlabs/inspect/state`
 
-## Authentication
+## Coverage
 
-The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-## Seed configuration
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 listenlabs:

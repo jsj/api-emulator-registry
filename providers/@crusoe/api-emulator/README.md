@@ -2,26 +2,25 @@
 
 Crusoe Cloud provides cloud infrastructure APIs for projects, GPU instance types, virtual machines, SSH keys, and operations.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/crusoe
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@crusoe/api-emulator.mjs --service crusoe
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `smoke-only`
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist
-
-## Endpoints
+## Supported API
 
 - `GET /v1alpha5/featureflags`
 - `GET /v1alpha5/projects`
@@ -41,11 +40,19 @@ npx -p api-emulator api --plugin ./providers/@crusoe/api-emulator.mjs --service 
 - `GET /v1alpha5/operations/:operation_id`
 - `GET /crusoe/inspect/state`
 
-## Authentication
+## Coverage
 
-The emulator does not require production credentials. Use fake local credentials in each client test.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-## Seed configuration
+## Credentials
+
+You do not need production credentials. Use fixed local credentials if your client requires them.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 crusoe:

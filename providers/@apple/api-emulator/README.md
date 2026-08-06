@@ -2,26 +2,25 @@
 
 Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/apple
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@apple/api-emulator/src/index.ts --service apple
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `smoke-only`
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist
-
-## Endpoints
+## Supported API
 
 - `GET /bag.xml`
 - `POST /v1/signSapSetup`
@@ -64,11 +63,19 @@ npx -p api-emulator api --plugin ./providers/@apple/api-emulator/src/index.ts --
 - `POST /database/1/:container/:environment/:database/zones/list`
 - `POST /database/1/:container/:environment/:database/zones/modify`
 
-## Authentication
+## Coverage
 
-The emulator accepts fake local credentials. Use a deterministic bearer token or API key in each client test.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-## Seed configuration
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 apple:

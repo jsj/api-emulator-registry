@@ -2,26 +2,25 @@
 
 imsg provides a stateful iMessage fakout API plus deterministic macOS Messages chat.db fixtures for testing chats, history, search, send, RPC, tapbacks, and attachments.
 
-This package is part of [api-emulator](https://github.com/jsj/api-emulator). It provides a local service for CI and offline sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/imsg
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@imsg/api-emulator.mjs --service imsg
 ```
 
-## Fidelity
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- Tier: `smoke-only`
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist
-
-## Endpoints
+## Supported API
 
 - `GET /imsg/inspect/contract`
 - `GET /imsg/inspect/state`
@@ -35,11 +34,19 @@ npx -p api-emulator api --plugin ./providers/@imsg/api-emulator.mjs --service im
 - `POST /imsg/react`
 - `POST /imsg/rpc`
 
-## Authentication
+## Coverage
 
-The emulator does not require production credentials. Use fake local credentials in each client test.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-## Seed configuration
+## Credentials
+
+You do not need production credentials. Use fixed local credentials if your client requires them.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 imsg:

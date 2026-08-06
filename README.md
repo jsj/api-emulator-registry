@@ -394,6 +394,8 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before you send a change.
 | <img src="https://www.google.com/s2/favicons?domain=vultr.com&sz=64" width="32" height="32" alt=""> | [Vultr](./providers/@vultr/api-emulator/README.md) | `@api-emulator/vultr` | Cloud: account, regions, instances, VPCs, images, DNS, and load balancers. |
 | <img src="https://www.google.com/s2/favicons?domain=workato.com&sz=64" width="32" height="32" alt=""> | [Workato](./providers/@workato/api-emulator/README.md) | `@api-emulator/workato` | Automation: recipes, connections, folders, jobs, and manifest export workflows. |
 | <img src="https://www.google.com/s2/favicons?domain=zapier.com&sz=64" width="32" height="32" alt=""> | [Zapier](./providers/@zapier/api-emulator/README.md) | `@api-emulator/zapier` | Automation: apps, Zaps, task history, and webhook trigger workflows. |
+
+Don't see the service you need? [Open a provider request](https://github.com/jsj/api-emulator-registry/issues/new?template=provider.yml).
 <!-- provider-wall:end -->
 
 <hr>

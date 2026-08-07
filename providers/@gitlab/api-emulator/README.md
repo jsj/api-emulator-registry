@@ -23,6 +23,7 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 ## Supported API
 
 - `GET /api/v4/user`
+- `GET /api/v4/users?username=<username>`
 - `GET /api/v4/projects/:project`
 - `GET /api/v4/projects/:project/issues`
 - `POST /api/v4/projects/:project/issues`
@@ -30,6 +31,9 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `PUT /api/v4/projects/:project/issues/:iid`
 - `POST /api/v4/projects/:project/issues/:iid/notes`
 - `GET /api/v4/projects/:project/merge_requests/:iid`
+- `GET /api/v4/projects/:project/merge_requests`
+- `POST /api/v4/projects/:project/merge_requests`
+- `PUT /api/v4/projects/:project/merge_requests/:iid`
 - `GET /api/v4/projects/:project/merge_requests/:iid/changes`
 - `GET /api/v4/projects/:project/merge_requests/:iid/diffs`
 - `GET /api/v4/projects/:project/merge_requests/:iid/versions`
@@ -47,7 +51,8 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Credentials
 
-You do not need production credentials. Use fixed local credentials if your client requires them.
+You do not need production credentials. Clients can use any fake token through
+`PRIVATE-TOKEN`, `Authorization`, or `glab auth login` with a local API host.
 
 ## Test data
 
@@ -55,7 +60,10 @@ Add repeatable test data to the provider configuration.
 
 ```yaml
 gitlab:
-  # Add provider-specific seed state here.
+  projects: []
+  issues: []
+  iterations: []
+  merge_requests: []
 ```
 
 ## Links

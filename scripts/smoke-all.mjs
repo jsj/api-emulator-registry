@@ -6,6 +6,7 @@ const checkFiles = [
   'scripts/check-conformance.mjs',
   'scripts/check-cloudflare-openapi-coverage.mjs',
   'scripts/check-github-openapi-coverage.mjs',
+  'scripts/check-gitlab-openapi-coverage.mjs',
   'scripts/check-google-workspace-coverage.mjs',
   'scripts/check-plaid-openapi-coverage.mjs',
   'scripts/check-xbow-openapi-coverage.mjs',

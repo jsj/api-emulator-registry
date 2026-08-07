@@ -45,9 +45,12 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Coverage
 
-- Level: `smoke-only`
-- Meaning: A smoke test starts the emulator and checks its main behavior.
-- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
+- Contract: GitLab 19.2.1 OpenAPI 3.0 (`1702` operations)
+- Stateful: the user, project, issue, merge request, note, discussion, and iteration routes listed above
+- Generic fallback: all other `/api/v4/*` operations return deterministic protocol-compatible placeholder responses
+- Contract check: `npm run contract:gitlab`
+
+The generic fallback provides endpoint and HTTP-method compatibility. It does not reproduce the full state transitions or response schemas of a live GitLab instance. Add a stateful override when a test depends on an operation's semantics.
 
 ## Credentials
 
@@ -69,3 +72,4 @@ gitlab:
 ## Links
 
 - [api-emulator](https://github.com/jsj/api-emulator)
+- [GitLab 19.2.1 OpenAPI 3.0 specification](https://gitlab.com/gitlab-org/gitlab/-/blob/v19.2.1-ee/doc/api/openapi/openapi_v3.yaml)

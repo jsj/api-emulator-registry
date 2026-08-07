@@ -85,7 +85,10 @@ const fallbackPresent =
   pluginSource.includes('stateful-core-plus-openapi-compatible-generic-fallback') &&
   routesSource.includes('function genericOpenApiPayload') &&
   routesSource.includes("app.get('*', fallback)") &&
-  routesSource.includes("app.post('*', fallback)");
+  routesSource.includes("app.post('*', fallback)") &&
+  routesSource.includes("app.put?.('*', fallback)") &&
+  routesSource.includes("app.patch?.('*', fallback)") &&
+  routesSource.includes("app.delete?.('*', fallback)");
 
 if (operations.length < 1000) {
   failures.push(`GitHub OpenAPI parse found too few operations: ${operations.length}`);

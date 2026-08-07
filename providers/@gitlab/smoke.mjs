@@ -46,6 +46,15 @@ await withServer(app, async (baseUrl) => {
 
   const iterations = await fetch(`${baseUrl}/api/v4/groups/${encodeURIComponent('example/team')}/iterations?state=current`);
   assert.equal((await iterations.json())[0].title, 'Current iteration');
+
+  const generic = await fetch(`${baseUrl}/api/v4/projects/${projectPath}/repository/branches`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ branch: 'feature/openapi-fallback' }),
+  });
+  assert.equal(generic.status, 201);
+  assert.equal(generic.headers.get('x-gitlab-emulator-fallback'), 'true');
+  assert.equal((await generic.json()).status, 'created');
 });
 
 console.log('gitlab smoke ok');

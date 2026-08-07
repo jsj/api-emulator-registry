@@ -45,6 +45,10 @@ function withMergeRequestWebUrl(baseUrl, project, mergeRequest) {
   };
 }
 
+async function requestBody(c) {
+  return c.req.header("content-type")?.includes("application/json") ? c.req.json() : c.req.parseBody();
+}
+
 export const plugin = {
   name: "gitlab",
   register(app, store, _webhooks, baseUrl) {
@@ -55,7 +59,12 @@ export const plugin = {
     const mergeRequestNotes = store.collection("gitlab:merge_request_notes", ["merge_request_id"]);
     const mergeRequestDiscussions = store.collection("gitlab:merge_request_discussions", ["merge_request_id"]);
 
-    app.get("/api/v4/user", (c) => c.json({ id: 1001, username: "sample-user", name: "Sample User" }));
+    const sampleUser = { id: 1001, username: "sample-user", name: "Sample User" };
+    app.get("/api/v4/user", (c) => c.json(sampleUser));
+    app.get("/api/v4/users", (c) => {
+      const username = c.req.query("username");
+      return c.json(!username || username === sampleUser.username ? [sampleUser] : []);
+    });
 
     app.get("/api/v4/projects/:project", (c) => {
       const [project, response] = getProjectOr404(c, store, c.req.param("project"));
@@ -81,7 +90,7 @@ export const plugin = {
     app.post("/api/v4/projects/:project/issues", async (c) => {
       const [project, response] = getProjectOr404(c, store, c.req.param("project"));
       if (response) return response;
-      const body = await c.req.parseBody();
+      const body = await requestBody(c);
       const projectIssues = issues.findBy("project_id", project.id);
       const iid = Number(body.iid ?? projectIssues.length + 1);
       const issue = issues.insert({
@@ -114,7 +123,7 @@ export const plugin = {
         candidate.project_id === project.id && candidate.iid === Number(c.req.param("iid"))
       ));
       if (!issue) return c.json({ message: "404 Issue Not Found" }, 404);
-      const body = await c.req.parseBody();
+      const body = await requestBody(c);
       const addLabels = String(body.add_labels ?? body.labels ?? "").split(",").filter(Boolean);
       const removeLabels = String(body.remove_labels ?? "").split(",").filter(Boolean);
       const labels = Array.from(new Set([...issue.labels.filter((label) => !removeLabels.includes(label)), ...addLabels]));
@@ -140,6 +149,60 @@ export const plugin = {
       const [mergeRequest, mergeRequestResponse] = getMergeRequestOr404(c, store, project, c.req.param("iid"));
       if (mergeRequestResponse) return mergeRequestResponse;
       return c.json(withMergeRequestWebUrl(baseUrl, project, mergeRequest));
+    });
+
+    app.get("/api/v4/projects/:project/merge_requests", (c) => {
+      const [project, response] = getProjectOr404(c, store, c.req.param("project"));
+      if (response) return response;
+      const sourceBranch = c.req.query("source_branch");
+      const state = c.req.query("state");
+      return c.json(
+        mergeRequests
+          .all()
+          .filter((mergeRequest) => (
+            mergeRequest.project_id === project.id
+            && (!sourceBranch || mergeRequest.source_branch === sourceBranch)
+            && (!state || state === "all" || mergeRequest.state === state)
+          ))
+          .map((mergeRequest) => withMergeRequestWebUrl(baseUrl, project, mergeRequest)),
+      );
+    });
+
+    app.post("/api/v4/projects/:project/merge_requests", async (c) => {
+      const [project, response] = getProjectOr404(c, store, c.req.param("project"));
+      if (response) return response;
+      const body = await requestBody(c);
+      const projectMergeRequests = mergeRequests.findBy("project_id", project.id);
+      const iid = Math.max(0, ...projectMergeRequests.map((mergeRequest) => Number(mergeRequest.iid))) + 1;
+      const mergeRequest = mergeRequests.insert({
+        project_id: project.id,
+        iid,
+        title: String(body.title ?? "Untitled merge request"),
+        description: String(body.description ?? ""),
+        state: "opened",
+        source_branch: String(body.source_branch ?? ""),
+        target_branch: String(body.target_branch ?? project.default_branch ?? "main"),
+        reviewer_ids: body.reviewer_ids ?? [],
+        web_url: "",
+      });
+      return c.json(withMergeRequestWebUrl(baseUrl, project, mergeRequest), 201);
+    });
+
+    app.put("/api/v4/projects/:project/merge_requests/:iid", async (c) => {
+      const [project, projectResponse] = getProjectOr404(c, store, c.req.param("project"));
+      if (projectResponse) return projectResponse;
+      const [mergeRequest, mergeRequestResponse] = getMergeRequestOr404(c, store, project, c.req.param("iid"));
+      if (mergeRequestResponse) return mergeRequestResponse;
+      const body = await requestBody(c);
+      const updated = mergeRequests.update(mergeRequest.id, {
+        ...mergeRequest,
+        ...(body.title === undefined ? {} : { title: String(body.title) }),
+        ...(body.target_branch === undefined ? {} : { target_branch: String(body.target_branch) }),
+        ...(body.reviewer_ids === undefined ? {} : { reviewer_ids: body.reviewer_ids }),
+        ...(body.state_event === "close" ? { state: "closed" } : {}),
+        ...(body.state_event === "reopen" ? { state: "opened" } : {}),
+      });
+      return c.json(withMergeRequestWebUrl(baseUrl, project, updated));
     });
 
     app.get("/api/v4/projects/:project/merge_requests/:iid/changes", (c) => {
@@ -180,7 +243,7 @@ export const plugin = {
       if (projectResponse) return projectResponse;
       const [mergeRequest, mergeRequestResponse] = getMergeRequestOr404(c, store, project, c.req.param("iid"));
       if (mergeRequestResponse) return mergeRequestResponse;
-      const body = await c.req.parseBody();
+      const body = await requestBody(c);
       const note = mergeRequestNotes.insert({
         merge_request_id: mergeRequest.id,
         body: String(body.body ?? body.message ?? ""),
@@ -202,7 +265,7 @@ export const plugin = {
       if (projectResponse) return projectResponse;
       const [mergeRequest, mergeRequestResponse] = getMergeRequestOr404(c, store, project, c.req.param("iid"));
       if (mergeRequestResponse) return mergeRequestResponse;
-      const body = await c.req.parseBody();
+      const body = await requestBody(c);
       const note = {
         id: `${Date.now()}`,
         type: "DiffNote",
@@ -301,7 +364,7 @@ export function seedFromConfig(store, _baseUrl, config = {}) {
 }
 
 export const label = "GitLab API emulator";
-export const endpoints = "GET/POST/PUT /api/v4/projects/:project/issues, notes, groups/:group/iterations";
+export const endpoints = "GET/POST/PUT /api/v4/projects/:project/issues and merge_requests, merge request notes/discussions, groups/:group/iterations";
 export const contract = {
   service: "gitlab",
   endpoints,

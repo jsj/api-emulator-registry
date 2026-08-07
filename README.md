@@ -5,7 +5,7 @@
 <p align="center">Create the stateful API sandbox that your agent needs.<br>Run the same workflow 1,000 times without test accounts, rate limits, or stale data.</p>
 
 <details open>
-<summary align="center"><img src="./.README/agent-icons/claude.svg" width="18" height="18" alt="Claude">&nbsp;<img src="./.README/agent-icons/cursor.svg" width="18" height="18" alt="Cursor">&nbsp;<img src="./.README/agent-icons/github-copilot.svg" width="18" height="18" alt="GitHub Copilot">&nbsp;<img src="./.README/agent-icons/openai.svg" width="18" height="18" alt="OpenAI">&nbsp;&nbsp;<strong>Copy this prompt to your coding agent</strong></summary>
+<summary align="center"><img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/claude.svg" width="18" height="18" alt="Claude">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/cursor.svg" width="18" height="18" alt="Cursor">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/github-copilot.svg" width="18" height="18" alt="GitHub Copilot">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/openai.svg" width="18" height="18" alt="OpenAI">&nbsp;&nbsp;<strong>Copy this prompt to your coding agent</strong></summary>
 
 ```text
 Set up api-emulator for this repository.
@@ -406,7 +406,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before you send a change.
 <p align="center">Create the stateful API sandbox that your agent needs.<br>Run the same workflow 1,000 times without test accounts, rate limits, or stale data.</p>
 
 <details open>
-<summary align="center"><img src="./.README/agent-icons/claude.svg" width="18" height="18" alt="Claude">&nbsp;<img src="./.README/agent-icons/cursor.svg" width="18" height="18" alt="Cursor">&nbsp;<img src="./.README/agent-icons/github-copilot.svg" width="18" height="18" alt="GitHub Copilot">&nbsp;<img src="./.README/agent-icons/openai.svg" width="18" height="18" alt="OpenAI">&nbsp;&nbsp;<strong>Copy this prompt to your coding agent</strong></summary>
+<summary align="center"><img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/claude.svg" width="18" height="18" alt="Claude">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/cursor.svg" width="18" height="18" alt="Cursor">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/github-copilot.svg" width="18" height="18" alt="GitHub Copilot">&nbsp;<img src="https://cdn.jsdelivr.net/gh/jsj/agent-icons@5d407d8b74fe0361051aa8df6ccbc937470fd950/openai.svg" width="18" height="18" alt="OpenAI">&nbsp;&nbsp;<strong>Copy this prompt to your coding agent</strong></summary>
 
 ```text
 Set up api-emulator for this repository.

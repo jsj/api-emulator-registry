@@ -13,6 +13,11 @@ type WorkersAiInput = {
   text?: string[];
 };
 
+type UnifiedAiRequest = {
+  model?: string;
+  input?: Record<string, unknown>;
+};
+
 type VectorizeVector = {
   id: string;
   values?: number[];
@@ -632,6 +637,41 @@ function workersAiRoutes(app: AppLike): void {
     modelCatalogHandler,
   );
   app.get?.("/client/v4/accounts/:accountId/ai/models", modelCatalogHandler);
+
+  app.post("/client/v4/accounts/:accountId/ai/run", async (c: any) => {
+    const request = (await c.req.json().catch(() => ({}))) as UnifiedAiRequest;
+    const input = request.input ?? {};
+    const model = request.model ?? "unknown";
+    if (model.startsWith("bytedance/seedance-")) {
+      if (input.last_frame_image && !input.image) {
+        return c.json({
+          success: false,
+          errors: [{ message: "last_frame_image requires image" }],
+          messages: [],
+          result: null,
+        }, 400);
+      }
+      return c.json({
+        success: true,
+        errors: [],
+        messages: [],
+        result: {
+          id: `emu-cloudflare-video-${Date.now()}`,
+          state: "Completed",
+          result: { video: "https://media.emulator.invalid/cloudflare/seedance.mp4" },
+          request: { model, input },
+        },
+      });
+    }
+
+    const workersInput = input as WorkersAiInput;
+    return c.json({
+      success: true,
+      errors: [],
+      messages: [],
+      result: { response: generateAiText(extractUserText(workersInput)) },
+    });
+  });
 
   app.post("/client/v4/accounts/:accountId/ai/run/*", async (c: any) => {
     const input = (await c.req.json().catch(() => ({}))) as WorkersAiInput;

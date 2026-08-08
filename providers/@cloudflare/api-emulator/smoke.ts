@@ -146,6 +146,18 @@ assertEqual(matches.matches[0].metadata.title, "First document");
 
 const app = new TestApp();
 cloudflarePlugin.register(app as any);
+const seedanceResponse = await app.request("POST", "/client/v4/accounts/test/ai/run", {
+  model: "bytedance/seedance-2.0",
+  input: {
+    prompt: "Move from the opening pose into the closing pose",
+    image: "https://example.com/start.png",
+    last_frame_image: "https://example.com/end.png",
+    duration: 5,
+  },
+});
+const seedanceResult = (await seedanceResponse.json() as any).result;
+assertEqual(seedanceResult.state, "Completed");
+assertEqual(seedanceResult.request.input.last_frame_image, "https://example.com/end.png");
 const routesDb = `routes-db-${Date.now()}`;
 await app.request("POST", `/client/v4/accounts/test/d1/database/${routesDb}/import`, {
   sql: "CREATE TABLE route_items (id TEXT NOT NULL PRIMARY KEY, name TEXT)",

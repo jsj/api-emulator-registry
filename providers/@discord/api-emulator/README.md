@@ -22,13 +22,25 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Supported API
 
-The emulator source lists the supported local API endpoints.
+The emulator covers the Discord API v10 routes used by `discord-agent`:
+
+- Current bot, guild, channel, role, and member lookups
+- Channel message listing and guild message search
+- Member search
+- Audit-log and AutoMod rule listing
+- Role assignment and removal
+- Member timeout, timeout removal, kick, and ban
+
+The default fixture contains only synthetic identities (`simulation-bot`,
+`sample-admin`, and `sample-member`) and generic operational messages. It does
+not contain names, email addresses, phone numbers, or production identifiers.
 
 ## Coverage
 
-- Level: `stub`
-- Meaning: This emulator has a small starter API.
-- Evidence: starter surface without smoke coverage.
+- Level: `behavioral`
+- Meaning: The `discord-agent` administration surface has Discord-compatible
+  response shapes and stateful moderation behavior.
+- Evidence: provider tests cover reads, search, mutations, and audit reasons.
 
 ## Credentials
 
@@ -40,7 +52,18 @@ Add repeatable test data to the provider configuration.
 
 ```yaml
 discord:
-  # Add provider-specific seed state here.
+  bot_token: discord-emulator-bot-token
+  guilds:
+    - name: Simulation Guild
+      channels:
+        - name: general
+      members:
+        - username: sample-member
+          nick: Sample Member
+      messages:
+        - channel: general
+          author: sample-member
+          content: This is a generic message for local simulation.
 ```
 
 ## Links

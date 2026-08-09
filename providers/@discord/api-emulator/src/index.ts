@@ -1,7 +1,7 @@
 import { registerRoutes, seedDefaults } from "./routes/http.ts";
 import type { DiscordSeedConfig } from "./routes/http.ts";
 
-export { seedFromConfig } from "./routes/http.ts";
+export { getDiscordStore, seedFromConfig } from "./routes/http.ts";
 export type { DiscordSeedConfig } from "./routes/http.ts";
 
 export const plugin = {

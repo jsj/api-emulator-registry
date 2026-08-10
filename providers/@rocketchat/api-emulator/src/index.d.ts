@@ -22,6 +22,7 @@ export interface EmulatorSeed {
 }
 
 export declare const defaultSeed: EmulatorSeed;
+export declare function registerRocketChatRoutes<T>(app: T, seed?: EmulatorSeed): T;
 export declare const plugin: unknown;
 export declare const contract: { service: string; endpoints: string };
 export default plugin;

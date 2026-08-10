@@ -32,6 +32,9 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `GET /api/v1/im.history`
 - `POST /api/v1/chat.postMessage`
 
+History endpoints support `count`, `offset`, `latest`, and `inclusive` for
+incremental synchronization and backward pagination.
+
 ## Coverage
 
 - Level: `smoke-only`

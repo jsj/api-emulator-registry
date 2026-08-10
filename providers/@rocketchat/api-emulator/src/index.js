@@ -34,6 +34,12 @@ export const plugin = {
 
 export default plugin;
 
+export function registerRocketChatRoutes(app, seed = defaultSeed) {
+  const mutableSeed = structuredClone(seed);
+  registerRoutes(app, () => mutableSeed, (message) => appendSeedMessage(mutableSeed, message));
+  return app;
+}
+
 export function seedFromConfig(store, _baseUrl, config = {}) {
   seedStore(store, {
     userId: config.userId ?? defaultSeed.userId,
@@ -203,7 +209,11 @@ function history(c, seed) {
   const roomId = room?._id ?? c.req.query("roomId") ?? "";
   const count = Number(c.req.query("count") ?? "20");
   const offset = Number(c.req.query("offset") ?? "0");
-  const messages = seed.messagesByRoomId[roomId] ?? [];
+  const latest = c.req.query("latest");
+  const inclusive = c.req.query("inclusive") !== "false";
+  const messages = (seed.messagesByRoomId[roomId] ?? []).filter((message) => (
+    !latest || (inclusive ? message.ts <= latest : message.ts < latest)
+  ));
   const ordered = [...messages].reverse();
   const paged = ordered.slice(offset, offset + count);
   return c.json({ success: true, messages: paged, count: paged.length, offset, total: messages.length });

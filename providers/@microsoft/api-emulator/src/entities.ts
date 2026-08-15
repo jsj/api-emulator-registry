@@ -22,3 +22,30 @@ export interface MicrosoftOAuthClient extends Entity {
   /** Tenant ID this app is registered in */
   tenant_id: string;
 }
+
+export interface MicrosoftTeam extends Entity {
+  team_id: string;
+  display_name: string;
+  description: string;
+  tenant_id: string;
+}
+
+export interface MicrosoftChannel extends Entity {
+  channel_id: string;
+  team_id: string;
+  display_name: string;
+  description: string;
+  membership_type: "standard" | "private" | "shared";
+}
+
+export interface MicrosoftChannelMessage extends Entity {
+  message_id: string;
+  team_id: string;
+  channel_id: string;
+  created_date_time: string;
+  last_modified_date_time: string;
+  content_type: "text" | "html";
+  content: string;
+  from_user_id: string;
+  from_display_name: string;
+}

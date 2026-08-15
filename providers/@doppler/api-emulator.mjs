@@ -10,6 +10,10 @@ function initialState(config = {}) {
         description: 'Doppler emulator project',
         created_at: '2020-09-01T23:57:27.052Z',
       },
+      { id: 'proj_example', name: 'Example Product', slug: 'example', description: 'Shared product secrets', created_at: fixedNow },
+      { id: 'proj_example_web', name: 'Example Product Web', slug: 'example-web', description: 'Web surface secrets', created_at: fixedNow },
+      { id: 'proj_example_worker', name: 'Example Product Worker', slug: 'example-worker', description: 'Worker surface secrets', created_at: fixedNow },
+      { id: 'proj_example_ios', name: 'Example Product iOS', slug: 'example-ios', description: 'iOS surface secrets', created_at: fixedNow },
     ],
     configs: [
       {
@@ -22,6 +26,11 @@ function initialState(config = {}) {
         last_fetch_at: fixedNow,
         created_at: '2019-11-21T03:45:47.982Z',
       },
+      ...['example', 'example-web', 'example-worker', 'example-ios'].flatMap((project) => [
+        { name: 'dev', project, environment: 'dev', root: true, locked: false, initial_fetch_at: fixedNow, last_fetch_at: fixedNow, created_at: fixedNow },
+        { name: 'prd', project, environment: 'prd', root: true, locked: true, initial_fetch_at: fixedNow, last_fetch_at: fixedNow, created_at: fixedNow },
+      ]),
+      { name: 'dev_personal', project: 'example-ios', environment: 'dev', root: false, locked: false, initial_fetch_at: fixedNow, last_fetch_at: fixedNow, created_at: fixedNow },
     ],
     secrets: {
       demo: {
@@ -38,6 +47,38 @@ function initialState(config = {}) {
           ROBINHOOD_MCP_TRADING_URL: { raw: 'https://agent.robinhood.com/mcp/trading', computed: 'https://agent.robinhood.com/mcp/trading' },
           ROBINHOOD_MCP_UNTIL: { raw: '2021-12-31', computed: '2021-12-31' },
         },
+      },
+      example: {
+        dev: {
+          SHARED_API_URL: { raw: 'https://dev.example.invalid', computed: 'https://dev.example.invalid' },
+          SHARED_TOKEN: { raw: 'dev-shared-token', computed: 'dev-shared-token', visibility: 'masked' },
+        },
+        prd: {
+          SHARED_API_URL: { raw: 'https://example.invalid', computed: 'https://example.invalid' },
+          SHARED_TOKEN: { raw: 'prod-shared-token', computed: 'prod-shared-token', visibility: 'masked' },
+        },
+      },
+      'example-web': {
+        dev: {
+          WEB_ORIGIN: { raw: 'http://localhost:3000', computed: 'http://localhost:3000' },
+          SHARED_API_URL: { raw: '${SHARED_API_URL}', computed: 'https://dev.example.invalid', note: 'Computed reference fixture' },
+        },
+        prd: { WEB_ORIGIN: { raw: 'https://web.example.invalid', computed: 'https://web.example.invalid' } },
+      },
+      'example-worker': {
+        dev: { WORKER_QUEUE: { raw: 'dev-jobs', computed: 'dev-jobs' } },
+        prd: { WORKER_QUEUE: { raw: 'prod-jobs', computed: 'prod-jobs' } },
+      },
+      'example-ios': {
+        dev: {
+          IOS_BUNDLE_ID: { raw: 'dev.invalid.example.app', computed: 'dev.invalid.example.app' },
+          IOS_SHARED: { raw: 'inherited-from-root', computed: 'inherited-from-root' },
+        },
+        dev_personal: {
+          IOS_BUNDLE_ID: { raw: 'dev.personal.invalid.example.app', computed: 'dev.personal.invalid.example.app' },
+          PERSONAL_DEVICE: { raw: 'simulator', computed: 'simulator' },
+        },
+        prd: { IOS_BUNDLE_ID: { raw: 'invalid.example.app', computed: 'invalid.example.app' } },
       },
     },
     ...config,
@@ -69,7 +110,12 @@ function page(c) {
 }
 
 function projectSecrets(current, project, config) {
-  return current.secrets?.[project]?.[config];
+  const own = current.secrets?.[project]?.[config];
+  if (!own) return undefined;
+  const metadata = current.configs.find((item) => item.project === project && item.name === config);
+  if (metadata?.root !== false) return own;
+  const root = current.configs.find((item) => item.project === project && item.environment === metadata.environment && item.root === true);
+  return root ? { ...current.secrets?.[project]?.[root.name], ...own } : own;
 }
 
 function flatSecrets(secrets = {}) {

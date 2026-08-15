@@ -27,8 +27,10 @@ The emulator supports these Apple Ads Platform API v1 areas:
 - Apps, eligibility records, and app locale details
 - Campaigns, ad groups, keywords, negative keywords, and ads
 - Creatives, product pages, assets, rejection reasons, and shared budgets
+- Business brands, business categories, location groups, and locations
 - Bulk keyword operations
 - Campaign, ad group, ad, keyword, and search-term reports
+- Business-brand campaign, ad group, ad, keyword, and search-term reports
 - Impression-share reports and search-term-popularity reports
 - Ad accounts, organizations, access lists, and advertiser resources
 - Recommendations, suggestions, and change history
@@ -53,9 +55,9 @@ The test data does not contain production credentials or customer information.
 ## Coverage
 
 - Level: `full-operation`
-- Operations: `78 of 78`
+- Operations: `104 of 104`
 - Contract: `GET /openapi.json`
-- Evidence: The coverage check calls every operation in the July 2026 guide.
+- Evidence: The coverage check calls every operation in the generated contract.
 
 Run the coverage check from the registry root:
 
@@ -65,6 +67,8 @@ npm run contract:apple-ads
 
 The OpenAPI document uses general request and response schemas.
 Apple has not published the complete v1 field schemas.
+The July 2026 preview guide lists 78 operations.
+Apple Developer documentation supplies 26 additional operations.
 
 ## Links
 

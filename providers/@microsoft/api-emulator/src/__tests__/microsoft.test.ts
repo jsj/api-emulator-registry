@@ -361,6 +361,78 @@ describe("Microsoft plugin integration", () => {
     expect(body["@odata.context"]).toContain("$metadata#users");
   });
 
+  // --- Microsoft Teams Graph endpoints ---
+
+  it("lists joined teams and their channels using Graph collection envelopes", async () => {
+    const teamsRes = await app.request(`${base}/v1.0/me/joinedTeams`);
+    expect(teamsRes.status).toBe(200);
+    const teams = (await teamsRes.json()) as { value: Array<{ id: string; displayName: string }> };
+    expect(teams.value).toEqual([
+      expect.objectContaining({ id: "00000000-0000-0000-0000-000000000001", displayName: "Emulator Team" }),
+    ]);
+
+    const channelsRes = await app.request(`${base}/v1.0/teams/${teams.value[0].id}/channels`);
+    expect(channelsRes.status).toBe(200);
+    const channels = (await channelsRes.json()) as { value: Array<{ id: string; displayName: string; membershipType: string }> };
+    expect(channels.value).toEqual([
+      expect.objectContaining({ id: "19:general@thread.tacv2", displayName: "General", membershipType: "standard" }),
+    ]);
+  });
+
+  it("sends and then lists a stateful Teams channel message", async () => {
+    const path = `${base}/v1.0/teams/00000000-0000-0000-0000-000000000001/channels/${encodeURIComponent("19:general@thread.tacv2")}/messages`;
+    const sendRes = await app.request(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: { contentType: "html", content: "Hello <b>team</b>" } }),
+    });
+    expect(sendRes.status).toBe(201);
+    const sent = (await sendRes.json()) as { id: string; body: { contentType: string; content: string } };
+    expect(sent.id).toBeDefined();
+    expect(sent.body).toEqual({ contentType: "html", content: "Hello <b>team</b>" });
+
+    const listRes = await app.request(path);
+    expect(listRes.status).toBe(200);
+    const messages = (await listRes.json()) as { value: Array<{ id: string }> };
+    expect(messages.value.some((message) => message.id === sent.id)).toBe(true);
+
+    const getRes = await app.request(`${path}/${sent.id}`);
+    expect(getRes.status).toBe(200);
+    expect(await getRes.json()).toEqual(expect.objectContaining({ id: sent.id }));
+  });
+
+  it("returns Graph-shaped errors for missing Teams resources and invalid messages", async () => {
+    const missing = await app.request(`${base}/v1.0/teams/missing/channels`);
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toEqual(expect.objectContaining({ error: expect.objectContaining({ code: "NotFound" }) }));
+
+    const invalid = await app.request(`${base}/v1.0/teams/00000000-0000-0000-0000-000000000001/channels/${encodeURIComponent("19:general@thread.tacv2")}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: {} }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toEqual(expect.objectContaining({ error: expect.objectContaining({ code: "BadRequest" }) }));
+  });
+
+  it("accepts unmodeled Microsoft Graph v1.0 operations through the OpenAPI fallback", async () => {
+    const listRes = await app.request(`${base}/v1.0/groups`);
+    expect(listRes.status).toBe(200);
+    expect(await listRes.json()).toEqual(expect.objectContaining({ value: [] }));
+
+    const createRes = await app.request(`${base}/v1.0/groups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: "Local Group" }),
+    });
+    expect(createRes.status).toBe(201);
+    expect(await createRes.json()).toEqual(expect.objectContaining({ id: expect.any(String), displayName: "Local Group" }));
+
+    expect((await app.request(`${base}/v1.0/groups/local-group`, { method: "PATCH", body: "{}" })).status).toBe(204);
+    expect((await app.request(`${base}/v1.0/groups/local-group`, { method: "DELETE" })).status).toBe(204);
+    expect(await (await app.request(`${base}/v1.0/groups/$count`)).text()).toBe("0");
+  });
+
   // --- Logout endpoint ---
 
   it("GET /oauth2/v2.0/logout redirects when post_logout_redirect_uri is registered", async () => {

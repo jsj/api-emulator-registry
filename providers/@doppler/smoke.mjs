@@ -8,6 +8,7 @@ assert.equal(contract.provider, 'doppler');
 const projects = await harness.call('GET', '/v3/projects?page=1&per_page=20', undefined, { authorization: 'Bearer dp.st.emulator' });
 assert.equal(projects.payload.success, true);
 assert.equal(projects.payload.projects[0].slug, 'demo');
+assert.equal(projects.payload.projects.length, 5);
 
 const configs = await harness.call('GET', '/v3/configs?project=demo', undefined, { authorization: 'Bearer dp.st.emulator' });
 assert.equal(configs.payload.configs[0].name, 'dev');
@@ -31,5 +32,18 @@ assert.equal(download.payload.ROBINHOOD_MCP_HISTORICAL_END_TIME, '2026-06-22T00:
 assert.equal(download.payload.ROBINHOOD_MCP_HISTORICAL_INTERVAL, 'day');
 assert.equal(download.payload.ROBINHOOD_MCP_SINCE, '2021-01-01');
 assert.equal(download.payload.ROBINHOOD_MCP_UNTIL, '2021-12-31');
+
+const productConfigs = await harness.call('GET', '/v3/configs?project=example-worker');
+assert.deepEqual(productConfigs.payload.configs.map((config) => config.name), ['dev', 'prd']);
+
+const iosConfigs = await harness.call('GET', '/v3/configs?project=example-ios');
+assert.equal(iosConfigs.payload.configs.find((config) => config.name === 'dev_personal').root, false);
+const personalDownload = await harness.call('GET', '/v3/configs/config/secrets/download?project=example-ios&config=dev_personal&format=json');
+assert.equal(personalDownload.payload.IOS_SHARED, 'inherited-from-root');
+assert.equal(personalDownload.payload.IOS_BUNDLE_ID, 'dev.personal.invalid.example.app');
+
+const referenced = await harness.call('GET', '/v3/configs/config/secrets?project=example-web&config=dev');
+assert.equal(referenced.payload.secrets.SHARED_API_URL.raw, '${SHARED_API_URL}');
+assert.equal(referenced.payload.secrets.SHARED_API_URL.computed, 'https://dev.example.invalid');
 
 console.log('doppler smoke ok');

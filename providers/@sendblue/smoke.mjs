@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { createHarness } from '../../scripts/provider-smoke-harness.mjs';
+import { contract, plugin } from './api-emulator.mjs';
+const harness = createHarness(plugin); assert.equal(contract.provider, 'sendblue');
+const auth = { 'sb-api-key-id': 'local-key', 'sb-api-secret-key': 'local-secret' };
+const sent = await harness.call('POST', '/api/send-message', { number: '+15555550199', from_number: '+15555550100', content: 'Hello from smoke.' }, { ...auth, 'content-type': 'application/json' }); assert.match(sent.payload.message_handle, /^msg_emulator_/);
+const messages = await harness.call('GET', '/api/v2/messages?number=%2B15555550199', undefined, auth); assert.equal(messages.payload.data[0].content, 'Hello from smoke.');
+const created = await harness.call('POST', '/api/v2/contacts', { number: '+15555550199', first_name: 'Smoke' }, { ...auth, 'content-type': 'application/json' }); assert.equal(created.payload.contact.firstName, 'Smoke');
+const lookup = await harness.call('GET', '/api/evaluate-service?number=%2B15555550199', undefined, auth); assert.equal(lookup.payload.service, 'iMessage');
+const hooks = await harness.call('POST', '/api/account/webhooks', { type: 'receive', webhooks: ['https://example.com/sendblue'] }, { ...auth, 'content-type': 'application/json' }); assert.deepEqual(hooks.payload.webhooks.receive, ['https://example.com/sendblue']);
+console.log('sendblue smoke ok');

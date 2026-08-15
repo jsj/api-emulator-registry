@@ -66,6 +66,12 @@
       "specifier": "./providers/@apple/api-emulator/src/index.ts",
       "description": "Apple provides Sign in with Apple, CloudKit/iCloud app data, APNs, device, and platform services for iOS and macOS apps."
     },
+    "apple-ads": {
+      "kind": "package",
+      "packageName": "@api-emulator/apple-ads",
+      "specifier": "./providers/@apple-ads/api-emulator.mjs",
+      "description": "Apple Ads Platform API v1 provides campaign management, reporting, recommendations, search popularity, account management, and change history."
+    },
     "apple-maps": {
       "kind": "package",
       "packageName": "@api-emulator/apple-maps",
@@ -666,6 +672,12 @@
       "specifier": "./providers/@linkedin/api-emulator.mjs",
       "description": "LinkedIn provides profile, organization, posting, advertising, analytics, and OAuth APIs for professional network workflows."
     },
+    "linq": {
+      "kind": "package",
+      "packageName": "@api-emulator/linq",
+      "specifier": "./providers/@linq/api-emulator.mjs",
+      "description": "Linq provides APIs for iMessage, RCS, and SMS chats, messages, phone numbers, and webhook subscriptions."
+    },
     "linode": {
       "kind": "package",
       "packageName": "@api-emulator/linode",
@@ -712,7 +724,7 @@
       "kind": "package",
       "packageName": "@api-emulator/microsoft",
       "specifier": "./providers/@microsoft/api-emulator/src/index.ts",
-      "description": "Microsoft provides identity, tenant, user, and productivity APIs through Microsoft Graph-style surfaces."
+      "description": "Microsoft provides stateful identity and Teams APIs with an OpenAPI-compatible fallback for Microsoft Graph v1.0."
     },
     "mintlify": {
       "kind": "package",
@@ -1001,6 +1013,12 @@
       "packageName": "@api-emulator/schwab",
       "specifier": "./providers/@schwab/api-emulator.mjs",
       "description": "Charles Schwab Trader API provides OAuth, brokerage accounts, account hashes, orders, quotes, and option chain data."
+    },
+    "sendblue": {
+      "kind": "package",
+      "packageName": "@api-emulator/sendblue",
+      "specifier": "./providers/@sendblue/api-emulator.mjs",
+      "description": "Sendblue provides APIs for iMessage, RCS, SMS, contacts, phone lines, and webhooks."
     },
     "sentry": {
       "kind": "package",

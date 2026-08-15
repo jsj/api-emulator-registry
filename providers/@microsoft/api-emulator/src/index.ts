@@ -3,6 +3,8 @@ import type { ServicePlugin, Store, WebhookDispatcher, TokenMap, AppEnv, RouteCo
 import { getMicrosoftStore } from "./store.js";
 import { generateOid, DEFAULT_TENANT_ID } from "./helpers.js";
 import { oauthRoutes } from "./routes/oauth.js";
+import { teamsRoutes } from "./routes/teams.js";
+import { graphFallbackRoutes } from "./routes/graph-fallback.js";
 
 export { getMicrosoftStore, type MicrosoftStore } from "./store.js";
 export * from "./entities.js";
@@ -22,6 +24,13 @@ export interface MicrosoftSeedConfig {
     redirect_uris: string[];
     tenant_id?: string;
   }>;
+  teams?: Array<{
+    id?: string;
+    display_name: string;
+    description?: string;
+    tenant_id?: string;
+    channels?: Array<{ id?: string; display_name: string; description?: string; membership_type?: "standard" | "private" | "shared" }>;
+  }>;
 }
 
 function seedDefaults(store: Store, _baseUrl: string): void {
@@ -36,6 +45,15 @@ function seedDefaults(store: Store, _baseUrl: string): void {
     email_verified: true,
     tenant_id: DEFAULT_TENANT_ID,
     preferred_username: "testuser@outlook.com",
+  });
+
+  const teamId = "00000000-0000-0000-0000-000000000001";
+  ms.teams.insert({ team_id: teamId, display_name: "Emulator Team", description: "Default Microsoft Teams workspace", tenant_id: DEFAULT_TENANT_ID });
+  ms.channels.insert({ channel_id: "19:general@thread.tacv2", team_id: teamId, display_name: "General", description: "General discussion", membership_type: "standard" });
+  ms.channelMessages.insert({
+    message_id: "1704067200000", team_id: teamId, channel_id: "19:general@thread.tacv2",
+    created_date_time: "2024-01-01T00:00:00.000Z", last_modified_date_time: "2024-01-01T00:00:00.000Z",
+    content_type: "text", content: "Welcome to the Emulator Team.", from_user_id: ms.users.all()[0]!.oid, from_display_name: ms.users.all()[0]!.name,
   });
 }
 
@@ -74,17 +92,40 @@ export function seedFromConfig(store: Store, _baseUrl: string, config: Microsoft
       });
     }
   }
+
+  for (const team of config.teams ?? []) {
+    const teamId = team.id ?? generateOid();
+    if (!ms.teams.findOneBy("team_id", teamId)) ms.teams.insert({ team_id: teamId, display_name: team.display_name, description: team.description ?? "", tenant_id: team.tenant_id ?? DEFAULT_TENANT_ID });
+    for (const channel of team.channels ?? []) {
+      const channelId = channel.id ?? `19:${generateOid()}@thread.tacv2`;
+      if (!ms.channels.findOneBy("channel_id", channelId)) ms.channels.insert({ channel_id: channelId, team_id: teamId, display_name: channel.display_name, description: channel.description ?? "", membership_type: channel.membership_type ?? "standard" });
+    }
+  }
 }
+
+export const contract = {
+  provider: "microsoft",
+  source: "Microsoft Graph v1.0 documentation",
+  docs: "https://learn.microsoft.com/graph/api/resources/teams-api-overview?view=graph-rest-1.0",
+  scope: ["oauth", "users", "teams", "channels", "channel-messages"],
+  fidelity: "stateful-core-plus-openapi-compatible-generic-fallback",
+  openapiVersion: "v1.0",
+  openapiOperationCount: 17531,
+  openapiCommit: "bd05c95ec804b2eec35e787a524976b67f9a5e36",
+} as const;
 
 export const microsoftPlugin: ServicePlugin = {
   name: "microsoft",
   register(app: Hono<AppEnv>, store: Store, webhooks: WebhookDispatcher, baseUrl: string, tokenMap?: TokenMap): void {
     const ctx: RouteContext = { app, store, webhooks, baseUrl, tokenMap };
     oauthRoutes(ctx);
+    teamsRoutes(ctx);
+    graphFallbackRoutes(ctx);
   },
   seed(store: Store, baseUrl: string): void {
     seedDefaults(store, baseUrl);
   },
 };
 
+export const plugin = microsoftPlugin;
 export default microsoftPlugin;

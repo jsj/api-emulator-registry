@@ -21,7 +21,7 @@ const implemented = new Set(
 );
 
 assert.deepEqual([...implemented].sort(), [...documented].sort());
-assert.equal(documented.size, 78);
+assert.equal(documented.size, 104);
 assert.equal(new Set([...documented].map((item) => item.split(' ')[0])).size, 4);
 
 const fixtureIDs = [
@@ -33,6 +33,11 @@ const fixtureIDs = [
   ['/ads/', '777888999'],
   ['/shared-budgets/', '777890001'],
   ['/creatives/', '666777888'],
+  ['/assets/', 'asset-iphone-1'],
+  ['/business-brands/', 'brand-12345678'],
+  ['/business-categories/', 'TRAVEL'],
+  ['/location-groups/', '333444555'],
+  ['/locations/', 'geo-us-nyc'],
   ['/product-pages/', 'product-page-671'],
   ['/rejection-reasons/apps/', '1111111'],
   ['/ad-accounts/', '123456789'],

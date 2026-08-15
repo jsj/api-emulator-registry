@@ -26,6 +26,12 @@ function initialState() {
     keywords: [{ id: 888999000, adAccountId: AD_ACCOUNT_ID, campaignId: 444555666, adGroupId: 555666777, text: 'travel planner', status: 'ENABLED', matchType: 'BROAD', bid: money('1.75'), displayStatus: 'RUNNING', creationTime: fixedNow, modificationTime: fixedNow, deleted: false }],
     negativeKeywords: [{ id: 888999100, adAccountId: AD_ACCOUNT_ID, campaignId: 444555666, text: 'free', status: 'ENABLED', matchType: 'BROAD', creationTime: fixedNow, modificationTime: fixedNow, deleted: false }],
     creatives: [{ id: 666777888, adAccountId: AD_ACCOUNT_ID, name: 'Default Product Page', creativeType: 'DEFAULT_PRODUCT_PAGE', destination: { destinationType: 'APP_STORE_PRODUCT_PAGE', parameters: { adamId: '999999999' } }, systemStatus: 'VALID', systemStatusReasons: [], deleted: false, creationTime: fixedNow, modificationTime: fixedNow }],
+    businessBrands: [{ id: 'brand-12345678', name: 'AwayFinder', status: 'ACTIVE', categoryId: 'TRAVEL', deleted: false }],
+    businessCategories: [{ id: 'TRAVEL', name: 'Travel', parentId: null }],
+    brandRejectionReasons: [{ id: 'brand-rejection-1', brandId: 'brand-12345678', reasonCode: 'ASSET_REVIEW_REQUIRED', reasonLevel: 'BUSINESS_BRAND' }],
+    locationGroups: [{ id: 333444555, name: 'New York Metro', locations: ['geo-us-nyc'], deleted: false, creationTime: fixedNow, modificationTime: fixedNow }],
+    locations: [{ id: 'geo-us-nyc', name: 'New York', entity: 'Locality', countryOrRegion: 'US', adminArea: 'New York' }],
+    supportedLanguages: [{ languageCode: 'en-US', language: 'English', storefronts: ['US'] }],
     ads: [{ id: 777888999, adAccountId: AD_ACCOUNT_ID, campaignId: 444555666, adGroupId: 555666777, creativeId: 666777888, name: 'AwayFinder Default Ad', status: 'ENABLED', displayStatus: 'RUNNING', systemStatus: 'RUNNING', systemStatusReasons: [], systemStatusLimitingReasons: [], creationTime: fixedNow, modificationTime: fixedNow, deleted: false }],
     sharedBudgets: [{ id: 777890001, name: 'AwayFinder Q3 Budget', startTime: '2026-07-01T00:00:00.000', endTime: '2026-09-30T23:59:59.000', value: money('20000.00'), adAccountIds: [AD_ACCOUNT_ID], deleted: false }],
     productPages: [{ id: 'product-page-671', adamId: 999999999, name: 'Travel Product Page', state: 'VISIBLE', deepLink: 'awayfinder://travel', creationTime: fixedNow, modificationTime: fixedNow }],
@@ -179,10 +185,10 @@ function recommendationResult(s, type, action, body) {
 
 export const contract = {
   provider: 'apple-ads',
-  source: 'Apple Ads Platform API Preview Release Notes v1, July 2026',
+  source: 'Apple Ads Platform API preview guide and Apple Developer documentation',
   docs: 'https://ads.apple.com/adsdam/app-store/us/en_us/documents/api-preview-guide.pdf',
   baseUrls: ['https://api.ads.apple.com/v1/'],
-  scope: ['oauth_context', 'apps', 'eligibility', 'campaigns', 'adgroups', 'keywords', 'negative_keywords', 'ads', 'shared_budgets', 'creatives', 'product_pages', 'rejection_reasons', 'assets', 'reports', 'impression_share', 'account_management', 'bulk_operations', 'recommendations', 'suggestions', 'search_term_popularity', 'change_history'],
+  scope: ['oauth_context', 'apps', 'eligibility', 'campaigns', 'adgroups', 'keywords', 'negative_keywords', 'ads', 'shared_budgets', 'creatives', 'product_pages', 'rejection_reasons', 'assets', 'business_brands', 'business_categories', 'location_groups', 'locations', 'reports', 'impression_share', 'account_management', 'bulk_operations', 'recommendations', 'suggestions', 'search_term_popularity', 'change_history'],
   fidelity: 'stateful-platform-api-v1-preview',
   openapi: 'apple-ads-platform-api-v1.openapi.json',
   operationCount: Object.values(openapi.paths).flatMap((path) => Object.keys(path)).length,
@@ -201,7 +207,8 @@ export const plugin = {
     registerCrud(app, store, 'negative-keywords', 'negativeKeywords');
     registerCrud(app, store, 'ads', 'ads');
     registerCrud(app, store, 'shared-budgets', 'sharedBudgets');
-    registerCrud(app, store, 'creatives', 'creatives', { update: false, remove: false });
+    registerCrud(app, store, 'creatives', 'creatives');
+    registerCrud(app, store, 'location-groups', 'locationGroups');
     registerBulk(app, store, 'keywords', 'keywords');
     registerBulk(app, store, 'negative-keywords', 'negativeKeywords');
 
@@ -209,14 +216,26 @@ export const plugin = {
     app.post('/v1/eligibilities/apps/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).eligibilities, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
     app.get('/v1/apps/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).apps.find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'App not found.', 404); });
     app.post('/v1/apps/:id/locale-details/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).appLocales.filter((row) => String(row.adamId) === c.req.param('id')), await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+    app.post('/v1/metadata/apps/supported-languages/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).supportedLanguages, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+    app.get('/v1/campaigns/:id/legacy-app-limited-status-reason-details', (c) => { const auth = requireAuth(c); if (auth) return auth; return c.json(envelope({ campaignId: Number(c.req.param('id')), reasons: [] })); });
 
     app.post('/v1/product-pages/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).productPages, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
     app.get('/v1/product-pages/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).productPages.find((item) => item.id === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'Product page not found.', 404); });
     app.post('/v1/product-pages/locale-details/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).productPageLocales, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
     for (const [path, key] of [['assets', 'assets'], ['rejection-reasons/apps', 'rejectionReasons']]) app.post(`/v1/${path}/query`, async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store)[key], await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+    app.post('/v1/assets/upload', async (c) => { const auth = requireAuth(c); if (auth) return auth; const s = state(store); const row = resource('assets', await readBody(c), s, `asset-${s.nextId++}`); s.assets.push(row); save(store, s); return c.json(envelope(row)); });
+    app.get('/v1/assets/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).assets.find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'Asset not found.', 404); });
+    app.delete('/v1/assets/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const s = state(store); const row = s.assets.find((item) => String(item.id) === c.req.param('id')); if (!row) return apiError(c, 'NOT_FOUND', 'Asset not found.', 404); row.deleted = true; save(store, s); return c.json(envelope(row)); });
     app.get('/v1/rejection-reasons/apps/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).rejectionReasons.find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'Rejection reason not found.', 404); });
 
+    for (const [path, key] of [['business-brands', 'businessBrands'], ['business-categories', 'businessCategories']]) {
+      app.post(`/v1/${path}/query`, async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store)[key], await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+      app.get(`/v1/${path}/:id`, (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store)[key].find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', `${path} resource not found.`, 404); });
+    }
+    app.post('/v1/rejection-reasons/business-brands/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).brandRejectionReasons, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+
     for (const kind of ['campaigns', 'adgroups', 'ads', 'keywords', 'searchterms']) app.post(`/v1/reports/apps/${kind}/query`, (c) => { const auth = requireAuth(c); if (auth) return auth; return c.json(envelope({ rows: reportRows(kind, state(store)), summary: { grandTotal: reportRows(kind, state(store))[0].totalMetrics } })); });
+    for (const kind of ['campaigns', 'adgroups', 'ads', 'keywords', 'searchterms']) app.post(`/v1/reports/business-brands/${kind}/query`, (c) => { const auth = requireAuth(c); if (auth) return auth; return c.json(envelope({ rows: reportRows(kind, state(store)), summary: { grandTotal: reportRows(kind, state(store))[0].totalMetrics } })); });
     app.post('/v1/insights/apps/impression-share/query', (c) => { const auth = requireAuth(c); if (auth) return auth; return c.json(envelope({ rows: [{ adamId: 999999999, countryOrRegion: 'US', searchTerm: 'travel planner', impressionShare: 0.42, impressionShareType: 'ALL_SLOTS' }] }, { offset: 0, pageSize: 20, totalCount: 1 })); });
     app.post('/v1/insights/apps/search-term-popularity/query', (c) => { const auth = requireAuth(c); if (auth) return auth; return c.json(envelope({ rows: [{ week: '2026-08-09', countryOrRegion: 'US', genre: 'PRODUCTIVITY', searchTerm: 'task manager', rankInGenre: 1, searchPopularityInGenre: 95, searchPopularity1to100: 88, searchPopularity1to5: 5 }, { week: '2026-08-09', countryOrRegion: 'US', genre: 'PRODUCTIVITY', searchTerm: 'travel planner', rankInGenre: 2, searchPopularityInGenre: 89, searchPopularity1to100: 84, searchPopularity1to5: 5 }] }, { offset: 0, pageSize: 20, totalCount: 2 })); });
 
@@ -224,6 +243,10 @@ export const plugin = {
     app.get('/v1/acls', (c) => requireAuth(c) ?? c.json(envelope({ acls: [{ adAccount: state(store).adAccounts[0], roles: ['Admin'] }] })));
     app.get('/v1/orgs/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).orgs.find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'Organization not found.', 404); });
     app.get('/v1/advertiser-resources', (c) => requireAuth(c) ?? c.json(envelope([{ resourceId: '12345678', resourceType: c.req.query('resourceType') ?? 'CONTENT_PROVIDER', resourceName: 'AwayFinder Apps' }])));
+    app.get('/v1/search/geo', (c) => { const auth = requireAuth(c); if (auth) return auth; const term = String(c.req.query('query') ?? c.req.query('term') ?? '').toLowerCase(); return c.json(page(state(store).locations.filter((row) => !term || row.name.toLowerCase().includes(term)))); });
+    app.post('/v1/search/geo', async (c) => { const auth = requireAuth(c); if (auth) return auth; const body = await readBody(c); const ids = body.ids ?? body.locationIds ?? []; const rows = state(store).locations.filter((row) => ids.length === 0 || ids.map(String).includes(String(row.id))); return c.json(page(rows)); });
+    app.post('/v1/locations/query', async (c) => { const auth = requireAuth(c); if (auth) return auth; const q = queryRows(state(store).locations, await readBody(c)); return c.json(envelope(q.selected, q.pagination)); });
+    app.get('/v1/locations/:id', (c) => { const auth = requireAuth(c); if (auth) return auth; const row = state(store).locations.find((item) => String(item.id) === c.req.param('id')); return row ? c.json(envelope(row)) : apiError(c, 'NOT_FOUND', 'Location not found.', 404); });
     app.post('/v1/ad-accounts', async (c) => {
       const auth = requireAuth(c); if (auth) return auth;
       const s = state(store); const row = resource('adAccounts', await readBody(c), s); s.adAccounts.push(row); save(store, s);

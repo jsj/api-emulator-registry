@@ -4,7 +4,7 @@ import { contract, plugin } from './api-emulator.mjs';
 
 assert.equal(contract.provider, 'apple-ads');
 assert.deepEqual(contract.baseUrls, ['https://api.ads.apple.com/v1/']);
-assert.equal(contract.operationCount, 78);
+assert.equal(contract.operationCount, 104);
 
 const app = createApp();
 const store = new Store();
@@ -34,6 +34,23 @@ await withServer(app, async (baseUrl) => {
   assert.equal(recommendations.result[0].popularity, 85);
   const change = await (await fetch(`${baseUrl}/v1/change-history/Campaign.444555666.txn_abc123def456`, { headers })).json();
   assert.equal(change.dataType, 'ChangeDetail');
+  const brands = await (await fetch(`${baseUrl}/v1/business-brands/query`, { method: 'POST', headers, body: '{}' })).json();
+  assert.equal(brands.result[0].name, 'AwayFinder');
+  const locations = await (await fetch(`${baseUrl}/v1/locations/query`, { method: 'POST', headers, body: '{}' })).json();
+  assert.equal(locations.result[0].name, 'New York');
+
+  const locationGroup = await (await fetch(`${baseUrl}/v1/location-groups`, { method: 'POST', headers, body: JSON.stringify({ name: 'California', locations: ['geo-us-sfo'] }) })).json();
+  const updatedLocationGroup = await (await fetch(`${baseUrl}/v1/location-groups/${locationGroup.result.id}`, { method: 'PUT', headers, body: JSON.stringify({ name: 'California Markets' }) })).json();
+  assert.equal(updatedLocationGroup.result.name, 'California Markets');
+  const deletedLocationGroup = await (await fetch(`${baseUrl}/v1/location-groups/${locationGroup.result.id}`, { method: 'DELETE', headers })).json();
+  assert.equal(deletedLocationGroup.result.deleted, true);
+
+  const asset = await (await fetch(`${baseUrl}/v1/assets/upload`, { method: 'POST', headers, body: JSON.stringify({ assetType: 'LOGO', promotedObjectId: 'brand-12345678' }) })).json();
+  const deletedAsset = await (await fetch(`${baseUrl}/v1/assets/${asset.result.id}`, { method: 'DELETE', headers })).json();
+  assert.equal(deletedAsset.result.deleted, true);
+
+  const creative = await (await fetch(`${baseUrl}/v1/creatives/666777888`, { method: 'PUT', headers, body: JSON.stringify({ name: 'Updated Product Page' }) })).json();
+  assert.equal(creative.result.name, 'Updated Product Page');
 
   const inspected = await (await fetch(`${baseUrl}/inspect/state`)).json();
   assert.ok(inspected.keywords.some((row) => row.text === 'trip planner'));

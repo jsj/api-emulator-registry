@@ -4,6 +4,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "check:secrets": "gitleaks detect --source . --redact --no-banner",
     "provider-wall": "node scripts/update-provider-wall.mjs",
     "check:provider-wall": "node scripts/update-provider-wall.mjs --check",
     "provider-readmes": "node scripts/generate-provider-readmes.mjs",

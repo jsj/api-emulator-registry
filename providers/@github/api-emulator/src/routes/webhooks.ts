@@ -1,4 +1,5 @@
-import type { RouteContext, AuthUser, WebhookDelivery } from "@api-emulator/core";
+import { createHmac } from "crypto";
+import type { RouteContext, AuthUser, WebhookDelivery, WebhookHeaderContext } from "@api-emulator/core";
 import { ApiError, forbidden, parseJsonBody, parsePagination, setLinkHeader, unauthorized } from "@api-emulator/core";
 import { getGitHubStore } from "../store.js";
 import type { GitHubStore } from "../store.js";
@@ -104,6 +105,18 @@ function parseHookConfig(raw: unknown, existing?: GitHubWebhook["config"]): GitH
   return { url, content_type, secret, insecure_ssl };
 }
 
+function githubWebhookHeaders({ event, body, subscription, deliveryId }: WebhookHeaderContext): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-GitHub-Event": event,
+    "X-GitHub-Delivery": String(deliveryId),
+  };
+  if (subscription.secret) {
+    headers["X-Hub-Signature-256"] = `sha256=${createHmac("sha256", subscription.secret).update(body).digest("hex")}`;
+  }
+  return headers;
+}
+
 function formatHookDelivery(d: WebhookDelivery, baseUrl: string, pathPrefix: string, hookId: number) {
   return {
     id: d.id,
@@ -176,6 +189,7 @@ export function webhooksRoutes({ app, store, webhooks, baseUrl }: RouteContext):
       secret: wh.config.secret,
       owner,
       repo: repo.name,
+      headerFactory: githubWebhookHeaders,
     });
 
     const ownerPath = `${owner}/${repoName}`;
@@ -395,6 +409,7 @@ export function webhooksRoutes({ app, store, webhooks, baseUrl }: RouteContext):
       secret: wh.config.secret,
       owner: org.login,
       repo: undefined,
+      headerFactory: githubWebhookHeaders,
     });
 
     return c.json(formatWebhook(wh, baseUrl, org.login), 201);

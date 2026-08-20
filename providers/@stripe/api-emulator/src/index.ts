@@ -1,5 +1,14 @@
+import { createHmac } from "crypto";
 import type { Hono } from "hono";
-import type { ServicePlugin, Store, WebhookDispatcher, TokenMap, AppEnv, RouteContext } from "@api-emulator/core";
+import type {
+  ServicePlugin,
+  Store,
+  WebhookDispatcher,
+  WebhookHeaderContext,
+  TokenMap,
+  AppEnv,
+  RouteContext,
+} from "@api-emulator/core";
 import { getStripeStore } from "./store.js";
 import { stripeId } from "./helpers.js";
 import { customerRoutes } from "./routes/customers.js";
@@ -39,6 +48,16 @@ export interface StripeSeedConfig {
     events: string[];
     secret?: string;
   }>;
+}
+
+function stripeWebhookHeaders({ body, subscription }: WebhookHeaderContext): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (subscription.secret) {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHmac("sha256", subscription.secret).update(`${timestamp}.${body}`).digest("hex");
+    headers["Stripe-Signature"] = `t=${timestamp},v1=${signature}`;
+  }
+  return headers;
 }
 
 function seedDefaults(store: Store, _baseUrl: string): void {
@@ -110,6 +129,7 @@ export function seedFromConfig(
         active: true,
         secret: wh.secret,
         owner: "stripe",
+        headerFactory: stripeWebhookHeaders,
       });
     }
   }

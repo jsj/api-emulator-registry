@@ -1,6 +1,6 @@
-import { createHmac } from "crypto";
+import { createHmac, generateKeyPairSync } from "crypto";
 import type { Hono } from "hono";
-import type { ServicePlugin, Store, WebhookDispatcher, TokenMap, AppEnv, RouteContext } from "@api-emulator/core";
+import type { AppKeyResolver, ServicePlugin, Store, WebhookDispatcher, TokenMap, AppEnv, RouteContext } from "@api-emulator/core";
 import { getGitHubStore } from "./store.js";
 import type { GitHubStore } from "./store.js";
 import type { GitHubAppInstallation } from "./entities.js";
@@ -67,7 +67,7 @@ export interface GitHubSeedConfig {
     app_id: number;
     slug: string;
     name: string;
-    private_key: string;
+    private_key?: string;
     permissions?: Record<string, string>;
     events?: string[];
     webhook_url?: string;
@@ -82,6 +82,34 @@ export interface GitHubSeedConfig {
       events?: string[];
     }>;
   }>;
+}
+
+function generateAppPrivateKey(): string {
+  return generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+    publicKeyEncoding: { type: "pkcs1", format: "pem" },
+  }).privateKey;
+}
+
+export async function materializeSeedConfig(config: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const github = config as GitHubSeedConfig;
+  if (!github.apps) return { ...config };
+
+  const appIds = new Set<number>();
+  const slugs = new Set<string>();
+  for (const app of github.apps) {
+    if (app.private_key === "") throw new Error(`GitHub App "${app.slug}" private_key must not be empty`);
+    if (appIds.has(app.app_id)) throw new Error(`Duplicate GitHub App app_id: ${app.app_id}`);
+    if (slugs.has(app.slug)) throw new Error(`Duplicate GitHub App slug: "${app.slug}"`);
+    appIds.add(app.app_id);
+    slugs.add(app.slug);
+  }
+
+  return {
+    ...config,
+    apps: github.apps.map((app) => ({ ...app, private_key: app.private_key ?? generateAppPrivateKey() })),
+  };
 }
 
 function seedDefaults(store: Store, baseUrl: string): void {
@@ -133,6 +161,11 @@ function seedDefaults(store: Store, baseUrl: string): void {
 }
 
 export function seedFromConfig(store: Store, baseUrl: string, config: GitHubSeedConfig): void {
+  for (const app of config.apps ?? []) {
+    if (!app.private_key) {
+      throw new Error(`GitHub App "${app.slug}" requires private_key; use createEmulator to generate one`);
+    }
+  }
   const gh = getGitHubStore(store);
 
   if (config.users) {
@@ -330,7 +363,7 @@ export function seedFromConfig(store: Store, baseUrl: string, config: GitHubSeed
         app_id: a.app_id,
         slug: a.slug,
         name: a.name,
-        private_key: a.private_key,
+        private_key: a.private_key!,
         permissions: a.permissions ?? {},
         events: a.events ?? [],
         webhook_url: a.webhook_url ?? null,
@@ -498,5 +531,12 @@ export const githubPlugin: ServicePlugin = {
     seedDefaults(store, baseUrl);
   },
 };
+
+export function createAppKeyResolver(store: Store): AppKeyResolver {
+  return (appId) => {
+    const app = getGitHubStore(store).apps.all().find((candidate) => candidate.app_id === appId);
+    return app ? { privateKey: app.private_key, slug: app.slug, name: app.name } : null;
+  };
+}
 
 export default githubPlugin;

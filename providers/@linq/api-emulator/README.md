@@ -30,13 +30,20 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `PUT ${prefix}/chats/:chatId`
 - `GET ${prefix}/chats/:chatId/messages`
 - `POST ${prefix}/chats/:chatId/messages`
+- `POST ${prefix}/messages`
+- `POST ${prefix}/attachments`
+- `GET ${prefix}/attachments/:attachmentId`
+- `DELETE ${prefix}/attachments/:attachmentId`
 - `GET ${prefix}/messages/:messageId`
 - `PATCH ${prefix}/messages/:messageId`
 - `DELETE ${prefix}/messages/:messageId`
 - `GET ${prefix}/webhook_subscriptions`
 - `POST ${prefix}/webhook_subscriptions`
 - `GET ${prefix}/webhook_subscriptions/:subscriptionId`
+- `PUT ${prefix}/webhook_subscriptions/:subscriptionId`
 - `DELETE ${prefix}/webhook_subscriptions/:subscriptionId`
+
+The emulator implements Partner API v3 only. It does not expose legacy v2 routes or accept `X-LINQ-INTEGRATION-TOKEN`.
 
 ## Coverage
 

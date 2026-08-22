@@ -72,7 +72,10 @@ export const plugin = {
   register(app, store) {
     app.get('/v1alpha5/featureflags', (c) => c.json({ flags: {} }));
     app.get('/v1alpha5/projects', (c) => c.json(list(state(store).projects, 'projects')));
-    app.get('/v1alpha5/organizations/projects', (c) => c.json(list(state(store).projects, 'projects')));
+    app.get('/v1alpha5/organizations/projects', (c) => {
+      const projects = state(store).projects;
+      return c.json({ ...list(projects, 'projects'), items: projects });
+    });
     app.get('/v1alpha5/projects/:project_id', (c) => {
       const project = state(store).projects.find((item) => item.id === c.req.param('project_id'));
       return project ? c.json(project) : routeError(c, 'project not found', 404, 'not_found');

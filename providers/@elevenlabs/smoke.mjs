@@ -90,6 +90,7 @@ assert.equal(history.payload.has_more, true);
 
 const user = await harness.call('GET', '/v1/user');
 assert.equal(user.payload.subscription.character_count, 55);
+assert.equal(user.payload.subscription.professional_voice_slots_used_in_workspace, 0);
 
 const validation = await harness.call('POST', '/v1/text-to-speech/:voice_id', {
   params: { voice_id: 'JBFqnCBsd6RMkjVDRZzb' },

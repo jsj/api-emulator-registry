@@ -116,7 +116,7 @@ export const contract = {
   source: 'Gusto official API documentation-informed REST subset',
   docs: 'https://docs.gusto.com/app-integrations/reference',
   baseUrl: 'https://api.gusto.com',
-  scope: ["current-user","companies","employees","payrolls","contractors"],
+  scope: ["token-introspection","current-user","companies","employees","payrolls","contractors"],
   fidelity: 'stateful-rest-emulator',
 };
 
@@ -124,6 +124,11 @@ export const plugin = {
   name: 'gusto',
   register(app, store) {
 
+    app.get('/v1/token_info', (c) => c.json({
+      scope: 'companies:read employees:read payrolls:read',
+      resource: { type: 'Company', uuid: 'company_1' },
+      resource_owner: { type: 'CompanyAdmin', uuid: 'user_1' },
+    }));
     app.get('/v1/me', (c) => c.json(state(store).me)); dataList(app, store, '/v1/companies', 'companies');
     app.get('/v1/companies/:companyId/employees', (c) => c.json(state(store).employees.filter((row) => row.company_uuid === c.req.param('companyId'))));
     app.post('/v1/companies/:companyId/employees', async (c) => { const row = await createPlain(c, store, 'employees', 'employee'); row.company_uuid = c.req.param('companyId'); return c.json(row, 201); });

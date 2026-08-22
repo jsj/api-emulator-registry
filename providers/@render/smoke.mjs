@@ -14,6 +14,10 @@ assert.ok(owners.payload[0].cursor);
 
 const services = await harness.call('GET', '/v1/services?ownerId=tea-emulator');
 assert.equal(services.payload[0].service.name, 'emulator-web');
+for (const collection of ['postgres', 'key-value', 'workflows']) {
+  const response = await harness.call('GET', `/v1/${collection}?ownerId=tea-emulator`);
+  assert.deepEqual(response.payload, []);
+}
 
 const service = await harness.call('GET', '/v1/services/srv-emulator-web');
 assert.equal(service.payload.serviceDetails.startCommand, 'npm start');

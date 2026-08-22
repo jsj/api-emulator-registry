@@ -130,12 +130,13 @@ function brandResponse(current, domain) {
   return { status: 'ok', brand, code: 200 };
 }
 
-function retrieveBrand(c, store) {
+async function retrieveBrand(c, store) {
   const current = state(store);
   const auth = requireAuth(c, current);
   if (auth) return auth;
-  const domain = query(c, 'domain');
-  if (!domain) return error(c, 'domain query parameter is required');
+  const input = await body(c);
+  const domain = query(c, 'domain') || input.domain || input.direct_url || input.email || input.name;
+  if (!domain) return error(c, 'a brand lookup identifier is required');
   record(current, '/brand/retrieve', { domain: normalizeDomain(domain) });
   save(store, current);
   return c.json(brandResponse(current, domain));
@@ -416,7 +417,9 @@ function transactionIdentifier(c, store) {
 
 function registerContextRoutes(app, store, prefix = '') {
   app.get(`${prefix}/brand/retrieve`, (c) => retrieveBrand(c, store));
+  app.post(`${prefix}/brand/retrieve`, (c) => retrieveBrand(c, store));
   app.get(`${prefix}/brand/retrieve/simple`, (c) => retrieveSimpleBrand(c, store));
+  app.get(`${prefix}/brand/retrieve-simplified`, (c) => retrieveSimpleBrand(c, store));
   app.get(`${prefix}/brand/transaction_identifier`, (c) => transactionIdentifier(c, store));
   app.post(`${prefix}/brand/ai/product`, (c) => product(c, store));
   app.post(`${prefix}/brand/ai/query`, (c) => aiQuery(c, store));

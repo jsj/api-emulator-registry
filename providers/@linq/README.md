@@ -19,13 +19,20 @@ Set `LINQ_API_V3_BASE_URL` to the local emulator URL. Use any nonempty value for
 - `PUT /v3/chats/:chatId` updates one chat.
 - `GET /v3/chats/:chatId/messages` lists the messages in a chat.
 - `POST /v3/chats/:chatId/messages` sends a message.
+- `POST /v3/messages` sends a message with automatic line and chat selection.
+- `POST /v3/attachments` creates a presigned-upload fixture.
+- `GET /v3/attachments/:attachmentId` returns attachment metadata.
+- `DELETE /v3/attachments/:attachmentId` deletes an attachment.
 - `GET /v3/messages/:messageId` returns one message.
 - `PATCH /v3/messages/:messageId` updates one message.
 - `DELETE /v3/messages/:messageId` deletes one message.
 - `GET /v3/webhook_subscriptions` lists the webhook subscriptions.
 - `POST /v3/webhook_subscriptions` creates a webhook subscription.
 - `GET /v3/webhook_subscriptions/:subscriptionId` returns one webhook subscription.
+- `PUT /v3/webhook_subscriptions/:subscriptionId` updates one webhook subscription.
 - `DELETE /v3/webhook_subscriptions/:subscriptionId` deletes one webhook subscription.
+
+Only Partner API v3 is emulated. Legacy `/api/partner/v2` routes and `X-LINQ-INTEGRATION-TOKEN` authentication are intentionally unsupported.
 
 The provider also accepts the canonical `/api/partner/v3` prefix.
 

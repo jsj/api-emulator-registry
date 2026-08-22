@@ -24,6 +24,7 @@
     "contract:plaid": "node scripts/check-plaid-openapi-coverage.mjs",
     "smoke": "node scripts/smoke-all.mjs",
     "smoke:cli": "bun scripts/cli-verification-smoke.mjs",
+    "smoke:cli:drift": "bun scripts/cli-verification-smoke.mjs --check-skips",
     "smoke:db-workspaces": "node providers/@supabase/smoke-db-workspace.mjs && node providers/@neon/smoke-db-workspace.mjs && node providers/@planetscale/smoke-db-workspace.mjs && node providers/@supabase/smoke-postgres-thin-clone.mjs",
     "supabase:pg:clone": "node providers/@supabase/local-postgres/workspace.mjs clone",
     "supabase:pg:dispose": "node providers/@supabase/local-postgres/workspace.mjs dispose",

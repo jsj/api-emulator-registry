@@ -106,6 +106,22 @@ function listKeys(entries, prefix = '') {
   return [...keys].sort();
 }
 
+async function writeKv(store, c) {
+  const current = state(store);
+  const mount = normalizeMount(c.req.param('mount'));
+  if (!mountConfig(current, mount)) return error(c, 'no handler for route', 404);
+  const path = normalizePath(c.req.param('path'));
+  const body = await json(c);
+  current.kv[mount] ??= {};
+  const versions = current.kv[mount][path] ?? [];
+  const version = versions.length + 1;
+  const metadata = { created_time: fixedNow, deletion_time: '', destroyed: false, version };
+  versions.push({ version, data: body.data ?? {}, metadata });
+  current.kv[mount][path] = versions;
+  saveState(store, current);
+  return c.json({ data: metadata });
+}
+
 export const contract = {
   provider: 'hashicorp-vault',
   source: 'HashiCorp Vault HTTP API and official CLI-compatible KV v2 subset',
@@ -169,21 +185,8 @@ export const plugin = {
       return c.json({ data: { path: `${mount}/`, type: config.type, options: config.options, description: config.description } });
     });
 
-    app.post('/v1/:mount/data/:path{.+}', async (c) => {
-      const current = state(store);
-      const mount = normalizeMount(c.req.param('mount'));
-      if (!mountConfig(current, mount)) return error(c, 'no handler for route', 404);
-      const path = normalizePath(c.req.param('path'));
-      const body = await json(c);
-      current.kv[mount] ??= {};
-      const versions = current.kv[mount][path] ?? [];
-      const version = versions.length + 1;
-      const metadata = { created_time: fixedNow, deletion_time: '', destroyed: false, version };
-      versions.push({ version, data: body.data ?? {}, metadata });
-      current.kv[mount][path] = versions;
-      saveState(store, current);
-      return c.json({ data: metadata });
-    });
+    app.post('/v1/:mount/data/:path{.+}', (c) => writeKv(store, c));
+    app.put('/v1/:mount/data/:path{.+}', (c) => writeKv(store, c));
 
     app.get('/v1/:mount/data/:path{.+}', (c) => {
       const mount = normalizeMount(c.req.param('mount'));

@@ -17,6 +17,9 @@ assert.equal(mounts.payload.data['secret/'].type, 'kv');
 const written = await harness.call('POST', '/v1/secret/data/cli-smoke', { data: { hello: 'vault' } }, { 'x-vault-token': 'root' });
 assert.equal(written.payload.data.version, 1);
 
+const sdkWritten = await harness.call('PUT', '/v1/secret/data/sdk-smoke', { data: { hello: 'sdk' } }, { 'x-vault-token': 'root' });
+assert.equal(sdkWritten.payload.data.version, 1);
+
 const read = await harness.call('GET', '/v1/secret/data/cli-smoke?version=1', undefined, { 'x-vault-token': 'root' });
 assert.equal(read.payload.data.data.hello, 'vault');
 

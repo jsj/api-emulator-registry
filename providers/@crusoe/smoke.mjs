@@ -10,6 +10,7 @@ assert.equal(projects.payload.projects[0].id, 'project-emulator');
 
 const cliProjects = await harness.call('GET', '/v1alpha5/organizations/projects');
 assert.equal(cliProjects.payload.projects[0].name, 'emulator-project');
+assert.equal(cliProjects.payload.items[0].id, 'project-emulator');
 
 const featureFlags = await harness.call('GET', '/v1alpha5/featureflags');
 assert.deepEqual(featureFlags.payload.flags, {});

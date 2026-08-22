@@ -13,6 +13,9 @@ assert.equal(brand.payload.status, 'ok');
 assert.equal(brand.payload.brand.domain, 'stripe.com');
 assert.equal(brand.payload.brand.colors[0].hex, '#635BFF');
 
+const sdkBrand = await harness.call('POST', '/brand/retrieve', { domain: 'stripe.com', type: 'by_domain' }, auth);
+assert.equal(sdkBrand.payload.brand.domain, 'stripe.com');
+
 const simpleBrand = await harness.call('GET', '/brand/retrieve/simple?domain=context.dev', undefined, auth);
 assert.equal(simpleBrand.payload.brand.domain, 'context.dev');
 assert.ok(simpleBrand.payload.brand.logos[0].url.includes('context.dev'));

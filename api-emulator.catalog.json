@@ -648,6 +648,12 @@
       "specifier": "./providers/@lemonade/api-emulator.mjs",
       "description": "Lemonade-style insurance APIs provide customer, renters quote, policy binding, and claim workflows."
     },
+    "lemma": {
+      "kind": "package",
+      "packageName": "@api-emulator/lemma",
+      "specifier": "./providers/@lemma/api-emulator.mjs",
+      "description": "Lemma provides agent trace ingestion and ingest-status APIs for local observability workflows."
+    },
     "lexis": {
       "kind": "package",
       "packageName": "@api-emulator/lexis",
@@ -1343,6 +1349,12 @@
       "packageName": "@api-emulator/x",
       "specifier": "./providers/@x/api-emulator.mjs",
       "description": "X API provides OAuth, users, tweets, timelines, and social publishing workflows."
+    },
+    "x-ads": {
+      "kind": "package",
+      "packageName": "@api-emulator/x-ads",
+      "specifier": "./providers/@x-ads/api-emulator.mjs",
+      "description": "X Ads MCP provides account, campaign, line-item, targeting, creative, and analytics tools with paused-by-default writes."
     },
     "xbow": {
       "kind": "package",

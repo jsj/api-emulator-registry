@@ -130,6 +130,13 @@ export const plugin = {
         return c.json(cursorPage(services, c));
       });
 
+      // The current Render CLI aggregates these collections into `render services`.
+      // Keep them empty in this services-only emulator slice, but expose the
+      // current list endpoints so the official CLI can complete that read.
+      app.get(`${prefix}/postgres`, (c) => c.json([]));
+      app.get(`${prefix}/key-value`, (c) => c.json([]));
+      app.get(`${prefix}/workflows`, (c) => c.json([]));
+
       app.post(`${prefix}/services`, async (c) => {
         const s = state(store);
         const body = await readBody(c).catch(() => ({}));

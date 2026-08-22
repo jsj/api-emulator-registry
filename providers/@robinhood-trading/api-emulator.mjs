@@ -37,7 +37,9 @@ const ROBINHOOD_TRADING_TOOLS = [
   'get_equity_tradability',
   'get_financials',
   'get_index_quotes',
+  'get_index_historicals',
   'get_indexes',
+  'get_limited_margin_upgrade_info',
   'get_option_chains',
   'get_option_historicals',
   'get_option_instruments',
@@ -92,7 +94,9 @@ const TOOL_INPUTS = {
   get_equity_tradability: { required: ['account_number', 'symbols'], strings: ['account_number'], arrays: ['symbols'] },
   get_financials: { required: ['symbols'], arrays: ['symbols'], strings: ['period'], integers: ['limit'] },
   get_index_quotes: { required: ['instrument_ids'], arrays: ['instrument_ids'] },
+  get_index_historicals: { required: ['instrument_ids', 'start_time', 'interval'], arrays: ['instrument_ids'], strings: ['start_time', 'end_time', 'interval'] },
   get_indexes: { strings: ['symbols'] },
+  get_limited_margin_upgrade_info: { required: ['account_number'], strings: ['account_number'] },
   get_option_chains: { strings: ['ids', 'underlying_symbol'] },
   get_option_historicals: { required: ['instrument_ids', 'start_time'], arrays: ['instrument_ids'], strings: ['start_time', 'end_time', 'interval', 'bounds'] },
   get_option_instruments: { strings: ['chain_id', 'chain_symbol', 'expiration_dates', 'strike_price', 'type', 'state', 'tradability', 'ids', 'cursor'] },
@@ -147,7 +151,9 @@ const TOOL_DATA_REQUIRED = {
   get_equity_tradability: ['results'],
   get_financials: ['results'],
   get_index_quotes: ['quotes'],
+  get_index_historicals: ['results'],
   get_indexes: ['indexes'],
+  get_limited_margin_upgrade_info: ['account_number', 'eligible', 'current_account_type'],
   get_option_chains: ['chains'],
   get_option_historicals: ['results'],
   get_option_instruments: ['instruments'],
@@ -1318,7 +1324,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-07-25',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-08-22',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1560,10 +1566,52 @@ export const plugin = {
         }
         case 'get_indexes':
           return c.json(liveToolResult(id, tool, { indexes: s.indexes ?? [] }, 'Market indexes matching the requested symbols.'));
+        case 'get_index_historicals': {
+          if (!parseRfc3339(args.start_time)) {
+            const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          if (args.end_time && !parseRfc3339(args.end_time)) {
+            const error = mcpError(id, "end_time must be RFC3339 (e.g. '2026-01-08T00:00:00Z')", 400);
+            return c.json(error.payload, error.status);
+          }
+          const ids = args.instrument_ids.map(String);
+          const indexes = (s.indexes ?? []).filter((index) => ids.includes(String(index.id)));
+          const results = indexes.map((index) => {
+            const quote = (s.indexQuotes ?? []).find((row) => row.symbol === index.symbol) ?? {};
+            const value = String(quote.price ?? '0');
+            return {
+              instrument_id: String(index.id),
+              symbol: index.symbol,
+              interval: String(args.interval),
+              bars: [{ begins_at: args.start_time, open_value: value, high_value: value, low_value: value, close_value: value, interpolated: false }],
+            };
+          });
+          const found = new Set(indexes.map((index) => String(index.id)));
+          return c.json(liveToolResult(id, tool, { results, not_found: ids.filter((idValue) => !found.has(idValue)) }, 'Index value bars are left-edge labeled in UTC; interpolated bars carry no new information.'));
+        }
         case 'get_index_quotes': {
           const ids = new Set(requestedExplicitOptionIds(args));
           const symbols = new Set((s.indexes ?? []).filter((index) => ids.has(String(index.id))).map((index) => index.symbol));
           return c.json(liveToolResult(id, tool, { quotes: (s.indexQuotes ?? []).filter((quote) => symbols.has(quote.symbol) || ids.has(String(quote.instrument_id ?? quote.id))) }, 'Index quotes for requested instrument_ids.'));
+        }
+        case 'get_limited_margin_upgrade_info': {
+          const accountNumber = String(args.account_number);
+          const account = s.accounts.find((row) => String(row.account_number) === accountNumber);
+          if (!account) return c.json(mcpError(id, 'Account not found', 404).payload, 404);
+          const currentAccountType = ['cash', 'limited_margin'].includes(account.type) ? account.type : 'unknown';
+          const eligible = currentAccountType === 'cash' && account.brokerage_account_type === 'individual';
+          const upgradeUrl = `https://robinhood.com/account/settings/investing/limited-margin?account_number=${encodeURIComponent(accountNumber)}`;
+          return c.json(liveToolResult(id, tool, {
+            account_number: accountNumber,
+            eligible,
+            current_account_type: currentAccountType,
+            ...(eligible ? {
+              web_upgrade_url: upgradeUrl,
+              mobile_upgrade_url: upgradeUrl,
+              upgrade_fallback: 'Open Investing Settings for this account and choose Upgrade to limited margin.',
+            } : {}),
+          }, 'This check never changes the account; the user completes any eligible upgrade in Robinhood.'));
         }
         case 'review_equity_order': {
           const accountError = validateTradingAccount(id, s, args);

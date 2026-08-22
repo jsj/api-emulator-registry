@@ -1,0 +1,28 @@
+// Known limitations that may be absent when optional clients are installed.
+// New skip reasons must be investigated before they are added here.
+export const knownCliSmokeSkipPrefixes = [
+  'ADP, Concur, and Deel have no safely required local CLI',
+  'health CLI smoke skipped: muinmomin/whoop-cli hardcodes',
+  'health CLI smoke skipped: steipete/eightctl and pyEight hardcode',
+  'health CLI smoke skipped: Oura community CLIs and SDKs hardcode',
+  'Goodreads public API is deprecated',
+  'Wikipedia has no official CLI',
+  'Azure CLI and official ARM Resources SDK unavailable or incompatible',
+  'Backblaze b2 CLI has no documented initial auth host override',
+  'Qualtrics has no official public CLI',
+  'SurveyMonkey has no maintained official CLI',
+  'Listen Labs API docs expose HTTP endpoints but no official CLI/SDK',
+  'Snappr API docs expose shell examples but no public CLI/SDK',
+  'Swift/sqlite3 or /Users/james/Developer/zmirror/imsg unavailable',
+  'Nextdoor has gated API access',
+  'official Suno CLI/SDK with safe base URL override unavailable',
+  'Symbolab has no maintained official CLI/SDK',
+  'Bilt has no official public CLI/SDK',
+  'Duke Energy public clients hardcode mobile API/Auth0 flows',
+  'Spectrum Enterprise has official API examples but no official CLI/SDK',
+  'Unity Ads has no official public CLI',
+  'Microsoft Store CLI smoke not run',
+  'PlayStation publishing CLI/SDK unavailable publicly',
+  'Skyscanner has no maintained official v3 CLI/SDK',
+  'Financial Datasets exposes OpenAPI/HTTP docs but no maintained official CLI',
+];

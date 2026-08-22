@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { rootPath } from './load.mjs';
 
-const MCPORTER_PACKAGE = 'mcporter@0.12.3';
+const MCPORTER_PACKAGE = 'mcporter@0.13.7';
 
 function cleanJson(output) {
   const clean = output.replaceAll('\r', '').replace(/\u001b\[[0-9;]*[A-Za-z]/g, '');
@@ -38,7 +38,7 @@ function sameContract(actual, expected) {
 function listLiveTools(url) {
   const result = spawnSync(
     'npx',
-    ['-y', MCPORTER_PACKAGE, 'list', url, '--schema', '--json'],
+    ['-y', MCPORTER_PACKAGE, 'list', '--http-url', url, '--schema', '--json', '--no-oauth'],
     { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
   );
   if (result.error) throw result.error;

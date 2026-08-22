@@ -98,6 +98,7 @@ export function state(store) {
         max_credit_limit_extension: 500000,
         voice_slots_used: 2,
         professional_voice_slots_used: 0,
+        professional_voice_slots_used_in_workspace: 0,
         voice_add_edit_counter: 0,
         current_overage: {
           amount: '0',

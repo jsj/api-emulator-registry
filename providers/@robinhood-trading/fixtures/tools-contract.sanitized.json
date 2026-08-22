@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-07-25T16:41:40.880Z",
+  "captured_at": "2026-08-22T19:27:14.841Z",
   "source": "https://agent.robinhood.com/mcp/trading",
   "tools": [
     {
@@ -447,13 +447,17 @@
     },
     {
       "name": "create_scan",
-      "description": "Create a new saved scanner (screener) on the user's account, optionally applying a preset and custom filters in a single call. Returns the new scan's id, title, applied filters, and the initial live market results.\n\nThis tool composes multiple Beacon operations:\n  1. Create an empty scan\n  2. If a non-INITIAL preset was requested: apply that preset configuration (DAILY_GAINERS, DAILY_LOSERS, HIGH_OPTIONS_VOLUME_IV, UPCOMING_EARNINGS)\n  3. If custom filters were provided: apply them (replaces any preset filters)\n  4. If a custom title was provided: set the title\n\nIf any step after the initial create fails, the scan still exists with the partial state — the response surfaces what was applied. Use update_scan_filters / update_scan_config to fix anything that failed.\n\nParameters:\n- preset (optional) — starting preset. Default: DAILY_GAINERS when no filters supplied, INITIAL when filters supplied. Valid values: INITIAL, DAILY_GAINERS, DAILY_LOSERS, HIGH_OPTIONS_VOLUME_IV, UPCOMING_EARNINGS.\n- filters (optional) — array of custom filter specs. Call get_scanner_filter_specs to discover valid filter_type / predicate values.\n- title (optional) — custom human-readable name for the scan.\n\nExample: to make \"stocks with RSI > 70 and volume > 1M, sorted by volume desc\", call with\n  preset = \"INITIAL\"\n  filters = [\n    {\"filter_type\": \"FILTER_TYPE_RSI\", \"predicate\": \">\", \"values\": [\"70\"], \"interval\": \"1d\", \"length\": 14},\n    {\"filter_type\": \"FILTER_TYPE_VOLUME\", \"predicate\": \">\", \"values\": [\"1000000\"], \"interval\": \"1d\"}\n  ]\n  title = \"High RSI + High Volume\"",
+      "description": "Create a new saved scanner (screener) on the user's account — or, with scan_id, update an existing one by appending a new configuration version. Filters can be enum-based (from get_scanner_filter_specs) or expression-based (a raw market-data expression built from get_scanner_datapoints). Returns the scan's id, title, applied filters, and live market results.\n\nPrefer an enum filter_type whenever one covers the request: enum filters are pre-validated and render as standard, user-editable filters in Legend. Build a raw expression only when no enum filter covers the request, and validate it with preview_scan before saving it here. This is the only tool that saves expression filters — update_scan_filters rejects them — so to change a scan that has an expression filter, call this tool with that scan's scan_id and the full desired filter set.\n\nColumns display values, filters screen. To show a datapoint in results without restricting matches, pass it in columns — never fake it with a no-op filter like \">= 0\", which pollutes the scan's filter list. A column is a display_name plus an expression, or a standard column's display name alone. A couple of contextual columns supporting the filters make a scan read better in Legend.\n\nTwo execution paths:\n- New scan, enum-only filters (or none), no columns: composes multiple Beacon operations — create the scan, apply the preset configuration if non-INITIAL, apply filters, set the title. If a step after the initial create fails, the scan still exists in its partial state; the response surfaces what was applied, and update_scan_filters / update_scan_config can fix the rest.\n- scan_id set, any expression filter present, or any columns present: a single transactional Beacon call that persists the filters and columns as a new ACTIVE configuration version (on the given scan, or on a brand-new one). All-or-nothing — an expression the market-data provider rejects means NOTHING is persisted, and the provider's validation error is returned. Earlier versions of a scan are never edited. A non-INITIAL preset cannot be combined with this path.\n\nParameters:\n- scan_id (optional) — update this existing scan instead of creating one. REPLACE semantics: the new version holds exactly the filters and columns passed, so read the current set via get_scans first and send the complete intended set. Cortex-managed scans are rejected.\n- preset (optional) — starting preset for a new scan. Default: DAILY_GAINERS when no filters supplied, INITIAL when filters supplied. Valid values: INITIAL, DAILY_GAINERS, DAILY_LOSERS, HIGH_OPTIONS_VOLUME_IV, UPCOMING_EARNINGS.\n- filters (optional for a new scan, required with scan_id) — array of filter specs, enum and/or expression. Call get_scanner_filter_specs for enum filters; call get_scanner_datapoints before composing an expression.\n- columns (optional) — extra result columns on top of the filters' own columns and the standard defaults. An expression matching a standard column's canonical form is saved as that standard column, canonical name included (e.g. \"optionsPutDayVolume\" always saves as \"Total put volume\").\n- title (optional) — custom human-readable name for the scan.\n\nExample: to make \"stocks with RSI > 70 and volume > 1M\", call with\n  preset = \"INITIAL\"\n  filters = [\n    {\"filter_type\": \"FILTER_TYPE_RSI\", \"predicate\": \">\", \"values\": [\"70\"], \"interval\": \"1d\", \"length\": 14},\n    {\"filter_type\": \"FILTER_TYPE_VOLUME\", \"predicate\": \">\", \"values\": [\"1000000\"], \"interval\": \"1d\"}\n  ]\n  title = \"High RSI + High Volume\"\n\nExample: to save \"stocks where put option volume exceeds call option volume\" (no enum filter compares two datapoints), showing both volumes and the ratio as context, call with\n  filters = [\n    {\"expression\": \"optionsPutDayVolume > optionsCallDayVolume\", \"predicate\": \"=\", \"values\": [\"True\"], \"display_title\": \"Put exceeds call\"}\n  ]\n  columns = [\n    {\"display_name\": \"Put volume\", \"expression\": \"optionsPutDayVolume\"},\n    {\"display_name\": \"Call volume\", \"expression\": \"optionsCallDayVolume\"},\n    {\"display_name\": \"Put/Call ratio\", \"expression\": \"optionsPutDayVolume / optionsCallDayVolume\"}\n  ]\n  title = \"Put hedging screen\"\n  (the first two save under their canonical standard names, \"Total put volume\" and \"Total call volume\")\n\nExample: to tighten that saved screen later without creating a second scan, call with\n  scan_id = \"<its scan_id from get_scans>\"\n  filters = [the scan's current filters, copied from get_scans (expressions verbatim, enum filters by filter_type_enum), with the desired change applied]\n  columns = [the scan's current extra columns, copied from get_scans, if they should be kept]",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "scan_id": {
+            "type": "string",
+            "description": "Optional. Update an existing scan by appending the given filters (and columns) as a NEW configuration version, which becomes the active one — earlier versions are preserved, never edited. The version holds exactly what is passed (REPLACE semantics, not merge): read the scan's current filters and columns with get_scans first and pass the complete intended set. This is how to change a scan that has expression filters, which update_scan_filters cannot carry. Cortex-managed scans are rejected. Omit to create a new scan."
+          },
           "preset": {
             "type": "string",
-            "description": "Starting preset for the new scan. One of: INITIAL (no preset; only valid if filters are provided), DAILY_GAINERS, DAILY_LOSERS, HIGH_OPTIONS_VOLUME_IV, UPCOMING_EARNINGS. Defaults to DAILY_GAINERS when no filters are provided, INITIAL when filters are provided."
+            "description": "Starting preset for the new scan. One of: INITIAL (no preset; only valid if filters are provided), DAILY_GAINERS, DAILY_LOSERS, HIGH_OPTIONS_VOLUME_IV, UPCOMING_EARNINGS. Defaults to DAILY_GAINERS when no filters are provided, INITIAL when filters are provided. A non-INITIAL preset cannot be combined with expression filters, columns, or scan_id."
           },
           "filters": {
             "type": [
@@ -465,7 +469,7 @@
               "properties": {
                 "filter_type": {
                   "type": "string",
-                  "description": "Wire-format enum name, e.g. \"FILTER_TYPE_RSI\". See the scanner-filter-specs resource for valid values."
+                  "description": "Wire-format enum name, e.g. \"FILTER_TYPE_RSI\". See the scanner-filter-specs resource for valid values. Omit when supplying expression."
                 },
                 "predicate": {
                   "type": "string",
@@ -479,35 +483,82 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Threshold values. Single-element for unary predicates, two-element for BETWEEN, multi-element for IN_LIST/ANY_OF."
+                  "description": "Threshold values. Single-element for unary predicates, two-element for BETWEEN, multi-element for IN_LIST/ANY_OF. For a boolean expression screen, exactly [\"True\"]."
                 },
                 "interval": {
                   "type": "string",
-                  "description": "Time granularity for time-series filters (e.g. \"1d\"). Use one of the supported_intervals from the filter's scanner-filter-specs entry."
+                  "description": "Time granularity for time-series filters (e.g. \"1d\"). Use one of the supported_intervals from the filter's scanner-filter-specs entry. Not used with expression — encode granularity inside the expression."
                 },
                 "length": {
                   "type": "integer",
-                  "description": "Lookback length for filters that need one (e.g. RSI period of 14). Use one of the supported_lengths from the filter's scanner-filter-specs entry.",
+                  "description": "Lookback length for filters that need one (e.g. RSI period of 14). Use one of the supported_lengths from the filter's scanner-filter-specs entry. Not used with expression.",
                   "minimum": -2147483648,
                   "maximum": 2147483647
                 },
                 "plot": {
                   "type": "string",
-                  "description": "Plot / price-field input for filters that have one (e.g. \"open\" or \"close\" for % Change). Use one of the supported_plots from the filter's scanner-filter-specs entry."
+                  "description": "Plot / price-field input for filters that have one (e.g. \"open\" or \"close\" for % Change). Use one of the supported_plots from the filter's scanner-filter-specs entry. Not used with expression."
+                },
+                "expression": {
+                  "type": "string",
+                  "description": "Raw market-data expression to screen on, e.g. \"dayVolume / volumeAvg(candleCount=30, candlePeriod=\\\"1d\\\", session=\\\"all\\\")\" with a numeric predicate, or a whole comparison like \"tradeAllDay.price > closeAvg(candleCount=50, candlePeriod=\\\"1d\\\", session=\\\"all\\\")\" with predicate \"=\" and values [\"True\"]. Accepted by preview_scan (validate without saving) and create_scan (save); update_scan_filters rejects expressions — to change an expression filter on a saved scan, call create_scan with that scan's scan_id and the full filter set (a new configuration version is appended; earlier versions are preserved). Omit filter_type when set. Prefer an enum filter_type whenever one covers the request."
+                },
+                "display_title": {
+                  "type": "string",
+                  "description": "Optional short label for an expression filter, shown as the results-column header (e.g. \"Relative volume (30D)\"). Only used with expression."
                 }
               },
               "required": [
-                "filter_type",
                 "predicate",
                 "values"
               ],
               "additionalProperties": false
             },
-            "description": "Custom filters to apply after the preset. Each filter has filter_type (FILTER_TYPE_... enum), predicate (>, <, =, BETWEEN, etc.), values, optional interval (e.g. 1d), and optional length (e.g. 14 for RSI). Call get_scanner_filter_specs first for valid filter_type / predicate combinations."
+            "description": "Custom filters, enum-based and/or expression-based. Enum filter: filter_type (FILTER_TYPE_... enum from get_scanner_filter_specs) plus predicate/values and optional interval/length/plot. Expression filter: expression (built from get_scanner_datapoints; omit filter_type) plus predicate/values and an optional display_title. Required when scan_id is set. Prefer an enum filter_type whenever one covers the request; validate an expression with preview_scan before saving it here."
+          },
+          "columns": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string",
+                  "description": "Column header, and the column's identity: matching an existing column's name (case-insensitively) customizes that column instead of adding a duplicate, and two columns cannot share a name. A filter with non-default interval/length names its column with those parameters (e.g. a 5-minute RSI filter's column is \"RSI (14, 5M)\") — matching it requires that exact name; a bare \"RSI\" next to it adds a separate, default-parameters RSI column. Without expression, must name a standard column (e.g. \"Market cap\", \"RSI\", \"Volume\") — an unknown name is rejected with the full list of valid ones."
+                },
+                "expression": {
+                  "type": "string",
+                  "description": "Raw market-data expression computing the column's value, built from get_scanner_datapoints (same language as expression filters), e.g. \"optionsPutDayVolume / optionsCallDayVolume\". Omit to reference a standard column by display_name alone. If the expression equals a standard column's canonical form, the column is saved as that standard column and display_name is REPLACED by its canonical name (e.g. \"optionsPutDayVolume\" always saves as \"Total put volume\")."
+                },
+                "visible": {
+                  "type": [
+                    "null",
+                    "boolean"
+                  ],
+                  "description": "Whether the column shows in results. When omitted, a NEW column is visible, but a column customizing an existing filter-created column keeps that column's current visibility (some filter columns are deliberately hidden) — pass an explicit value to change it. A hidden column is still computed and saved."
+                },
+                "order": {
+                  "type": [
+                    "null",
+                    "integer"
+                  ],
+                  "description": "Relative ordering among the columns passed in this call: lower comes first, columns without an order go last in the order given. The scan's standard default columns (Symbol, Name, price, Volume, ...) always come before these.",
+                  "minimum": -2147483648,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "display_name"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Optional result columns to display on top of what the filters and the standard default columns already show. Each column: display_name plus either an expression (from get_scanner_datapoints) or nothing (a standard column referenced by name, e.g. \"Market cap\"). Columns display values, filters screen — to show a datapoint without restricting results, add a column here, never a no-op filter (e.g. >= 0). A couple of contextual columns supporting the filters make the scan read better in Legend."
           },
           "title": {
             "type": "string",
-            "description": "Optional custom title for the saved scan. If omitted, Beacon assigns a default title based on the preset."
+            "description": "Optional custom title for the saved scan. If omitted: a new scan gets Beacon's default title for the preset, and a scan_id update keeps the scan's existing title."
           }
         },
         "additionalProperties": false
@@ -553,11 +604,11 @@
                         },
                         "instrument_type": {
                           "type": "string",
-                          "description": "Asset class: STOCK, ETF, etc. Mirrors hippo.model.v1.InstrumentType."
+                          "description": "Robinhood's own asset classification: EQUITY, OPTION, INDEX, CRYPTO, FUTURES_PRODUCT, FUTURES_CONTRACT, COMBO. NOT the vocabulary the asset-type filter accepts, and not translatable to it: EQUITY covers both stocks and ETFs, which that filter distinguishes. To screen on asset type, use the values listed in the asset-type filter's options from get_scanner_filter_specs, never a value copied from this field."
                         },
                         "columns": {
                           "type": "object",
-                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Numeric values are upstream-formatted strings; the agent should re-format for the user.",
+                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Values are raw numeric strings, not display-formatted: columns whose header contains % hold ratios (multiply by 100 before presenting), large numbers can arrive in scientific notation, and floats carry precision noise. Always format before presenting. An empty string means the datapoint is undefined for that instrument; the row still matched the filters.",
                           "additionalProperties": {
                             "type": "string"
                           }
@@ -587,7 +638,11 @@
                       "properties": {
                         "filter_type": {
                           "type": "string",
-                          "description": "Filter category in human form (e.g. \"RSI\", \"Volume\", \"Market Cap\"). See the scanner-filter-specs resource for the full list."
+                          "description": "Display label of the column this filter screens on, as shown in Legend (e.g. \"RSI\", \"Market cap\"). This is a user-editable label, so it is for describing the filter to the user — do NOT send it back as filter_type when re-applying filters; use filter_type_enum for that."
+                        },
+                        "filter_type_enum": {
+                          "type": "string",
+                          "description": "Wire-format enum name for this filter (e.g. \"FILTER_TYPE_RSI\") — the value to pass as a filter's filter_type when re-sending this filter to create_scan or update_scan_filters. FILTER_TYPE_CUSTOM is the exception: such a filter is defined by its expression, so re-create it by sending the expression field to create_scan and omitting filter_type. Never send FILTER_TYPE_CUSTOM as a filter_type — it would create an empty filter. Empty only when the filter has no recognized type."
                         },
                         "predicate": {
                           "type": "string",
@@ -616,6 +671,10 @@
                         "plot": {
                           "type": "string",
                           "description": "Plot / price-field input for filters that have one (e.g. % Change uses \"open\" or \"close\" to choose changeFromOpen vs changeFromClose). Empty for filters that don't take a plot."
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Upstream market-data expression this filter screens on. Populated for every filter, standard or custom — an enum filter type is a preset that compiles to an expression upstream. Useful for explaining precisely what the filter measures (which interval, lookback and session it uses). When re-applying a standard filter, send filter_type_enum rather than this; for a FILTER_TYPE_CUSTOM filter this expression is exactly what to send, as the expression field of a create_scan filter."
                         }
                       },
                       "required": [
@@ -651,7 +710,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "How to interpret the response:\n- result.scan_id — newly created scan. Pass this to run_scan, update_scan_filters, or update_scan_config in follow-up calls.\n- result.scan_title — final title (custom if provided, else Beacon's default for the preset).\n- result.filters_applied — the filter set actually in effect after the call. If this doesn't match what the user asked for, one of the composite steps failed silently — surface that to the user.\n- result.results — initial live results (real-time market data at scan creation time).\n- result.total_items — total matches. May exceed len(results) if the scan's frontend_limit is hit.\n\nWhen presenting:\n- Confirm the scan was created and note its title + filters_applied (so the user knows what was actually saved).\n- Render the initial results as a table.\n- Tell the user the scan is saved and can be re-run anytime with run_scan + the returned scan_id.\n- If results is empty: tell the user no instruments match the filters right now, and suggest broadening them with update_scan_filters.\n\nError handling:\n- \"unknown preset X\" → preset enum not recognized. List the valid presets to the user.\n- \"filter[N]: ...\" → filter validation failure at index N. Tell the user which filter and why. The scan may still exist with just the preset applied — they can fix the filter with update_scan_filters.\n- Partial-failure responses (e.g. \"scan X created but preset Y could not be applied\") indicate a partial success: the scan exists but is missing some of the intended state. Use filters_applied on the response to see what actually landed; mention this clearly to the user so they know whether they need to follow up with update_scan_filters."
+            "description": "How to interpret the response:\n- result.scan_id — the created scan (or, when scan_id was passed, that same scan: the update landed as a new configuration version on it). Pass this to run_scan, update_scan_filters, or update_scan_config in follow-up calls.\n- result.scan_title — final title (custom if provided; else Beacon's default for a new scan, or the existing title on a scan_id update).\n- result.filters_applied — the filter set actually in effect after the call. If this doesn't match what the user asked for, one of the composite steps failed silently — surface that to the user.\n- result.results — initial live results (real-time market data at scan creation time).\n- result.total_items — total matches. May exceed len(results) if the scan's frontend_limit is hit.\n\nWhen presenting:\n- Confirm the scan was created and note its title + filters_applied (so the user knows what was actually saved).\n- Render the initial results as a table.\n- Tell the user the scan is saved and can be re-run anytime with run_scan + the returned scan_id.\n- If results is empty: tell the user no instruments match the filters right now, and suggest broadening them with update_scan_filters.\n\nError handling:\n- \"unknown preset X\" → preset enum not recognized. List the valid presets to the user.\n- \"filter[N]: ...\" → filter validation failure at index N. Tell the user which filter and why. Rejected before any Beacon call — nothing was created.\n- \"created by Cortex and cannot be modified\" (with scan_id) → the target scan is Cortex-managed. Offer to create a fresh scan (omit scan_id) instead.\n- Partial-failure responses (e.g. \"scan X created but preset Y could not be applied\") indicate a partial success on the enum path: the scan exists but is missing some of the intended state. Use filters_applied on the response to see what actually landed; mention this clearly to the user so they know whether they need to follow up with update_scan_filters.\n- With expression filters there are no partial failures: an upstream validation error (e.g. \"unresolved reference: X\", \"unsupported candle-period\") means nothing was saved. Fix the expression — get_scanner_datapoints has the valid names and signatures — and call again, or iterate with preview_scan first."
           }
         },
         "required": [
@@ -997,7 +1056,7 @@
     },
     {
       "name": "get_accounts",
-      "description": "List the user's brokerage accounts. Use this to look up account_number values needed by other tools. If the user has multiple accounts and hasn't specified which one, present the list and ask them to choose. Does NOT return reliable buying power — route buying-power questions through get_portfolio.",
+      "description": "List the user's brokerage accounts. Each account includes an agentic_allowed field indicating whether it's tradable by you — accounts where it's false are read-only to you. Use this to look up account_number values needed by other tools. Exactly one account is tradable by you; when the user is choosing an account for a trade, use that account directly without asking. Does NOT return reliable buying power — route buying-power questions through get_portfolio.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false
@@ -1033,7 +1092,11 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "'cash' or 'margin' — the trading-permissions classification for the brokerage account. Crypto accounts are never marginable, so a linked crypto account has no equivalent. On retirement (IRA) accounts 'margin' means limited margin; full margin is not available there."
+                      "description": "'cash', 'margin', or 'limited_margin' — the trading-permissions classification for the brokerage account. 'limited_margin' (instant settlement without full margin leverage) applies to accounts where full margin is unavailable, such as retirement (IRA), managed, and agentic accounts. Crypto accounts are never marginable, so a linked crypto account has no equivalent."
+                    },
+                    "unsettled_funds": {
+                      "type": "string",
+                      "description": "Proceeds from recent sales not yet settled (cash accounts settle T+1), in the account's currency. Informational only and may lag live trading — this is NOT a spendable or order-gating figure; buying_power from get_portfolio is authoritative for what can be traded now. A cash-type account with unsettled_funds greater than 0 could trade with those proceeds immediately by upgrading to limited margin. Absent when upstream does not report it — treat as unknown, not zero."
                     },
                     "brokerage_account_type": {
                       "type": "string",
@@ -1101,7 +1164,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "Sort the list deterministically when presenting: the default account first, agentic accounts (agentic_allowed=true) second, then other individual accounts, then retirement (IRA) accounts. Present account_number, rhc_account_number (label it \"Crypto Account\"), brokerage_account_type (label it \"Account Type\" — a linked crypto account always shares it, so never add a separate crypto account type column), type (label it \"Brokerage Trading Type\"), nickname (if set), and is_default — in that column order. In the Crypto Account column show \"N/A\" for accounts with an empty rhc_account_number; omit the column entirely only when no account has one. When referring to the account in user-facing prose (e.g. \"your <X> account\"), use nickname when set; fall back to brokerage_account_type otherwise. When displaying account_number or rhc_account_number to the user, mask all but the last 4 digits (e.g. '••••1234'); pass the full value to other tools unchanged — including get_option_level_upgrade_info and any fallback upgrade URL; masking breaks the link. Flag agentic_allowed when the user is choosing an account for a trade. agentic_allowed is caller-relative — true means accessible to this agent, false means this agent cannot act on it (the account may still be agentic-enabled for a different agent). Do not use nickname to determine agentic-account eligibility. Skip false accounts for trade operations; if the user asks why, say the account is not accessible to this agent, not that it needs to be enabled. When option_level is empty or 'option_level_0' and the user wants options, call get_option_level_upgrade_info with the account_number; if that tool is unavailable, direct the user to https://applink.robinhood.com/upgrade_options?account_number=<that account's account_number> (embed the full unmasked account_number in the URL). management_type='managed' is layered on brokerage_account_type — surface alongside, not as a replacement. For tools that ask for an account identifier on a crypto-backed flow (get_crypto_positions, future crypto write tools), pass rhs_account_number; for everything else (equities, options, etc.) pass account_number."
+            "description": "Sort the list deterministically when presenting: the default account first, agentic accounts (agentic_allowed=true) second, then other individual accounts, then retirement (IRA) accounts. Present account_number, rhc_account_number (label it \"Crypto Account\"), brokerage_account_type (label it \"Account Type\" — a linked crypto account always shares it, so never add a separate crypto account type column), type (label it \"Brokerage Trading Type\"), nickname (if set), and is_default — in that column order. In the Crypto Account column show \"N/A\" for accounts with an empty rhc_account_number; omit the column entirely only when no account has one. When referring to the account in user-facing prose (e.g. \"your <X> account\"), use nickname when set; fall back to brokerage_account_type otherwise. When displaying account_number or rhc_account_number to the user, mask all but the last 4 digits (e.g. '••••1234'); pass the full value to other tools unchanged — including get_option_level_upgrade_info and any fallback upgrade URL; masking breaks the link. Flag agentic_allowed when the user is choosing an account for a trade. There is exactly one agentic_allowed=true account — use it directly rather than asking which account to trade. agentic_allowed is caller-relative — true means accessible to this agent, false means this agent cannot act on it (the account may still be agentic-enabled for a different agent). Never state agentic_allowed's field name or raw boolean value to the user. Do not use nickname to determine agentic-account eligibility. Skip false accounts for trade operations; if the user asks why, say the account is not accessible to this agent, not that it needs to be enabled. When option_level is empty or 'option_level_0' and the user wants options, call get_option_level_upgrade_info with the account_number; if that tool is unavailable, direct the user to https://applink.robinhood.com/upgrade_options?account_number=<that account's account_number> (embed the full unmasked account_number in the URL). management_type='managed' is layered on brokerage_account_type — surface alongside, not as a replacement. For tools that ask for an account identifier on a crypto-backed flow (get_crypto_positions, future crypto write tools), pass rhs_account_number; for everything else (equities, options, etc.) pass account_number. Do not add an unsettled_funds column to the account table — surface it only via the following rule. Whenever you report an account's funds, value, or buying power and that account has type='cash' with unsettled_funds greater than 0, tell the user those unsettled proceeds could be traded immediately with a limited-margin upgrade, and — if the get_limited_margin_upgrade_info tool is available — call it with the account_number and share the appropriate upgrade link. If that tool is not available, say nothing about limited margin (there is no fallback). "
           }
         },
         "required": [
@@ -1912,7 +1975,7 @@
     },
     {
       "name": "get_equity_orders",
-      "description": "Fetch equity orders for an account — list mode (newest first; open and closed, including fills, cancellations, rejections) or single-order mode by passing order_id. When the user asks for \"orders\" without specifying equity or options, call both get_equity_orders and get_option_orders in parallel.\n\nFiltering tips:\n- Prefer narrow queries: combine state, symbol, and/or created_at_gte for specific questions (e.g. \"my filled AAPL orders this week\") — the per-page cap is fixed.\n- created_at_gte: interpret relative times in the user's timezone, convert to UTC before sending.\n- symbol forces a symbol→instrument lookup; omit it if you don't need it.",
+      "description": "Fetch equity orders for an account — list mode (newest first; open and closed, including fills, cancellations, rejections) or single-order mode by passing order_id. When the user asks for \"orders\" without specifying an asset class, call get_equity_orders, get_option_orders, and get_advanced_orders (OCO / multi-leg contingency orders) in parallel.\n\nFiltering tips:\n- Prefer narrow queries: combine state, symbol, and/or created_at_gte for specific questions (e.g. \"my filled AAPL orders this week\") — the per-page cap is fixed.\n- created_at_gte: interpret relative times in the user's timezone, convert to UTC before sending.\n- symbol forces a symbol→instrument lookup; omit it if you don't need it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -3296,6 +3359,186 @@
       }
     },
     {
+      "name": "get_index_historicals",
+      "description": "Get OHLC value bars for one or more market indexes (by instrument UUID) across an explicit time range. Use this for charting an index's history and \"recent movement\" questions. If the bar's interpolated field is true, bar was synthesized to fill a gap and carry no new information.\n\nParameter rules:\n- instrument_ids are index instrument UUIDs from get_indexes. Resolve symbols there first; this tool does not accept ticker symbols.\n- interval is required; pick the coarsest interval that answers the question. If the requested interval would produce too many bars for the range, the call is rejected — narrow the range or coarsen the interval.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instrument_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Index instrument UUIDs (from get_indexes). Up to 10 per call."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Start of the range (RFC3339 UTC, e.g. '2026-01-01T00:00:00Z'). Required."
+          },
+          "end_time": {
+            "type": "string",
+            "description": "End of the range (RFC3339 UTC). Optional — when omitted, defaults to the current time."
+          },
+          "interval": {
+            "type": "string",
+            "description": "Bar interval. Required — there is no server auto-select for indexes. Intraday: 5second, 15second, 30second, minute, 5minute, 10minute, 30minute, hour, 4hour. Interday: day, week, month, 3month, 6month, year, 5year, 10year, 20year, 50year. Note: the 1-minute bar is named 'minute' (not '1minute')."
+          }
+        },
+        "required": [
+          "instrument_ids",
+          "start_time",
+          "interval"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "results": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "instrument_id": {
+                      "type": "string",
+                      "description": "UUID of the index instrument."
+                    },
+                    "symbol": {
+                      "type": "string",
+                      "description": "Index ticker (e.g. SPX, NDX)."
+                    },
+                    "interval": {
+                      "type": "string",
+                      "description": "Bar interval echoed from the request."
+                    },
+                    "bars": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": [
+                          "null",
+                          "object"
+                        ],
+                        "properties": {
+                          "begins_at": {
+                            "type": "string",
+                            "description": "Start of the bar (RFC3339 UTC). Bars are left-edge labeled."
+                          },
+                          "open_value": {
+                            "type": "string",
+                            "description": "Index level at the start of the bar, as a decimal string."
+                          },
+                          "high_value": {
+                            "type": "string",
+                            "description": "Highest index level in the bar, as a decimal string."
+                          },
+                          "low_value": {
+                            "type": "string",
+                            "description": "Lowest index level in the bar, as a decimal string."
+                          },
+                          "close_value": {
+                            "type": "string",
+                            "description": "Index level at the end of the bar, as a decimal string. NOT an official close; for the live level use get_index_quotes."
+                          },
+                          "interpolated": {
+                            "type": "boolean",
+                            "description": "True when the bar was synthesized to fill a gap (no values were published); its levels are filled from a nearby bar and carry no new information."
+                          }
+                        },
+                        "required": [
+                          "begins_at",
+                          "open_value",
+                          "high_value",
+                          "low_value",
+                          "close_value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Bars in ascending time order. May be empty if no values were published in the window."
+                    }
+                  },
+                  "required": [
+                    "instrument_id",
+                    "symbol",
+                    "interval",
+                    "bars"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "One entry per requested index that resolved upstream. Empty if no instrument_id resolved."
+              },
+              "not_found": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "description": "Requested instrument_ids that did not resolve (invalid or unknown). Absent when every requested id resolved."
+              },
+              "restricted": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "instrument_id": {
+                      "type": "string",
+                      "description": "UUID of the restricted index instrument, as requested."
+                    },
+                    "symbol": {
+                      "type": "string",
+                      "description": "Index ticker whose historical data is not licensed for this channel."
+                    }
+                  },
+                  "required": [
+                    "instrument_id",
+                    "symbol"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Requested indexes whose historical data is not licensed for this channel. No bars are ever returned for these. Absent when none were requested."
+              }
+            },
+            "description": "Tool-specific result payload; see the inner properties for fields.",
+            "required": [
+              "results"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string",
+            "description": "Bars are left-edge labeled in UTC; convert to the user's timezone for presentation. Treat interpolated=true bars as gap-fill — they carry no new information and should usually be hidden in charts and ignored for analytics. Bars carry index values, not trade prices — there is no volume. For the current level use get_index_quotes; for a multi-bar move, compute the change from the first bar's open_value to the last bar's close_value. Match results to your request by instrument_id; requested ids that did not resolve are listed in not_found, and ids under restricted are unavailable for licensing reasons — tell the user that rather than retrying."
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "get_index_quotes",
       "description": "Get real-time values for one or more market indexes by instrument ID. Returns current index level, state, and timestamps.",
       "inputSchema": {
@@ -3370,6 +3613,39 @@
                   "additionalProperties": false
                 },
                 "description": "One entry per requested instrument_id with a current value. May be empty if no instrument_id resolved to an active index."
+              },
+              "restricted": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "instrument_id": {
+                      "type": "string",
+                      "description": "UUID of the restricted index instrument, as requested."
+                    },
+                    "symbol": {
+                      "type": "string",
+                      "description": "Index ticker whose values are not available through this channel."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "User-facing explanation for why no value is returned. Relay verbatim; do not retry."
+                    }
+                  },
+                  "required": [
+                    "instrument_id",
+                    "symbol",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Requested indexes whose values are not available through this channel. No value is ever returned for these. Absent when none were requested."
               }
             },
             "description": "Tool-specific result payload; see the inner properties for fields.",
@@ -3380,7 +3656,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "Match quotes[] entries to your requested instrument_ids by instrument_id (NOT symbol — multiple instruments could theoretically share a symbol). value is the current index level as a decimal string; quote precision is preserved. Surface symbol and value first; only mention state when it is non-empty and not 'active'. venue_timestamp reflects when the exchange published the level; updated_at reflects when marketdata last refreshed the record."
+            "description": "Match quotes[] entries to your requested instrument_ids by instrument_id (NOT symbol — multiple instruments could theoretically share a symbol). value is the current index level as a decimal string; quote precision is preserved. Surface symbol and value first; only mention state when it is non-empty and not 'active'. venue_timestamp reflects when the exchange published the level; updated_at reflects when marketdata last refreshed the record. Requested ids under restricted have no value available — relay their message to the user verbatim; do not retry or estimate a value."
           }
         },
         "required": [
@@ -3456,6 +3732,39 @@
                   "additionalProperties": false
                 },
                 "description": "One entry per index in the current page. May be empty when filtering by a symbol that does not match any indexes."
+              },
+              "restricted": {
+                "type": [
+                  "null",
+                  "array"
+                ],
+                "items": {
+                  "type": [
+                    "null",
+                    "object"
+                  ],
+                  "properties": {
+                    "instrument_id": {
+                      "type": "string",
+                      "description": "UUID of the restricted index instrument, as requested."
+                    },
+                    "symbol": {
+                      "type": "string",
+                      "description": "Index ticker whose values are not available through this channel."
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "User-facing explanation for why no value is returned. Relay verbatim; do not retry."
+                    }
+                  },
+                  "required": [
+                    "instrument_id",
+                    "symbol",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Explicitly requested indexes whose values are not available through this channel. No value is ever returned for these. Absent when none were requested."
               }
             },
             "description": "Tool-specific result payload; see the inner properties for fields.",
@@ -3466,7 +3775,74 @@
           },
           "guide": {
             "type": "string",
-            "description": "Each indexes[] entry identifies one index by id and symbol. current_value is a snapshot — for live values, pass id to get_index_quotes."
+            "description": "Each indexes[] entry identifies one index by id and symbol. current_value is a snapshot — for live values, pass id to get_index_quotes. Entries under restricted have no values available through this channel — relay their message to the user verbatim; do not retry or estimate a value."
+          }
+        },
+        "required": [
+          "data",
+          "guide"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_limited_margin_upgrade_info",
+      "description": "Check whether a cash account is eligible to upgrade to limited margin and return the links (web and mobile) that start the upgrade flow. Limited margin lets the account trade with unsettled funds — proceeds from a sale can go into a new order before that sale settles — while adding no borrowing or leverage. Call when the user asks about that capability, about trading with unsettled funds, or about enabling limited margin — or when a cash account shows unsettled_funds greater than 0 while you are reporting its funds, value, or buying power (the get_accounts and get_portfolio guides direct this)..",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "account_number": {
+            "type": "string",
+            "description": "Brokerage account number to check. Obtain from get_accounts."
+          }
+        },
+        "required": [
+          "account_number"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "account_number": {
+                "type": "string",
+                "description": "The account checked."
+              },
+              "eligible": {
+                "type": "boolean",
+                "description": "True when this account is a cash account that can be upgraded to limited margin."
+              },
+              "current_account_type": {
+                "type": "string",
+                "description": "The account's current type — 'cash', 'limited_margin', or 'unknown' if the type is unrecognized. An account already on 'limited_margin' returns eligible=false, since no upgrade is needed."
+              },
+              "web_upgrade_url": {
+                "type": "string",
+                "description": "Upgrade-flow link for desktop/web browsers (opens robinhood.com in the browser). Present only when eligible=true. Send exactly as returned with the account number unmasked — masking it breaks the link."
+              },
+              "mobile_upgrade_url": {
+                "type": "string",
+                "description": "Upgrade-flow link for mobile — a universal link that opens the flow in the Robinhood app. Present only when eligible=true. Send exactly as returned with the account number unmasked — masking it breaks the link."
+              },
+              "upgrade_fallback": {
+                "type": "string",
+                "description": "Instructions for reaching the upgrade flow manually when neither link opens. Present only when eligible=true."
+              }
+            },
+            "description": "Tool-specific result payload; see the inner properties for fields.",
+            "required": [
+              "account_number",
+              "eligible",
+              "current_account_type"
+            ],
+            "additionalProperties": false
+          },
+          "guide": {
+            "type": "string",
+            "description": "When eligible=true, tell the user in one line what limited margin gives them: it lets the account trade with unsettled funds — proceeds from a closing order can go straight into a new order before that sale settles — with no borrowing or leverage. Then give the upgrade link that matches the user's device, introduced with a line like \"To upgrade your <nickname> account (••••<last4>), open this link:\" — send mobile_upgrade_url when the user is on a phone (a universal link that opens the flow in the Robinhood app) and web_upgrade_url when they are on desktop/web (opens in a browser). If the device is unknown, offer both, clearly labeled \"on your phone\" vs \"on desktop/web\". Name the account by its nickname and last four digits (from get_accounts) in the prose, but send the chosen URL exactly as returned with the account number unmasked (masking the number in the link breaks it). If the user reports that neither link works, give them the manual path from upgrade_fallback. The user completes the upgrade themselves in that flow (identity verification and agreement acceptance); this tool never changes the account, so once they confirm they finished, re-fetch get_accounts because the account type from any earlier call is now stale."
           }
         },
         "required": [
@@ -3922,6 +4298,10 @@
                       "type": "string",
                       "description": "'tradable' or 'untradable'; active contracts may still be untradable near expiration or during halts."
                     },
+                    "trade_value_multiplier": {
+                      "type": "string",
+                      "description": "Multiplier converting a per-contract price to a total dollar amount: price × quantity × this. '100' for standard contracts; a corporate action can change it. Not a share count."
+                    },
                     "min_ticks": {
                       "type": "object",
                       "properties": {
@@ -3958,6 +4338,7 @@
                     "type",
                     "state",
                     "tradability",
+                    "trade_value_multiplier",
                     "min_ticks"
                   ],
                   "additionalProperties": false
@@ -3989,7 +4370,7 @@
     },
     {
       "name": "get_option_level_upgrade_info",
-      "description": "Get the upgrade URL to apply for options access on an account. Call when option_level is null. option_level_2 enables long calls/puts, covered calls, and cash-secured puts; option_level_3 adds spreads and complex strategies, though multi-leg orders are not yet supported here.",
+      "description": "Get the upgrade URL to apply for — or raise — options access on an account. The returned link routes the customer into the correct application for their target tier, including upgrading an existing option_level_2 account to option_level_3. Call when the user requests an options level their account doesn't yet have: option_level_2 enables long calls/puts, covered calls, and cash-secured puts; option_level_3 adds spreads and other multi-leg/complex strategies. option_level_3 additionally requires a margin or limited-margin account. If the account type is cash, do NOT call this tool for an L3 request — the customer must first switch to a margin/limited-margin account via get_limited_margin_upgrade_info, then re-fetch get_accounts; call this tool for L3 only once the account type is margin or limited margin. option_level_2 has no account-type requirement and is available on cash accounts. Map the user's requested strategy to its required level and call this tool if the account is below it — null/empty/option_level_0 for any options, or option_level_2 for an L3-only strategy such as a spread. Do NOT call when the account already has the required level or higher.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -5253,7 +5634,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "Show total_value as \"account value\" or \"portfolio value\". The breakdown fields show how value is distributed across asset types. Zero-value fields mean the user has no holdings in that asset class — omit them from display unless the user explicitly asks. For \"how much cash do I have?\" use the cash field. buying_power is the real-time authoritative spendable figure from the broker; quote buying_power.buying_power as the primary affordability answer with buying_power.display_currency. For \"how much can I spend on crypto?\" quote crypto_buying_power.buying_power instead — crypto is cash-only (not marginable), so the top-level buying_power may overstate it; crypto_buying_power is omitted when unavailable. crypto_value reflects the user's crypto holdings value."
+            "description": "Show total_value as \"account value\" or \"portfolio value\". The breakdown fields show how value is distributed across asset types. Zero-value fields mean the user has no holdings in that asset class — omit them from display unless the user explicitly asks. For \"how much cash do I have?\" use the cash field. buying_power is the real-time authoritative spendable figure from the broker; quote buying_power.buying_power as the primary affordability answer with buying_power.display_currency. For \"how much can I spend on crypto?\" quote crypto_buying_power.buying_power instead — crypto is cash-only (not marginable), so the top-level buying_power may overstate it; crypto_buying_power is omitted when unavailable. crypto_value reflects the user's crypto holdings value. On a cash account, recently sold proceeds that have not yet settled are not spendable and are not included in buying_power; that unsettled amount is reported as unsettled_funds by get_accounts (not here), so if you do not already have the account's unsettled_funds, call get_accounts to check it. Whenever you report buying power or account value for a type='cash' account whose unsettled_funds is greater than 0, inform the user those unsettled proceeds could be traded immediately with a limited-margin upgrade, and — if the get_limited_margin_upgrade_info tool is available — call it with the account_number and share the appropriate upgrade link. If that tool is not available, say nothing about limited margin (there is no fallback)."
           }
         },
         "required": [
@@ -5446,7 +5827,7 @@
                     },
                     "unit_type": {
                       "type": "string",
-                      "description": "Value unit: DOLLAR, PERCENTAGE, or PLAIN."
+                      "description": "Value unit: DOLLAR, PERCENTAGE, or PLAIN. PERCENTAGE filters take DECIMAL values: 0.05 means 5%, so send 0.05 and never 5 (which reads as 500% and silently matches nothing). Same convention as the Legend UI, which converts percent input to decimals before sending."
                     },
                     "supported_predicates": {
                       "type": [
@@ -5489,6 +5870,16 @@
                         "type": "string"
                       },
                       "description": "Plot / price-field values the filter accepts (e.g. [\"open\", \"close\"] for % Change). Empty when the filter has no plot input."
+                    },
+                    "options": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The complete set of values this filter accepts, for filters that take a value from a fixed vocabulary rather than a threshold (asset type, sector). Send one of these verbatim in the filter's values: they are case-sensitive, and a value outside the set is rejected. Empty for threshold filters, whose values are numbers."
                     }
                   },
                   "required": [
@@ -5501,7 +5892,7 @@
                   ],
                   "additionalProperties": false
                 },
-                "description": "Every valid scanner filter type: wire-format enum name, category, value format, and supported predicates/intervals/lengths/plots."
+                "description": "Every valid scanner filter type: wire-format enum name, category, value format, supported predicates/intervals/lengths/plots, and the enumerated options a vocabulary filter accepts."
               }
             },
             "description": "Tool-specific result payload; see the inner properties for fields.",
@@ -5512,7 +5903,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "Match filter_type exactly, including suffixes (e.g. percent-change filters use FILTER_TYPE_PERCENT_CHANGE_FROM_CLOSE, not FILTER_TYPE_PERCENT_CHANGE). If a filter's supported_intervals is non-empty, pass an interval — omitting it is the leading cause of an otherwise-valid filter returning no results. Use supported_predicates symbols exactly (e.g. \">\", \"BETWEEN\")."
+            "description": "Match filter_type exactly, including suffixes (e.g. percent-change filters use FILTER_TYPE_PERCENT_CHANGE_FROM_CLOSE, not FILTER_TYPE_PERCENT_CHANGE). If a filter's supported_intervals is non-empty, pass an interval — omitting it is the leading cause of an otherwise-valid filter returning no results. Use supported_predicates symbols exactly (e.g. \">\", \"BETWEEN\").\n\nNo enum filter scopes a scan to particular instruments: to restrict it to named tickers or to an index's members, use an expression filter on the symbol field (get_scanner_datapoints, descriptive category) rather than concluding it cannot be done.\n\nIf a filter has options, its values must come from that list verbatim — it is the filter's complete vocabulary, and anything else is rejected. Do not infer these values from scan results: the instrument_type field in results is Robinhood's classification, which is coarser than the asset-type filter's (its EQUITY spans both STOCK and ETF), so a value copied from there screens for nothing.\n\nFilters with unit_type PERCENTAGE take DECIMAL values: 0.05 means 5%. A whole-percent number silently matches nothing — \"implied volatility above 80\" is values [\"0.8\"], because [\"80\"] reads as 8000% and returns zero rows with no error. This applies to every PERCENTAGE filter (implied and historical volatility, IV rank, the margins, return on assets/equity, % change, gap)."
           }
         },
         "required": [
@@ -5524,7 +5915,7 @@
     },
     {
       "name": "get_scans",
-      "description": "List the authenticated user's saved scanners (also called screeners). A scan is a saved set of filters and columns that filters the market for instruments matching specific criteria (e.g. \"RSI > 70 and Volume > 1M\"). The user creates these in Legend or via the create_scan tool.\n\nReturns one entry per scan with its id, title, active filters, column count, sort order, and a flag indicating whether the scan is managed by Cortex (Legend's AI agent). Cortex-managed scans are read-only via MCP — they can be run with run_scan but not modified with update_scan_filters or update_scan_config.\n\nThis tool takes no parameters.",
+      "description": "List the authenticated user's saved scanners (also called screeners). A scan is a saved set of filters and columns that filters the market for instruments matching specific criteria (e.g. \"RSI > 70 and Volume > 1M\"). The user creates these in Legend or via the create_scan tool.\n\nReturns one entry per scan with its id, title, active filters, configured columns, sort order, and a flag indicating whether the scan is managed by Cortex (Legend's AI agent). Cortex-managed scans are read-only via MCP — they can be run with run_scan but not modified with update_scan_filters or update_scan_config.\n\nThis tool takes no parameters.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false
@@ -5561,7 +5952,11 @@
                         "properties": {
                           "filter_type": {
                             "type": "string",
-                            "description": "Filter category in human form (e.g. \"RSI\", \"Volume\", \"Market Cap\"). See the scanner-filter-specs resource for the full list."
+                            "description": "Display label of the column this filter screens on, as shown in Legend (e.g. \"RSI\", \"Market cap\"). This is a user-editable label, so it is for describing the filter to the user — do NOT send it back as filter_type when re-applying filters; use filter_type_enum for that."
+                          },
+                          "filter_type_enum": {
+                            "type": "string",
+                            "description": "Wire-format enum name for this filter (e.g. \"FILTER_TYPE_RSI\") — the value to pass as a filter's filter_type when re-sending this filter to create_scan or update_scan_filters. FILTER_TYPE_CUSTOM is the exception: such a filter is defined by its expression, so re-create it by sending the expression field to create_scan and omitting filter_type. Never send FILTER_TYPE_CUSTOM as a filter_type — it would create an empty filter. Empty only when the filter has no recognized type."
                           },
                           "predicate": {
                             "type": "string",
@@ -5590,6 +5985,10 @@
                           "plot": {
                             "type": "string",
                             "description": "Plot / price-field input for filters that have one (e.g. % Change uses \"open\" or \"close\" to choose changeFromOpen vs changeFromClose). Empty for filters that don't take a plot."
+                          },
+                          "expression": {
+                            "type": "string",
+                            "description": "Upstream market-data expression this filter screens on. Populated for every filter, standard or custom — an enum filter type is a preset that compiles to an expression upstream. Useful for explaining precisely what the filter measures (which interval, lookback and session it uses). When re-applying a standard filter, send filter_type_enum rather than this; for a FILTER_TYPE_CUSTOM filter this expression is exactly what to send, as the expression field of a create_scan filter."
                           }
                         },
                         "required": [
@@ -5603,7 +6002,43 @@
                     },
                     "column_count": {
                       "type": "integer",
-                      "description": "Number of visible columns configured on this scan."
+                      "description": "Number of visible columns configured on this scan. Equals the number of columns entries with visible true."
+                    },
+                    "columns": {
+                      "type": [
+                        "null",
+                        "array"
+                      ],
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "display_name": {
+                            "type": "string",
+                            "description": "Column header as shown in Legend, e.g. \"% Change\". This is the value other scanner tools take when they reference a column."
+                          },
+                          "visible": {
+                            "type": "boolean",
+                            "description": "False for a column configured on the scan but hidden from the results table. Hidden columns still appear here but their values are absent from scan results."
+                          },
+                          "order": {
+                            "type": "integer",
+                            "description": "Zero-based position of this column in the results table.",
+                            "minimum": -2147483648,
+                            "maximum": 2147483647
+                          },
+                          "expression": {
+                            "type": "string",
+                            "description": "Upstream market-data expression this column computes, e.g. dayVolume or fundamental.marketCap. Populated for every column, standard or custom — a named column is a preset that compiles to an expression upstream. Read-only explanatory detail: reference a column by display_name, never by this."
+                          }
+                        },
+                        "required": [
+                          "display_name",
+                          "visible",
+                          "order"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Every column configured on this scan, visible or not, in configuration order. Use the display_name values here as the sorting_column argument to update_scan_config — that argument matches on display name and is case-sensitive."
                     },
                     "sorting": {
                       "type": "string",
@@ -5619,6 +6054,7 @@
                     "title",
                     "filter_summary",
                     "column_count",
+                    "columns",
                     "cortex_managed"
                   ],
                   "additionalProperties": false
@@ -5634,7 +6070,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "How to interpret the response:\n- scans is an array, newest first. Empty when the user has no saved scans — offer to create one with create_scan if they ask.\n- filter_summary on each scan is a human-readable list of the active filters: filter_type (e.g. \"RSI\"), predicate (>, <, BETWEEN), values, and optional interval/length. Use these to describe what the scan does without quoting raw configuration internals.\n- cortex_managed: true means the scan was created or modified by Cortex inside Legend. Tell the user it's read-only via MCP if they ask to modify it. Suggest creating a fresh scan via create_scan as the alternative.\n- column_count is the number of visible columns in the scan's table. Mention it only if the user asks \"how wide\" or about specific columns.\n- sorting describes the scan's current sort (e.g. \"Volume desc\"). Mention it when summarizing how results would be ordered.\n- Use scan_id (not title) when calling run_scan, update_scan_filters, or update_scan_config.\n\nWhen presenting scans to the user:\n- Render as a numbered list with the title prominent and a short summary of filters.\n- Mark Cortex-managed scans clearly so the user knows they're read-only here.\n- If the user wants to see results, ask which scan and call run_scan with that scan_id."
+            "description": "How to interpret the response:\n- scans is an array, newest first. Empty when the user has no saved scans — offer to create one with create_scan if they ask.\n- filter_summary on each scan describes the active filters. Use filter_type (e.g. \"RSI\"), predicate, values and optional interval/length to tell the user what the scan does. To re-send a filter to update_scan_filters or create_scan, copy filter_type_enum — not filter_type, which is a user-editable column label and will be rejected.\n- A filter whose filter_type_enum is FILTER_TYPE_CUSTOM is defined by its expression. update_scan_filters cannot carry it over; to change a scan that has one, use create_scan with that scan's scan_id and the full intended filter set, passing the filter's expression in the expression field (the scan gets a new configuration version; earlier versions are preserved).\n- cortex_managed: true means the scan was created or modified by Cortex inside Legend. Tell the user it's read-only via MCP if they ask to modify it. Suggest creating a fresh scan via create_scan as the alternative.\n- columns lists every configured column, hidden ones included; column_count counts only the visible ones. When the user asks to re-sort a scan, take update_scan_config's sorting_column verbatim from a columns[].display_name — never guess it.\n- Columns are writable: to add, remove or reorder a scan's extra columns (the ones beyond its filters' own and the standard defaults), call update_scan_config with the complete intended columns list — it keeps the scan's filters, expression filters included, without re-sending them. Each entry here carries the display_name and expression to copy from.\n- sorting describes the scan's current sort (e.g. \"Volume desc\"). Mention it when summarizing how results would be ordered.\n- Use scan_id (not title) when calling run_scan, update_scan_filters, or update_scan_config.\n\nWhen presenting scans to the user:\n- Render as a numbered list with the title prominent and a short summary of filters.\n- Mark Cortex-managed scans clearly so the user knows they're read-only here.\n- If the user wants to see results, ask which scan and call run_scan with that scan_id."
           }
         },
         "required": [
@@ -6103,7 +6539,7 @@
     },
     {
       "name": "place_option_order",
-      "description": "Place a real options order with real money.\n\nWorkflow: by default call review_option_order first, present the alerts, fees, collateral, and quote, and get explicit user confirmation before calling this tool. Skip review only when the user has very explicitly asked to bypass it (e.g. \"skip the review\", \"just place it, don't review\") — a generic \"place this order\" is NOT a bypass.\n\nCapability: single-leg options orders only — Level 2 strategies (covered calls, cash-secured puts, long calls and puts). Multi-leg spreads (Level 3 strategies) aren't supported yet, even on option_level_3 accounts.\n\nAccount requirements: confirm via get_accounts that the chosen account is agentic_allowed=true AND has option_level_2 or option_level_3. If agentic_allowed=false do NOT call. If option_level is empty or option_level_0, do NOT call; follow the get_accounts guide for how to direct the user to enroll.\n\nAlert handling: pre-trade alerts surface only in review_option_order. After the user has acknowledged the reviewed alert, call this tool with the same parameters.\n\nIdempotency: pass a fresh UUID as ref_id on the first call for each logical order, and re-send the SAME ref_id on retries of transient transport failures. Use a new ref_id only when the user wants a new order.\n\nTo find option_id: get_option_chains → get_option_instruments filtered by expiration_date/strike_price/type.\n\nParameter rules:\n- legs: exactly one leg. Direction derived from side (buy → debit, sell → credit).\n- type: 'limit' (default), 'market', 'stop_limit', 'stop_market'. price for limit/stop_limit; stop_price for stop_market/stop_limit.\n- market and stop_market: regular_hours + GFD only; stop_market is sell-to-close only with stop_price below the current ask.\n\nSupported in the Robinhood apps only (not via this MCP):\n- multi-leg structures: spreads, condors, butterflies, etc.\n\nNot currently supported anywhere (including the Robinhood apps):\n- combo orders. At Robinhood, \"combo\" specifically means a stock-option combo: one option leg paired with 100 shares of the underlying equity. In broader industry use, \"combo\" without qualifier sometimes refers to multi-leg option structures.",
+      "description": "Place a real options order with real money.\n\nWorkflow: by default call review_option_order first, present the alerts, fees, collateral, and quote, and get explicit user confirmation before calling this tool. Skip review only when the user has very explicitly asked to bypass it (e.g. \"skip the review\", \"just place it, don't review\") — a generic \"place this order\" is NOT a bypass.\n\nCapability: single-leg options orders — Level 2 strategies (covered calls, cash-secured puts, long calls and puts). Multi-leg spreads (Level 3 strategies) are supported on option_level_3 accounts.\n\nAccount requirements: confirm via get_accounts that the chosen account is agentic_allowed=true AND has option_level_2 or option_level_3. If agentic_allowed=false do NOT call. If option_level is empty or option_level_0, do NOT call; follow the get_accounts guide for how to direct the user to enroll.\n\nAlert handling: pre-trade alerts surface only in review_option_order. After the user has acknowledged the reviewed alert, call this tool with the same parameters.\n\nIdempotency: pass a fresh UUID as ref_id on the first call for each logical order, and re-send the SAME ref_id on retries of transient transport failures. Use a new ref_id only when the user wants a new order.\n\nTo find option_id: get_option_chains → get_option_instruments filtered by expiration_date/strike_price/type.\n\nParameter rules:\n- Multi-leg leg layouts — vertical spread: two legs, same expiration, different strikes, opposite sides. Calendar: two legs, same strike, different expirations. Iron condor: four legs, a put spread plus a call spread. Roll: close the leg you hold (position_effect 'close', side opposite the position) plus open the replacement ('open').\n- Get the net price from the user rather than inferring it from individual leg quotes.\n- Multi-leg is not available on cash or retirement accounts through this tool.\n- type: 'limit' (default), 'market', 'stop_limit', 'stop_market'. price for limit/stop_limit; stop_price for stop_market/stop_limit.\n- market, stop_market, and stop_limit are single-leg only. market and stop_market are also regular_hours, GFD only. stop_market is sell-to-close only with stop_price below the current ask.\n\nNot currently supported anywhere (including the Robinhood apps):\n- combo orders. At Robinhood, \"combo\" specifically means a stock-option combo: one option leg paired with 100 shares of the underlying equity. In broader industry use, \"combo\" without qualifier sometimes refers to multi-leg option structures.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -6133,7 +6569,7 @@
                 },
                 "ratio_quantity": {
                   "type": "integer",
-                  "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1."
+                  "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1, which is what standard spreads, condors, calendars, and rolls use. Must be 1 on a single-leg order; across legs the ratios must be in lowest terms (1:2, not 2:4)."
                 }
               },
               "required": [
@@ -6143,19 +6579,23 @@
               ],
               "additionalProperties": false
             },
-            "description": "Exactly one leg."
+            "description": "1 to 4 legs, all on the same underlying and each a different contract. Several legs are filled together as one strategy. Should match the legs the user reviewed."
+          },
+          "direction": {
+            "type": "string",
+            "description": "Net direction of the whole order: 'debit' (you pay the net premium) or 'credit' (you receive it). Required with 2 or more legs; for one leg it is derived from that leg's side, so omit it."
           },
           "type": {
             "type": "string",
-            "description": "'limit' (default), 'market', 'stop_limit', or 'stop_market'. Should match the type the user reviewed."
+            "description": "'limit' (default), 'market', 'stop_limit', or 'stop_market'. Should match the type the user reviewed. Only 'limit' is available with 2 or more legs."
           },
           "quantity": {
             "type": "string",
-            "description": "Positive integer contract count."
+            "description": "Positive integer contract count. With several legs it counts whole strategies — each leg fills quantity × its ratio_quantity contracts."
           },
           "price": {
             "type": "string",
-            "description": "Limit price per contract. Required for limit/stop_limit; must be omitted for market/stop_market."
+            "description": "Limit price. Per contract for one leg; with several legs it is the net premium of the whole strategy per unit of quantity, always positive — direction says whether it is paid or received. Required for limit/stop_limit; must be omitted for market/stop_market."
           },
           "stop_price": {
             "type": "string",
@@ -6894,7 +7334,7 @@
     },
     {
       "name": "review_option_order",
-      "description": "Simulate an options order without placing it. Returns the current quote plus pre-trade alerts. Call this by default before place_option_order or replace_option_order unless the user has very explicitly asked to skip review.\n\nCapability: single-leg options orders only — Level 2 strategies (covered calls, cash-secured puts, long calls and puts). Multi-leg spreads (Level 3 strategies) aren't supported yet, even on option_level_3 accounts.\n\nAccount requirements: confirm via get_accounts that the chosen account is agentic_allowed=true AND has option_level_2 or option_level_3. If agentic_allowed=false do NOT call. If option_level is empty or option_level_0, do NOT call; follow the get_accounts guide for how to direct the user to enroll.\n\nParameter rules:\n- legs: exactly one leg with option_id (from get_option_instruments), side, position_effect, optional ratio_quantity.\n- type: 'limit' (default), 'market', 'stop_limit', 'stop_market'. If unspecified, ask. price for limit/stop_limit; stop_price for stop_market/stop_limit.\n- market and stop_market: single-leg, GFD, regular_hours only. stop_market is sell-to-close only with stop_price below the current ask. Non-limit-immediate types are blocked in any extended-hours session.\n- Surface order_checks alerts verbatim — the detail strings carry the actual time/contract/BP values for the user.",
+      "description": "Simulate an options order without placing it. Returns the current quote plus pre-trade alerts. Call this by default before place_option_order or replace_option_order unless the user has very explicitly asked to skip review.\n\nCapability: single-leg options orders — Level 2 strategies (covered calls, cash-secured puts, long calls and puts). Multi-leg spreads (Level 3 strategies) are supported on option_level_3 accounts.\n\nAccount requirements: confirm via get_accounts that the chosen account is agentic_allowed=true AND has option_level_2 or option_level_3. If agentic_allowed=false do NOT call. If option_level is empty or option_level_0, do NOT call; follow the get_accounts guide for how to direct the user to enroll.\n\nParameter rules:\n- legs: option_id (from get_option_instruments), side, position_effect, optional ratio_quantity per leg.\n- Multi-leg leg layouts — vertical spread: two legs, same expiration, different strikes, opposite sides. Calendar: two legs, same strike, different expirations. Iron condor: four legs, a put spread plus a call spread. Roll: close the leg you hold (position_effect 'close', side opposite the position) plus open the replacement ('open').\n- Get the net price from the user rather than inferring it from individual leg quotes.\n- Multi-leg is not available on cash or retirement accounts through this tool.\n- type: 'limit' (default), 'market', 'stop_limit', 'stop_market'. If unspecified, ask. price for limit/stop_limit; stop_price for stop_market/stop_limit.\n- market, stop_market, and stop_limit are single-leg only. market and stop_market are also GFD, regular_hours only. stop_market is sell-to-close only with stop_price below the current ask. Non-limit-immediate types are blocked in any extended-hours session.\n- Surface order_checks alerts verbatim — the detail strings carry the actual time/contract/BP values for the user.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -6924,7 +7364,7 @@
                 },
                 "ratio_quantity": {
                   "type": "integer",
-                  "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1."
+                  "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1, which is what standard spreads, condors, calendars, and rolls use. Must be 1 on a single-leg order; across legs the ratios must be in lowest terms (1:2, not 2:4)."
                 }
               },
               "required": [
@@ -6934,19 +7374,23 @@
               ],
               "additionalProperties": false
             },
-            "description": "Exactly one leg."
+            "description": "1 to 4 legs, all on the same underlying and each a different contract. Several legs are filled together as one strategy."
+          },
+          "direction": {
+            "type": "string",
+            "description": "Net direction of the whole order: 'debit' (you pay the net premium) or 'credit' (you receive it). Required with 2 or more legs; for one leg it is derived from that leg's side, so omit it."
           },
           "type": {
             "type": "string",
-            "description": "'limit' (default), 'market', 'stop_limit', or 'stop_market'."
+            "description": "'limit' (default), 'market', 'stop_limit', or 'stop_market'. Only 'limit' is available with 2 or more legs."
           },
           "quantity": {
             "type": "string",
-            "description": "Positive integer contract count."
+            "description": "Positive integer contract count. With several legs it counts whole strategies — each leg fills quantity × its ratio_quantity contracts."
           },
           "price": {
             "type": "string",
-            "description": "Limit price per contract (e.g. '1.50'). Required for limit/stop_limit; must be omitted for market/stop_market."
+            "description": "Limit price (e.g. '1.50'). Per contract for one leg; with several legs it is the net premium of the whole strategy per unit of quantity, always positive — direction says whether it is paid or received. Required for limit/stop_limit; must be omitted for market/stop_market."
           },
           "stop_price": {
             "type": "string",
@@ -6990,13 +7434,17 @@
                 "type": "string",
                 "description": "Echoed user-facing order type (limit / market / stop_limit / stop_market)."
               },
+              "direction": {
+                "type": "string",
+                "description": "Net direction the order was reviewed with: 'debit' (the user pays) or 'credit' (the user receives). Derived from the leg's side on a single-leg order."
+              },
               "quantity": {
                 "type": "string",
-                "description": "Echoed contract count."
+                "description": "Echoed contract count. With several legs it counts whole strategies."
               },
               "price": {
                 "type": "string",
-                "description": "Echoed limit price per contract. Omitted for market/stop_market."
+                "description": "Echoed limit price — per contract for one leg, the net premium of the whole strategy per unit of quantity with several legs. Omitted for market/stop_market."
               },
               "stop_price": {
                 "type": "string",
@@ -7032,7 +7480,7 @@
                     },
                     "ratio_quantity": {
                       "type": "integer",
-                      "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1."
+                      "description": "Contracts for this leg per unit of the order's quantity. Defaults to 1, which is what standard spreads, condors, calendars, and rolls use. Must be 1 on a single-leg order; across legs the ratios must be in lowest terms (1:2, not 2:4)."
                     }
                   },
                   "required": [
@@ -7422,7 +7870,7 @@
                           "null",
                           "string"
                         ],
-                        "description": "Dollar collateral reserved as a decimal string. null when the position carries infinite risk (infinite=true)."
+                        "description": "Change in dollar collateral if the order fills, as a decimal string — computed against the account's existing positions and working orders, not for this order alone. Zero is a valid answer when existing positions already cover the new legs. null when the position carries infinite risk (infinite=true)."
                       },
                       "direction": {
                         "type": "string",
@@ -7433,7 +7881,7 @@
                         "description": "True for naked short positions with unlimited risk (e.g. naked calls). Warn the user before they proceed."
                       }
                     },
-                    "description": "Dollar collateral reserved when the order fills.",
+                    "description": "Change in dollar collateral if the order fills.",
                     "required": [
                       "amount",
                       "direction",
@@ -7487,7 +7935,7 @@
                     "description": "Share-based collateral required by the strategy (e.g. covered calls). Empty for most orders — only short equity-covered strategies require share collateral."
                   }
                 },
-                "description": "Collateral to be held if the order fills. Present only when chain_symbol and underlying_type were supplied. Warn the user when cash.infinite=true (unlimited-risk position).",
+                "description": "How this order changes the collateral held on the account, measured against its existing positions and working orders — a credit means collateral is released, and zero means existing positions already cover the new legs. Do NOT describe it as this order's standalone requirement or as unreliable. Present only when chain_symbol and underlying_type were supplied. Warn the user when cash.infinite=true (unlimited-risk position).",
                 "required": [
                   "account_number",
                   "cash",
@@ -7500,6 +7948,7 @@
             "required": [
               "account_number",
               "type",
+              "direction",
               "quantity",
               "legs",
               "order_checks",
@@ -7509,7 +7958,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "This tool does NOT place the order — it returns a preview for the user to review. Reaching this tool means the user opted into the review step, so you MUST present the preview to the user (legs, type, quantity, price/stop_price, alerts, fees, collateral, quote) and get explicit confirmation before calling place_option_order (for a new order) or replace_option_order (when modifying an existing order). This holds even when order_checks is empty ({}) — empty means no broker alerts, NOT that confirmation can be skipped; the user asked to review, so let them review. Non-empty order_checks: present alertType + details verbatim and ask the user to confirm before proceeding. On user ack, call place_option_order (or replace_option_order) with the same parameters. Use option_quotes (mark_price, bid/ask, greeks) to help judge cost. When fees is present, lead with total_fee; mention gold_fee_savings when non-zero. When collateral is present, show cash amount/direction; warn on cash.infinite=true (unlimited-risk position) or non-empty equities (share-based collateral). Echo the order type: for market/stop_market remind the user the fill price is unbounded; for stop_limit/stop_market note the order only triggers when the underlying reaches stop_price."
+            "description": "This tool does NOT place the order — it returns a preview for the user to review. Reaching this tool means the user opted into the review step, so you MUST present the preview to the user (legs, type, quantity, price/stop_price, alerts, fees, collateral, quote) and get explicit confirmation before calling place_option_order (for a new order) or replace_option_order (when modifying an existing order). This holds even when order_checks is empty ({}) — empty means no broker alerts, NOT that confirmation can be skipped; the user asked to review, so let them review. Non-empty order_checks: present alertType + details verbatim and ask the user to confirm before proceeding. On user ack, call place_option_order (or replace_option_order) with the same parameters. With several legs, present each leg (pair it with its option_quotes entry by instrument_id) and then the net direction and price for the order as a whole. Use option_quotes (mark_price, bid/ask, greeks) to help judge cost. When fees is present, lead with total_fee; mention gold_fee_savings when non-zero. When collateral is present, show cash amount/direction; warn on cash.infinite=true (unlimited-risk position) or non-empty equities (share-based collateral). Echo the order type: for market/stop_market remind the user the fill price is unbounded; for stop_limit/stop_market note the order only triggers when the underlying reaches stop_price."
           }
         },
         "required": [
@@ -7576,11 +8025,11 @@
                         },
                         "instrument_type": {
                           "type": "string",
-                          "description": "Asset class: STOCK, ETF, etc. Mirrors hippo.model.v1.InstrumentType."
+                          "description": "Robinhood's own asset classification: EQUITY, OPTION, INDEX, CRYPTO, FUTURES_PRODUCT, FUTURES_CONTRACT, COMBO. NOT the vocabulary the asset-type filter accepts, and not translatable to it: EQUITY covers both stocks and ETFs, which that filter distinguishes. To screen on asset type, use the values listed in the asset-type filter's options from get_scanner_filter_specs, never a value copied from this field."
                         },
                         "columns": {
                           "type": "object",
-                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Numeric values are upstream-formatted strings; the agent should re-format for the user.",
+                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Values are raw numeric strings, not display-formatted: columns whose header contains % hold ratios (multiply by 100 before presenting), large numbers can arrive in scientific notation, and floats carry precision noise. Always format before presenting. An empty string means the datapoint is undefined for that instrument; the row still matched the filters.",
                           "additionalProperties": {
                             "type": "string"
                           }
@@ -7610,7 +8059,11 @@
                       "properties": {
                         "filter_type": {
                           "type": "string",
-                          "description": "Filter category in human form (e.g. \"RSI\", \"Volume\", \"Market Cap\"). See the scanner-filter-specs resource for the full list."
+                          "description": "Display label of the column this filter screens on, as shown in Legend (e.g. \"RSI\", \"Market cap\"). This is a user-editable label, so it is for describing the filter to the user — do NOT send it back as filter_type when re-applying filters; use filter_type_enum for that."
+                        },
+                        "filter_type_enum": {
+                          "type": "string",
+                          "description": "Wire-format enum name for this filter (e.g. \"FILTER_TYPE_RSI\") — the value to pass as a filter's filter_type when re-sending this filter to create_scan or update_scan_filters. FILTER_TYPE_CUSTOM is the exception: such a filter is defined by its expression, so re-create it by sending the expression field to create_scan and omitting filter_type. Never send FILTER_TYPE_CUSTOM as a filter_type — it would create an empty filter. Empty only when the filter has no recognized type."
                         },
                         "predicate": {
                           "type": "string",
@@ -7639,6 +8092,10 @@
                         "plot": {
                           "type": "string",
                           "description": "Plot / price-field input for filters that have one (e.g. % Change uses \"open\" or \"close\" to choose changeFromOpen vs changeFromClose). Empty for filters that don't take a plot."
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Upstream market-data expression this filter screens on. Populated for every filter, standard or custom — an enum filter type is a preset that compiles to an expression upstream. Useful for explaining precisely what the filter measures (which interval, lookback and session it uses). When re-applying a standard filter, send filter_type_enum rather than this; for a FILTER_TYPE_CUSTOM filter this expression is exactly what to send, as the expression field of a create_scan filter."
                         }
                       },
                       "required": [
@@ -7674,7 +8131,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "How to interpret the response:\n- result.total_items is the total number of instruments matching the scan's filters. result.results may contain fewer entries if the scan's frontend_limit caps the rows — mention this to the user when total_items > len(results).\n- result.results is an array of matching instruments. Each entry has:\n  - ticker: trading symbol (e.g. \"AAPL\"). Empty when the scan does not have a Symbol/Ticker column visible — use instrument_id then.\n  - instrument_id: Robinhood instrument UUID. Pass this to other trading tools that take an instrument_id.\n  - instrument_type: STOCK, ETF, etc.\n  - columns: map of column display name -> cell value. Values are pre-formatted strings from upstream — re-format only if needed for the user.\n- result.sorted_by tells you the row order (e.g. \"Volume desc\"). Mention it when describing the table.\n- result.filters_applied lists the filters in effect — useful for confirming \"this scan currently filters by RSI > 70\".\n- result.cortex_managed: true means the scan was created by Cortex inside Legend. Reads are fine, but update_scan_filters / update_scan_config will reject Cortex-managed scans — tell the user that if they ask to modify it.\n\nWhen presenting results:\n- Render as a table with ticker as the leftmost column followed by the most user-relevant columns (% Change, Volume, etc.).\n- State total_items so the user knows how big the match set is.\n- Note that results are live as of execution time — they will differ if run again later.\n- If results is empty: tell the user the scan returned 0 matches right now. Suggest relaxing filters with update_scan_filters if they want broader results.\n\nError handling:\n- \"scan does not exist or you do not have access to it\" → the scan_id is wrong or the scan belongs to a different user. Suggest get_scans to see available scans.\n- Rate-limited or upstream failure → surface the error verbatim, no automatic retry."
+            "description": "How to interpret the response:\n- result.total_items is the total number of instruments matching the scan's filters. result.results may contain fewer entries if the scan's frontend_limit caps the rows — mention this to the user when total_items > len(results).\n- result.results is an array of matching instruments. Each entry has:\n  - ticker: trading symbol (e.g. \"AAPL\"). Empty when the scan does not have a Symbol/Ticker column visible — use instrument_id then.\n  - instrument_id: Robinhood instrument UUID. Pass this to other trading tools that take an instrument_id.\n  - instrument_type: Robinhood's own asset classification (EQUITY, OPTION, INDEX, CRYPTO, FUTURES_PRODUCT, FUTURES_CONTRACT, COMBO). EQUITY covers both stocks and ETFs. This is NOT the vocabulary the asset-type filter accepts and it is not translatable to it: to screen on asset type, use the values listed in the asset-type filter's options from get_scanner_filter_specs, never a value copied from this field.\n  - columns: map of column display name -> cell value. Values are RAW numeric strings, not display-formatted; always format them before presenting. In particular: columns whose header contains \"%\" (e.g. \"% Change\") hold RATIOS, so multiply by 100 (a cell of \"-0.0059\" is -0.59%, not -0.0059%); large numbers can arrive in scientific notation (\"1.98e+11\"); floats carry precision noise (\"-0.6800000000000068\") and need rounding. An empty string means the datapoint is undefined for that instrument (e.g. Market cap for an ETF); the row still matched the filters.\n- result.sorted_by tells you the row order (e.g. \"Volume desc\"). Mention it when describing the table.\n- result.filters_applied lists the filters in effect — useful for confirming \"this scan currently filters by RSI > 70\".\n- result.cortex_managed: true means the scan was created by Cortex inside Legend. Reads are fine, but update_scan_filters / update_scan_config will reject Cortex-managed scans — tell the user that if they ask to modify it.\n\nWhen presenting results:\n- Render as a table with ticker as the leftmost column followed by the most user-relevant columns (% Change, Volume, etc.).\n- State total_items so the user knows how big the match set is.\n- Note that results are live as of execution time — they will differ if run again later.\n- If results is empty: tell the user the scan returned 0 matches right now. Suggest relaxing filters with update_scan_filters if they want broader results.\n\nError handling:\n- \"scan does not exist or you do not have access to it\" → the scan_id is wrong or the scan belongs to a different user. Suggest get_scans to see available scans.\n- Rate-limited or upstream failure → surface the error verbatim, no automatic retry."
           }
         },
         "required": [
@@ -7917,7 +8374,7 @@
     },
     {
       "name": "update_scan_config",
-      "description": "Change the sort order of a saved scan's results table. The scan's filters and columns are preserved; only the sort changes.\n\nParameters:\n- scan_id (required) — the scan to modify.\n- sorting_column (required) — display name of the column to sort by. Must match a visible column on the scan; the error response lists available columns when no match is found.\n- sorting_direction (required) — \"asc\" or \"desc\".\n\nRestrictions:\n- Cortex-managed scans (cortex_managed: true in get_scans) are rejected.\n- v1 supports only sort changes — column add/remove/visibility/reorder are not exposed by this tool.\n\nReturns the scan with the new sort applied and fresh live results in the new order.",
+      "description": "Change the sort order of a saved scan's results table, and/or replace its extra result columns. The scan's filters are always preserved.\n\nParameters:\n- scan_id (required) — the scan to modify.\n- sorting_column (required unless columns is provided) — display name of the column to sort by. Must match a column on the scan; the error response lists available columns when no match is found.\n- sorting_direction — \"asc\" or \"desc\". Required with sorting_column.\n- columns (optional) — REPLACE the scan's extra result columns (beyond the filters' own columns and the standard defaults). The scan keeps its current filters verbatim and gets a new configuration version — earlier versions are preserved. To add one column, pass the complete intended set (current columns from get_scans plus the new one). Columns display values, filters screen — to show a datapoint without restricting results, this is the tool, never a no-op filter.\n\nRestrictions:\n- Cortex-managed scans (cortex_managed: true in get_scans) are rejected.\n- Omitted/empty columns means sorting-only. To remove every extra column, use create_scan with this scan's scan_id and its current filters.\n- An expression matching a standard column's canonical form is saved as that standard column, canonical name included.\n\nReturns the scan with the changes applied and fresh live results.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -7927,17 +8384,55 @@
           },
           "sorting_column": {
             "type": "string",
-            "description": "Display name of the column to sort by (e.g. \"Volume\", \"% Change\", \"RSI\"). Must match a column currently visible on the scan — call get_scans / run_scan first to see available columns."
+            "description": "Display name of the column to sort by (e.g. \"Volume\", \"% Change\", \"RSI\"). Must match a column on the scan — call get_scans / run_scan first to see available columns. Required unless columns is provided."
           },
           "sorting_direction": {
             "type": "string",
-            "description": "\"asc\" or \"desc\" (ascending or descending)."
+            "description": "\"asc\" or \"desc\" (ascending or descending). Required with sorting_column."
+          },
+          "columns": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string",
+                  "description": "Column header, and the column's identity: matching an existing column's name (case-insensitively) customizes that column instead of adding a duplicate, and two columns cannot share a name. A filter with non-default interval/length names its column with those parameters (e.g. a 5-minute RSI filter's column is \"RSI (14, 5M)\") — matching it requires that exact name; a bare \"RSI\" next to it adds a separate, default-parameters RSI column. Without expression, must name a standard column (e.g. \"Market cap\", \"RSI\", \"Volume\") — an unknown name is rejected with the full list of valid ones."
+                },
+                "expression": {
+                  "type": "string",
+                  "description": "Raw market-data expression computing the column's value, built from get_scanner_datapoints (same language as expression filters), e.g. \"optionsPutDayVolume / optionsCallDayVolume\". Omit to reference a standard column by display_name alone. If the expression equals a standard column's canonical form, the column is saved as that standard column and display_name is REPLACED by its canonical name (e.g. \"optionsPutDayVolume\" always saves as \"Total put volume\")."
+                },
+                "visible": {
+                  "type": [
+                    "null",
+                    "boolean"
+                  ],
+                  "description": "Whether the column shows in results. When omitted, a NEW column is visible, but a column customizing an existing filter-created column keeps that column's current visibility (some filter columns are deliberately hidden) — pass an explicit value to change it. A hidden column is still computed and saved."
+                },
+                "order": {
+                  "type": [
+                    "null",
+                    "integer"
+                  ],
+                  "description": "Relative ordering among the columns passed in this call: lower comes first, columns without an order go last in the order given. The scan's standard default columns (Symbol, Name, price, Volume, ...) always come before these.",
+                  "minimum": -2147483648,
+                  "maximum": 2147483647
+                }
+              },
+              "required": [
+                "display_name"
+              ],
+              "additionalProperties": false
+            },
+            "description": "REPLACE the scan's extra result columns (the ones beyond what its filters and the standard defaults contribute): the scan keeps its current filters verbatim and gets a new configuration version whose extra columns are exactly this list. To add one column, read the scan's current columns with get_scans and pass the complete intended set, carrying visible: false for any column get_scans shows as hidden (a hidden extra column re-sent without it becomes visible). Omitted or empty means sorting-only, columns untouched; to remove every extra column, use create_scan with this scan's scan_id and its current filters. Each column: display_name plus either an expression (from get_scanner_datapoints) or nothing (a standard column referenced by name, e.g. \"Market cap\")."
           }
         },
         "required": [
-          "scan_id",
-          "sorting_column",
-          "sorting_direction"
+          "scan_id"
         ],
         "additionalProperties": false
       },
@@ -7982,11 +8477,11 @@
                         },
                         "instrument_type": {
                           "type": "string",
-                          "description": "Asset class: STOCK, ETF, etc. Mirrors hippo.model.v1.InstrumentType."
+                          "description": "Robinhood's own asset classification: EQUITY, OPTION, INDEX, CRYPTO, FUTURES_PRODUCT, FUTURES_CONTRACT, COMBO. NOT the vocabulary the asset-type filter accepts, and not translatable to it: EQUITY covers both stocks and ETFs, which that filter distinguishes. To screen on asset type, use the values listed in the asset-type filter's options from get_scanner_filter_specs, never a value copied from this field."
                         },
                         "columns": {
                           "type": "object",
-                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Numeric values are upstream-formatted strings; the agent should re-format for the user.",
+                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Values are raw numeric strings, not display-formatted: columns whose header contains % hold ratios (multiply by 100 before presenting), large numbers can arrive in scientific notation, and floats carry precision noise. Always format before presenting. An empty string means the datapoint is undefined for that instrument; the row still matched the filters.",
                           "additionalProperties": {
                             "type": "string"
                           }
@@ -8016,7 +8511,11 @@
                       "properties": {
                         "filter_type": {
                           "type": "string",
-                          "description": "Filter category in human form (e.g. \"RSI\", \"Volume\", \"Market Cap\"). See the scanner-filter-specs resource for the full list."
+                          "description": "Display label of the column this filter screens on, as shown in Legend (e.g. \"RSI\", \"Market cap\"). This is a user-editable label, so it is for describing the filter to the user — do NOT send it back as filter_type when re-applying filters; use filter_type_enum for that."
+                        },
+                        "filter_type_enum": {
+                          "type": "string",
+                          "description": "Wire-format enum name for this filter (e.g. \"FILTER_TYPE_RSI\") — the value to pass as a filter's filter_type when re-sending this filter to create_scan or update_scan_filters. FILTER_TYPE_CUSTOM is the exception: such a filter is defined by its expression, so re-create it by sending the expression field to create_scan and omitting filter_type. Never send FILTER_TYPE_CUSTOM as a filter_type — it would create an empty filter. Empty only when the filter has no recognized type."
                         },
                         "predicate": {
                           "type": "string",
@@ -8045,6 +8544,10 @@
                         "plot": {
                           "type": "string",
                           "description": "Plot / price-field input for filters that have one (e.g. % Change uses \"open\" or \"close\" to choose changeFromOpen vs changeFromClose). Empty for filters that don't take a plot."
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Upstream market-data expression this filter screens on. Populated for every filter, standard or custom — an enum filter type is a preset that compiles to an expression upstream. Useful for explaining precisely what the filter measures (which interval, lookback and session it uses). When re-applying a standard filter, send filter_type_enum rather than this; for a FILTER_TYPE_CUSTOM filter this expression is exactly what to send, as the expression field of a create_scan filter."
                         }
                       },
                       "required": [
@@ -8080,7 +8583,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "How to interpret the response:\n- result.sorted_by — confirms the new sort (\"Volume desc\" etc.).\n- result.results — live results re-ordered by the new sort.\n- The change is persisted: subsequent run_scan calls on this scan_id will return rows in the new order.\n\nWhen presenting:\n- Confirm the new sort order to the user.\n- Render the re-sorted results as a table. Eyeball-verify the sort with the user if they care: the top rows should match the requested direction.\n- Mention that the sort is saved for future runs of the scan.\n\nError handling:\n- \"no column named X\" → the requested sorting_column does not match any visible column. The error message lists available columns — relay them to the user and ask which they meant.\n- \"created by Cortex\" → the scan is read-only via MCP. Suggest creating a fresh scan via create_scan.\n- \"scan X does not exist or you do not have access\" → bad scan_id. Suggest get_scans."
+            "description": "How to interpret the response:\n- result.sorted_by — the sort in effect (\"Volume desc\" etc.).\n- result.columns — the scan's columns after the change (when columns were passed, verify the intended set landed; expression columns matching a standard column adopt its canonical name).\n- result.results — live results reflecting the change.\n- The change is persisted: subsequent run_scan calls on this scan_id will return rows accordingly.\n\nWhen presenting:\n- Confirm what changed (sort, columns, or both) to the user.\n- Render the results as a table. Eyeball-verify a sort change with the user if they care: the top rows should match the requested direction.\n- Mention that the change is saved for future runs of the scan.\n\nError handling:\n- \"no column named X\" → the requested sorting_column does not match any column. The error message lists available columns — relay them to the user and ask which they meant. When changing columns and sort together, the sort can name one of the new columns; if the sort fails, the columns change has already landed — retry with update_scan_config sorting-only rather than re-sending columns.\n- \"columns[N]: ...\" → column validation failure at index N, nothing was changed.\n- \"no standard column is named X\" → the display name (without expression) isn't a standard column; the error lists valid names. Either pick one or provide an expression.\n- \"created by Cortex\" → the scan is read-only via MCP. Suggest creating a fresh scan via create_scan.\n- \"scan X does not exist or you do not have access\" → bad scan_id. Suggest get_scans."
           }
         },
         "required": [
@@ -8110,7 +8613,7 @@
               "properties": {
                 "filter_type": {
                   "type": "string",
-                  "description": "Wire-format enum name, e.g. \"FILTER_TYPE_RSI\". See the scanner-filter-specs resource for valid values."
+                  "description": "Wire-format enum name, e.g. \"FILTER_TYPE_RSI\". See the scanner-filter-specs resource for valid values. Omit when supplying expression."
                 },
                 "predicate": {
                   "type": "string",
@@ -8124,25 +8627,32 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Threshold values. Single-element for unary predicates, two-element for BETWEEN, multi-element for IN_LIST/ANY_OF."
+                  "description": "Threshold values. Single-element for unary predicates, two-element for BETWEEN, multi-element for IN_LIST/ANY_OF. For a boolean expression screen, exactly [\"True\"]."
                 },
                 "interval": {
                   "type": "string",
-                  "description": "Time granularity for time-series filters (e.g. \"1d\"). Use one of the supported_intervals from the filter's scanner-filter-specs entry."
+                  "description": "Time granularity for time-series filters (e.g. \"1d\"). Use one of the supported_intervals from the filter's scanner-filter-specs entry. Not used with expression — encode granularity inside the expression."
                 },
                 "length": {
                   "type": "integer",
-                  "description": "Lookback length for filters that need one (e.g. RSI period of 14). Use one of the supported_lengths from the filter's scanner-filter-specs entry.",
+                  "description": "Lookback length for filters that need one (e.g. RSI period of 14). Use one of the supported_lengths from the filter's scanner-filter-specs entry. Not used with expression.",
                   "minimum": -2147483648,
                   "maximum": 2147483647
                 },
                 "plot": {
                   "type": "string",
-                  "description": "Plot / price-field input for filters that have one (e.g. \"open\" or \"close\" for % Change). Use one of the supported_plots from the filter's scanner-filter-specs entry."
+                  "description": "Plot / price-field input for filters that have one (e.g. \"open\" or \"close\" for % Change). Use one of the supported_plots from the filter's scanner-filter-specs entry. Not used with expression."
+                },
+                "expression": {
+                  "type": "string",
+                  "description": "Raw market-data expression to screen on, e.g. \"dayVolume / volumeAvg(candleCount=30, candlePeriod=\\\"1d\\\", session=\\\"all\\\")\" with a numeric predicate, or a whole comparison like \"tradeAllDay.price > closeAvg(candleCount=50, candlePeriod=\\\"1d\\\", session=\\\"all\\\")\" with predicate \"=\" and values [\"True\"]. Accepted by preview_scan (validate without saving) and create_scan (save); update_scan_filters rejects expressions — to change an expression filter on a saved scan, call create_scan with that scan's scan_id and the full filter set (a new configuration version is appended; earlier versions are preserved). Omit filter_type when set. Prefer an enum filter_type whenever one covers the request."
+                },
+                "display_title": {
+                  "type": "string",
+                  "description": "Optional short label for an expression filter, shown as the results-column header (e.g. \"Relative volume (30D)\"). Only used with expression."
                 }
               },
               "required": [
-                "filter_type",
                 "predicate",
                 "values"
               ],
@@ -8198,11 +8708,11 @@
                         },
                         "instrument_type": {
                           "type": "string",
-                          "description": "Asset class: STOCK, ETF, etc. Mirrors hippo.model.v1.InstrumentType."
+                          "description": "Robinhood's own asset classification: EQUITY, OPTION, INDEX, CRYPTO, FUTURES_PRODUCT, FUTURES_CONTRACT, COMBO. NOT the vocabulary the asset-type filter accepts, and not translatable to it: EQUITY covers both stocks and ETFs, which that filter distinguishes. To screen on asset type, use the values listed in the asset-type filter's options from get_scanner_filter_specs, never a value copied from this field."
                         },
                         "columns": {
                           "type": "object",
-                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Numeric values are upstream-formatted strings; the agent should re-format for the user.",
+                          "description": "Column display name -> cell value, for every visible column in the scan's configuration. Values are raw numeric strings, not display-formatted: columns whose header contains % hold ratios (multiply by 100 before presenting), large numbers can arrive in scientific notation, and floats carry precision noise. Always format before presenting. An empty string means the datapoint is undefined for that instrument; the row still matched the filters.",
                           "additionalProperties": {
                             "type": "string"
                           }
@@ -8232,7 +8742,11 @@
                       "properties": {
                         "filter_type": {
                           "type": "string",
-                          "description": "Filter category in human form (e.g. \"RSI\", \"Volume\", \"Market Cap\"). See the scanner-filter-specs resource for the full list."
+                          "description": "Display label of the column this filter screens on, as shown in Legend (e.g. \"RSI\", \"Market cap\"). This is a user-editable label, so it is for describing the filter to the user — do NOT send it back as filter_type when re-applying filters; use filter_type_enum for that."
+                        },
+                        "filter_type_enum": {
+                          "type": "string",
+                          "description": "Wire-format enum name for this filter (e.g. \"FILTER_TYPE_RSI\") — the value to pass as a filter's filter_type when re-sending this filter to create_scan or update_scan_filters. FILTER_TYPE_CUSTOM is the exception: such a filter is defined by its expression, so re-create it by sending the expression field to create_scan and omitting filter_type. Never send FILTER_TYPE_CUSTOM as a filter_type — it would create an empty filter. Empty only when the filter has no recognized type."
                         },
                         "predicate": {
                           "type": "string",
@@ -8261,6 +8775,10 @@
                         "plot": {
                           "type": "string",
                           "description": "Plot / price-field input for filters that have one (e.g. % Change uses \"open\" or \"close\" to choose changeFromOpen vs changeFromClose). Empty for filters that don't take a plot."
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Upstream market-data expression this filter screens on. Populated for every filter, standard or custom — an enum filter type is a preset that compiles to an expression upstream. Useful for explaining precisely what the filter measures (which interval, lookback and session it uses). When re-applying a standard filter, send filter_type_enum rather than this; for a FILTER_TYPE_CUSTOM filter this expression is exactly what to send, as the expression field of a create_scan filter."
                         }
                       },
                       "required": [
@@ -8296,7 +8814,7 @@
           },
           "guide": {
             "type": "string",
-            "description": "How to interpret the response:\n- result.filters_applied lists the filters that are now in effect on the scan. Confirm this matches what the user requested.\n- result.total_items reflects matches under the new filter set — tighter filters typically lower this count.\n- result.results is fresh live data evaluated against the new filters.\n\nWhen presenting:\n- Confirm exactly which filters are now active (filters_applied) — useful especially after add/remove operations where the user wants to know the new total filter set.\n- Mention the new total_items so the user sees the impact of the change.\n- Render the new results as a table.\n- If results is empty: tell the user no instruments match the new filter set. Suggest relaxing one filter (and offer to call update_scan_filters again with the relaxed set).\n\nREPLACE-semantics callout:\n- If the user said \"add a market cap filter\" but the request payload only had the new filter (not the existing ones), the existing filters were dropped because update_scan_filters REPLACES the filter set. Surface this if the result's filters_applied is shorter than expected. Recovery: read the scan via get_scans/run_scan, then call again with the full intended set.\n\nError handling:\n- \"filter[N]: ...\" → validation failure at filter index N. Tell the user which filter and why.\n- \"created by Cortex\" → the scan is read-only via MCP. Suggest creating a fresh scan via create_scan as the alternative.\n- \"scan X does not exist or you do not have access\" → bad scan_id. Suggest get_scans."
+            "description": "How to interpret the response:\n- result.filters_applied lists the filters that are now in effect on the scan. Confirm this matches what the user requested.\n- result.total_items reflects matches under the new filter set — tighter filters typically lower this count.\n- result.results is fresh live data evaluated against the new filters.\n\nWhen presenting:\n- Confirm exactly which filters are now active (filters_applied) — useful especially after add/remove operations where the user wants to know the new total filter set.\n- Mention the new total_items so the user sees the impact of the change.\n- Render the new results as a table.\n- If results is empty: tell the user no instruments match the new filter set. Suggest relaxing one filter (and offer to call update_scan_filters again with the relaxed set).\n\nColumns display values, filters screen: to show a datapoint in the scan's results without restricting matches, do NOT add a filter here (a \">= 0\" filter is not a no-op — it silently drops instruments where the datapoint is undefined, and it pollutes the scan's filter list). Use update_scan_config's columns parameter instead; it keeps this scan's filters untouched.\n\nREPLACE-semantics callout:\n- If the user said \"add a market cap filter\" but the request payload only had the new filter (not the existing ones), the existing filters were dropped because update_scan_filters REPLACES the filter set. Surface this if the result's filters_applied is shorter than expected. Recovery: read the scan via get_scans/run_scan, then call again with the full intended set — carry each existing filter over using its filter_type_enum value, since filter_type is a display label and is not accepted here. A filter whose filter_type_enum is FILTER_TYPE_CUSTOM cannot be carried over here — it is defined by an expression, which this tool does not accept. To keep it, use create_scan instead with this scan's scan_id and the full intended filter set, passing that filter's expression in the expression field (the scan gets a new configuration version; earlier versions are preserved). Never send FILTER_TYPE_CUSTOM as a filter_type — it creates an empty filter.\n\nError handling:\n- \"filter[N]: ...\" → validation failure at filter index N. Tell the user which filter and why.\n- \"created by Cortex\" → the scan is read-only via MCP. Suggest creating a fresh scan via create_scan as the alternative.\n- \"scan X does not exist or you do not have access\" → bad scan_id. Suggest get_scans."
           }
         },
         "required": [

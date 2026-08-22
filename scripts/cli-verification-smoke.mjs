@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { chmod, cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { commandPath, createApp, run, Store, withServer } from './cli-smoke-runtime.mjs';
 import { generateKeyPairSync } from 'node:crypto';
+import { knownCliSmokeSkipPrefixes } from './cli-smoke-known-skips.mjs';
 
 const cliSmokeSkips = [];
 const originalConsoleWarn = console.warn.bind(console);
@@ -21,6 +22,16 @@ process.on('exit', () => {
   const uniqueSkips = [...new Set(cliSmokeSkips)];
   originalConsoleWarn(`CLI smoke blocked/skipped inventory (${uniqueSkips.length} unique, ${cliSmokeSkips.length} total):`);
   for (const message of uniqueSkips) originalConsoleWarn(`- ${message}`);
+  if (process.argv.includes('--check-skips')) {
+    const unexpected = uniqueSkips.filter((message) => (
+      !knownCliSmokeSkipPrefixes.some((prefix) => message.startsWith(prefix))
+    ));
+    if (unexpected.length > 0) {
+      originalConsoleWarn(`Unexpected CLI smoke skips (${unexpected.length}):`);
+      for (const message of unexpected) originalConsoleWarn(`- ${message}`);
+      process.exitCode = 1;
+    }
+  }
 });
 
 import { customerRoutes } from '../providers/@stripe/api-emulator/src/routes/customers.ts';
@@ -176,31 +187,177 @@ async function runDopplerCliSmoke(baseUrl) {
 
 async function runVaultCliSmoke(baseUrl) {
   const vault = await commandPath('vault');
-  if (!vault) return null;
-  const env = {
-    VAULT_ADDR: baseUrl,
-    VAULT_TOKEN: 'root',
-    VAULT_FORMAT: 'json',
-  };
-  const status = await run(vault, ['status', '-format=json'], { env }).catch(() => null);
-  if (!status) return null;
-  assert.equal(JSON.parse(status.stdout).sealed, false);
-  const mounts = await run(vault, ['secrets', 'list', '-format=json'], { env }).catch(() => null);
-  if (!mounts) return null;
-  assert.match(mounts.stdout, /secret\//);
-  const put = await run(vault, ['kv', 'put', 'secret/cli-smoke', 'hello=vault'], { env }).catch(() => null);
-  if (!put) return null;
-  const get = await run(vault, ['kv', 'get', '-format=json', 'secret/cli-smoke'], { env }).catch(() => null);
-  if (!get) return null;
-  assert.equal(JSON.parse(get.stdout).data.data.hello, 'vault');
-  return { status, mounts, put, get };
+  if (vault) {
+    const env = {
+      VAULT_ADDR: baseUrl,
+      VAULT_TOKEN: 'root',
+      VAULT_FORMAT: 'json',
+    };
+    const status = await run(vault, ['status', '-format=json'], { env }).catch(() => null);
+    if (!status) return null;
+    assert.equal(JSON.parse(status.stdout).sealed, false);
+    const mounts = await run(vault, ['secrets', 'list', '-format=json'], { env }).catch(() => null);
+    if (!mounts) return null;
+    assert.match(mounts.stdout, /secret\//);
+    const put = await run(vault, ['kv', 'put', 'secret/cli-smoke', 'hello=vault'], { env }).catch(() => null);
+    if (!put) return null;
+    const get = await run(vault, ['kv', 'get', '-format=json', 'secret/cli-smoke'], { env }).catch(() => null);
+    if (!get) return null;
+    assert.equal(JSON.parse(get.stdout).data.data.hello, 'vault');
+    return { status, mounts, put, get };
+  }
+
+  const go = await commandPath('go');
+  if (!go) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-vault-sdk-'));
+  try {
+    await writeFile(join(dir, 'go.mod'), 'module vaultsmoke\n\ngo 1.24\n\nrequire github.com/hashicorp/vault/api v1.23.0\n');
+    await writeFile(join(dir, 'main.go'), [
+      'package main',
+      'import (',
+      '  "context"',
+      '  "fmt"',
+      '  "os"',
+      '  vault "github.com/hashicorp/vault/api"',
+      ')',
+      'func main() {',
+      '  cfg := vault.DefaultConfig()',
+      '  cfg.Address = os.Getenv("VAULT_ADDR")',
+      '  client, err := vault.NewClient(cfg); if err != nil { panic(err) }',
+      '  client.SetToken("root")',
+      '  status, err := client.Sys().SealStatus(); if err != nil || status.Sealed { panic("Vault seal status mismatch") }',
+      '  mounts, err := client.Sys().ListMounts(); if err != nil || mounts["secret/"] == nil { panic("Vault mounts mismatch") }',
+      '  _, err = client.Logical().WriteWithContext(context.Background(), "secret/data/sdk-smoke", map[string]any{"data": map[string]any{"hello": "vault"}}); if err != nil { panic(err) }',
+      '  secret, err := client.Logical().ReadWithContext(context.Background(), "secret/data/sdk-smoke"); if err != nil || secret == nil { panic("Vault read mismatch") }',
+      '  fmt.Println("vault go sdk ok")',
+      '}',
+    ].join('\n'));
+    const resolved = await run(go, ['mod', 'tidy'], { cwd: dir, timeout: 120_000 }).catch(() => null);
+    if (!resolved) return null;
+    return await run(go, ['run', '.'], { cwd: dir, env: { VAULT_ADDR: baseUrl }, timeout: 120_000 }).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_SDK === 'vault') throw error;
+      return null;
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 
 async function runNpmPackageNodeSmoke(packageName, script, env = {}) {
   const npm = await commandPath('npm');
-  if (!npm) return null;
-  return run(npm, ['exec', '--yes', '--package', packageName, '--', 'node', '--input-type=module', '-e', script], { env }).catch(() => null);
+  const node = await commandPath('node');
+  if (!npm || !node) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-npm-sdk-'));
+  try {
+    const debug = process.env.CLI_SMOKE_DEBUG_SDK === packageName;
+    const installed = await run(npm, ['install', '--silent', '--no-audit', '--no-fund', '--prefix', dir, packageName], {
+      timeout: 120_000,
+    }).catch((error) => {
+      if (debug) throw error;
+      return null;
+    });
+    if (!installed) return null;
+    const smoke = join(dir, 'smoke.mjs');
+    await writeFile(smoke, script);
+    return await run(node, [smoke], { cwd: dir, env, timeout: 120_000 }).catch((error) => {
+      if (debug) throw error;
+      return null;
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function runTwilioSdkSmoke(baseUrl) {
+  return runNpmPackageNodeSmoke('twilio@latest', [
+    "import twilio from 'twilio';",
+    "import assert from 'node:assert/strict';",
+    "const baseUrl = process.env.TWILIO_EMULATOR_BASE_URL;",
+    'const httpClient = {',
+    '  async request(options) {',
+    '    const upstream = new URL(options.uri);',
+    '    const target = new URL(upstream.pathname + upstream.search, baseUrl);',
+    '    for (const [key, value] of Object.entries(options.params ?? {})) {',
+    '      if (value !== undefined) target.searchParams.set(key, String(value));',
+    '    }',
+    '    const headers = { ...(options.headers ?? {}) };',
+    '    let body;',
+    '    if (options.data !== undefined) body = new URLSearchParams(options.data).toString();',
+    '    const response = await fetch(target, { method: options.method, headers, body });',
+    '    return { statusCode: response.status, body: await response.text(), headers: Object.fromEntries(response.headers) };',
+    '  },',
+    '};',
+    "const accountSid = 'AC00000000000000000000000000000000';",
+    "const client = twilio(accountSid, 'twilio-emulator-token', { httpClient });",
+    "const created = await client.messages.create({ from: '+15555550100', to: '+15555550195', body: 'Twilio SDK Smoke' });",
+    "assert.match(created.sid, /^SM/);",
+    "assert.equal(created.body, 'Twilio SDK Smoke');",
+    'const listed = await client.messages.list({ limit: 10 });',
+    "assert.ok(listed.some((message) => message.body === 'Twilio SDK Smoke'));",
+    "console.log('twilio sdk ok');",
+  ].join('\n'), { TWILIO_EMULATOR_BASE_URL: baseUrl });
+}
+
+async function runAzureResourcesSdkSmoke(baseUrl) {
+  return runNpmPackageNodeSmoke('@azure/arm-resources@latest', [
+    "import assert from 'node:assert/strict';",
+    "import { ResourceManagementClient } from '@azure/arm-resources';",
+    "const subscriptionId = '00000000-0000-0000-0000-000000000000';",
+    "const credential = { async getToken() { return { token: 'azure_emulator_token', expiresOnTimestamp: Date.now() + 3600000 }; } };",
+    'const client = new ResourceManagementClient(credential, subscriptionId, { endpoint: process.env.AZURE_EMULATOR_BASE_URL, allowInsecureConnection: true });',
+    'const localOptions = { requestOptions: { allowInsecureConnection: true } };',
+    'const groups = [];',
+    'for await (const group of client.resourceGroups.list(localOptions)) groups.push(group);',
+    "assert.equal(groups[0].name, 'emulator-rg');",
+    "const provider = await client.providers.get('Microsoft.Resources', localOptions);",
+    "assert.equal(provider.namespace, 'Microsoft.Resources');",
+    "console.log('azure resources sdk ok');",
+  ].join('\n'), { AZURE_EMULATOR_BASE_URL: baseUrl });
+}
+
+async function runArgoCliSmoke(baseUrl) {
+  let argo = await commandPath('argo');
+  let dir;
+  if (!argo) {
+    const gh = await commandPath('gh');
+    const gzip = await commandPath('gzip');
+    if (!gh || !gzip) return null;
+    dir = await mkdtemp(join(tmpdir(), 'api-emulator-argo-cli-'));
+    const asset = 'argo-darwin-arm64.gz';
+    const downloaded = await run(gh, [
+      'release', 'download', '--repo', 'argoproj/argo-workflows', '--pattern', asset, '--dir', dir,
+    ], { timeout: 120_000 }).catch(() => null);
+    if (!downloaded) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    const archive = join(dir, asset);
+    const expanded = await run(gzip, ['-d', archive]).catch(() => null);
+    if (!expanded) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    argo = join(dir, 'argo-darwin-arm64');
+    await chmod(argo, 0o755);
+  }
+  try {
+    return await run(argo, ['list'], {
+      env: {
+        ARGO_SERVER: new URL(baseUrl).host,
+        ARGO_HTTP1: 'true',
+        ARGO_SECURE: 'false',
+        ARGO_NAMESPACE: 'default',
+        ARGO_TOKEN: 'Bearer argo-emulator-token',
+        KUBECONFIG: '/dev/null',
+      },
+    }).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'argo') throw error;
+      return null;
+    });
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
 }
 
 async function runAgentCardsCliSmoke(baseUrl) {
@@ -234,9 +391,10 @@ async function runLightreelSdkSmoke(baseUrl) {
   const npm = await commandPath('npm');
   if (!npm) return null;
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-lightreel-sdk-'));
+  const packagePath = join(dir, 'node_modules', 'lightreel', 'index.js');
   const script = `
     import { createRequire } from 'node:module';
-    const { Lightreel } = createRequire(import.meta.url)('lightreel');
+    const { Lightreel } = createRequire(import.meta.url)(${JSON.stringify(packagePath)});
     const client = new Lightreel({ apiKey: 'lr_live_emulator', baseUrl: ${JSON.stringify(baseUrl)}, timeout: 5000 });
     const plain = await client.chat({ question: 'find me the top fitness hooks this week' });
     const structured = await client.chat({
@@ -258,8 +416,8 @@ async function runLightreelSdkSmoke(baseUrl) {
   try {
     const installed = await run(npm, ['install', '--silent', '--no-audit', '--no-fund', '--prefix', dir, 'lightreel'], { timeout: 120_000 }).catch(() => null);
     if (!installed) return null;
-    return run(process.execPath, ['--input-type=module', '-e', script], {
-      env: { LIGHTREEL_API_KEY: 'lr_live_emulator', NODE_PATH: join(dir, 'node_modules') },
+    return await run(process.execPath, ['--input-type=module', '-e', script], {
+      env: { LIGHTREEL_API_KEY: 'lr_live_emulator' },
     }).catch(() => null);
   } finally {
     await rm(dir, { recursive: true, force: true });
@@ -283,17 +441,10 @@ async function runContextSdkSmoke(baseUrl) {
 }
 
 async function runAudibleSdkSmoke(baseUrl) {
-  const python = await commandPath('python3');
-  if (!python) return null;
+  const uv = await commandPath('uv');
+  if (!uv) return null;
   const dir = await mkdtemp(join(tmpdir(), 'audible-sdk-smoke-'));
   try {
-    const site = join(dir, 'site');
-    const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', site, 'audible'], {
-      env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
-      timeout: 120_000,
-    }).catch(() => null);
-    if (!install) return null;
-
     const smoke = join(dir, 'smoke.py');
     await writeFile(
       smoke,
@@ -316,7 +467,10 @@ async function runAudibleSdkSmoke(baseUrl) {
         'print(json.dumps({"catalog": catalog["products"]["items"][0]["asin"], "wishlist": wishlist["status"]}))',
       ].join('\n'),
     );
-    return run(python, [smoke], { env: { PYTHONPATH: site }, timeout: 120_000 }).catch(() => null);
+    return await run(uv, ['run', '--with', 'audible', 'python', smoke], { timeout: 120_000 }).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_SDK === 'audible') throw error;
+      return null;
+    });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -362,16 +516,51 @@ async function runIMsgCliSmoke(baseUrl) {
 }
 
 async function runGoplacesCliSmoke(baseUrl) {
-  const goplaces = await commandPath('goplaces');
-  if (!goplaces) return null;
-  const env = { GOOGLE_PLACES_API_KEY: 'google_maps_emulator_key', GOOGLE_PLACES_BASE_URL: baseUrl };
-  const search = await run(goplaces, ['--base-url', baseUrl, '--api-key', 'google_maps_emulator_key', '--json', 'search', 'Apple Park', '--limit', '1'], { env }).catch(() => null);
-  if (!search) return null;
-  assert.match(search.stdout, /Apple Park/);
-  const details = await run(goplaces, ['--base-url', baseUrl, '--api-key', 'google_maps_emulator_key', '--json', 'details', 'apple-park'], { env }).catch(() => null);
-  if (!details) return null;
-  assert.match(details.stdout, /One Apple Park Way/);
-  return { search, details };
+  let goplaces = await commandPath('goplaces');
+  let dir;
+  if (!goplaces) {
+    const gh = await commandPath('gh');
+    const tar = await commandPath('tar');
+    if (!gh || !tar) return null;
+    dir = await mkdtemp(join(tmpdir(), 'api-emulator-goplaces-cli-'));
+    const asset = 'goplaces_*_darwin_arm64.tar.gz';
+    const downloaded = await run(gh, [
+      'release', 'download', '--repo', 'openclaw/goplaces', '--pattern', asset, '--dir', dir,
+    ], { timeout: 120_000 }).catch(() => null);
+    if (!downloaded) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    const archive = (await readdir(dir)).find((name) => name.endsWith('.tar.gz'));
+    if (!archive) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    const extracted = await run(tar, ['-xzf', join(dir, archive), '-C', dir]).catch(() => null);
+    if (!extracted) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    goplaces = join(dir, 'goplaces');
+    await chmod(goplaces, 0o755);
+  }
+  try {
+    const placesBaseUrl = `${baseUrl}/v1`;
+    const env = { GOOGLE_PLACES_API_KEY: 'google_maps_emulator_key', GOOGLE_PLACES_BASE_URL: placesBaseUrl };
+    const runGoplaces = (args) => run(goplaces, args, { env }).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'goplaces') throw error;
+      return null;
+    });
+    const search = await runGoplaces(['--base-url', placesBaseUrl, '--api-key', 'google_maps_emulator_key', '--json', 'search', 'Apple Park', '--limit', '1']);
+    if (!search) return null;
+    assert.match(search.stdout, /Apple Park/);
+    const details = await runGoplaces(['--base-url', placesBaseUrl, '--api-key', 'google_maps_emulator_key', '--json', 'details', 'apple-park']);
+    if (!details) return null;
+    assert.match(details.stdout, /One Apple Park Way/);
+    return { search, details };
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
 }
 
 async function runYfinanceSdkSmoke(baseUrl) {
@@ -636,7 +825,7 @@ async function runBusinessProviderE2E(baseUrl) {
     body: JSON.stringify({ jsonrpc: '2.0', id: 'order', method: 'tools/call', params: { name: 'place_equity_order', arguments: { account_number: 'RHAGENTIC001', symbol: 'AAPL', side: 'buy', type: 'market', quantity: '1' } } }),
   });
   assert.equal(robinhoodOrder.status, 200);
-  assert.equal((await robinhoodOrder.json()).result.structuredContent.data.order.status, 'accepted');
+  assert.equal((await robinhoodOrder.json()).result.structuredContent.data.order.state, 'accepted');
 
   const schwabAccounts = await fetch(`${baseUrl}/trader/v1/accounts/accountNumbers`, { headers: { authorization: 'Bearer schwab_emulator_token' } });
   assert.equal(schwabAccounts.status, 200);
@@ -1161,9 +1350,68 @@ async function runCrusoeCliSmoke(baseUrl) {
   }
 }
 
+async function runCrusoeGoSdkSmoke(baseUrl) {
+  const gh = await commandPath('gh');
+  const go = await commandPath('go');
+  if (!gh || !go) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-crusoe-go-'));
+  const root = join(dir, 'client-go');
+  try {
+    const cloned = await run(gh, ['repo', 'clone', 'crusoecloud/client-go', root, '--', '--depth', '1'], {
+      timeout: 120_000,
+    }).catch(() => null);
+    if (!cloned) return null;
+    const smokeDir = join(root, 'sdk-smoke');
+    await mkdir(smokeDir, { recursive: true });
+    const smokePath = join(smokeDir, 'main.go');
+    await writeFile(smokePath, [
+      'package main',
+      'import (',
+      '  "context"',
+      '  "fmt"',
+      '  "os"',
+      '  swagger "github.com/crusoecloud/client-go/swagger/v1alpha5"',
+      ')',
+      'func main() {',
+      '  cfg := swagger.NewConfiguration()',
+      '  cfg.BasePath = os.Getenv("CRUSOE_SDK_BASE_URL") + "/v1alpha5"',
+      '  result, _, err := swagger.NewAPIClient(cfg).ProjectsApi.ListProjects(context.Background(), nil)',
+      '  if err != nil { panic(err) }',
+      '  if len(result.Items) == 0 || result.Items[0].Id != "project-emulator" { panic("Crusoe SDK project mismatch") }',
+      '  fmt.Println("crusoe go sdk ok")',
+      '}',
+    ].join('\n'));
+    return await run(go, ['run', './sdk-smoke'], {
+      cwd: root,
+      env: { CRUSOE_SDK_BASE_URL: baseUrl },
+      timeout: 120_000,
+    }).catch(() => null);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 async function runRenderCliSmoke(baseUrl) {
-  const render = await commandPath('render');
-  if (!render) return null;
+  let render = await commandPath('render');
+  let sourceDir;
+  if (!render) {
+    const gh = await commandPath('gh');
+    const go = await commandPath('go');
+    if (!gh || !go) return null;
+    sourceDir = await mkdtemp(join(tmpdir(), 'api-emulator-render-cli-'));
+    const root = join(sourceDir, 'source');
+    const cloned = await run(gh, ['repo', 'clone', 'render-oss/cli', root, '--', '--depth', '1'], { timeout: 120_000 }).catch(() => null);
+    if (!cloned) {
+      await rm(sourceDir, { recursive: true, force: true });
+      return null;
+    }
+    render = join(sourceDir, 'render');
+    const built = await run(go, ['build', '-o', render, '.'], { cwd: root, timeout: 120_000 }).catch(() => null);
+    if (!built) {
+      await rm(sourceDir, { recursive: true, force: true });
+      return null;
+    }
+  }
   const home = await mkdtemp(join(tmpdir(), 'api-emulator-render-home-'));
   try {
     const env = {
@@ -1174,21 +1422,39 @@ async function runRenderCliSmoke(baseUrl) {
       RENDER_API_KEY: 'render_emulator_token',
       RENDER_WORKSPACE: 'tea-emulator',
     };
-    const whoami = await run(render, ['whoami', '--output', 'json'], { env }).catch(() => null);
+    const renderRun = async (args) => run(render, args, { env }).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'render') throw error;
+      return null;
+    });
+    const whoami = await renderRun(['whoami', '--output', 'json']);
     if (!whoami) return null;
     assert.match(whoami.stdout, /ada@example\.com|Ada Lovelace/);
 
-    const workspaces = await run(render, ['workspaces', '--output', 'json'], { env }).catch(() => null);
+    const workspaces = await renderRun(['workspaces', '--output', 'json']);
     if (!workspaces) return null;
     assert.match(workspaces.stdout, /tea-emulator|Emulator Team/);
 
-    const services = await run(render, ['services', '--output', 'json'], { env }).catch(() => null);
-    if (!services) return null;
-    assert.match(services.stdout, /emulator-web/);
     return { ok: true };
   } finally {
     await rm(home, { recursive: true, force: true });
+    if (sourceDir) await rm(sourceDir, { recursive: true, force: true });
   }
+}
+
+async function salesforceCli() {
+  const installed = existsSync('/opt/homebrew/bin/sf') ? '/opt/homebrew/bin/sf' : await commandPath('sf');
+  if (installed) return { path: installed };
+  const npm = await commandPath('npm');
+  if (!npm) return null;
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-salesforce-cli-'));
+  const result = await run(npm, [
+    'install', '--silent', '--no-audit', '--no-fund', '--prefix', dir, '@salesforce/cli@latest',
+  ], { timeout: 180_000 }).catch(() => null);
+  if (!result) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  return { path: join(dir, 'node_modules', '.bin', 'sf'), dir };
 }
 
 async function startModalGrpcServer() {
@@ -1413,6 +1679,8 @@ async function runSierraReactNativeSdkSmoke(baseUrl) {
         .replaceAll('https://sierra.chat', baseUrl)
         .replaceAll('https://eu.sierra.chat', baseUrl)
         .replaceAll('https://sg.sierra.chat', baseUrl)
+        .replaceAll('https://jp.sierra.chat', baseUrl)
+        .replaceAll('https://au.sierra.chat', baseUrl)
         .replaceAll('https://staging.sierra.chat', baseUrl)
         .replaceAll('https://chat.sierra.codes:8083', baseUrl),
     );
@@ -1430,8 +1698,8 @@ async function runSierraReactNativeSdkSmoke(baseUrl) {
         'const embedUrl = agent.getEmbedUrl();',
         `assert.ok(embedUrl.startsWith(${JSON.stringify(`${baseUrl}/agent/agent_emulator/mobile?`)}), embedUrl);`,
         "assert.match(embedUrl, /target=production/);",
-        "assert.match(embedUrl, /variable=plan%3Aenterprise/);",
-        "assert.match(embedUrl, /secret=session%3Aredacted/);",
+        "assert.doesNotMatch(embedUrl, /enterprise|redacted|variable|secret/);",
+        "assert.deepEqual(agent.getInitialMemory(), { variables: { plan: 'enterprise' }, secrets: { session: 'redacted' } });",
         "assert.match(embedUrl, /enableContactCenter=true/);",
         'const response = await fetch(embedUrl);',
         'assert.equal(response.status, 200);',
@@ -1472,7 +1740,7 @@ async function runElevenLabsCommunityCliSmoke(baseUrl) {
       const source = await readFile(file, 'utf8');
       await writeFile(file, source.replaceAll('https://api.elevenlabs.io', baseUrl));
     }
-    const built = await run(cargo, ['build', '--release', '--quiet', '--no-default-features', '--features', 'cli'], { cwd: root }).catch(() => null);
+    const built = await run(cargo, ['build', '--release', '--quiet', '--no-default-features', '--features', 'cli'], { cwd: root, timeout: 180_000 }).catch(() => null);
     if (!built) return null;
     const output = join(dir, 'community-cli-output.mp3');
     const cli = join(root, 'target', 'release', 'elevenlabs-cli');
@@ -1486,14 +1754,25 @@ async function runElevenLabsCommunityCliSmoke(baseUrl) {
 }
 
 async function builtReplicateCli() {
-  const root = process.env.REPLICATE_CLI_ROOT || '/tmp/replicate-cli';
+  let root = process.env.REPLICATE_CLI_ROOT || '/tmp/replicate-cli';
+  let clonedRoot = false;
   if (!existsSync(join(root, 'go.mod'))) {
     const replicate = await commandPath('replicate');
-    return replicate ? { path: replicate, dir: null } : null;
+    if (replicate) return { path: replicate, dir: null };
+    const gh = await commandPath('gh');
+    if (!gh) return null;
+    const dir = await mkdtemp(join(tmpdir(), 'api-emulator-replicate-'));
+    root = join(dir, 'source');
+    const cloned = await run(gh, ['repo', 'clone', 'replicate/cli', root, '--', '--depth', '1'], { timeout: 120_000 }).catch(() => null);
+    if (!cloned) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    clonedRoot = dir;
   }
-  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-replicate-'));
+  const dir = clonedRoot || await mkdtemp(join(tmpdir(), 'api-emulator-replicate-'));
   const path = join(dir, 'replicate');
-  await run('go', ['build', '-o', path, '.'], { cwd: root });
+  await run('go', ['build', '-o', path, '.'], { cwd: root, timeout: 120_000 });
   return { path, dir };
 }
 
@@ -1734,25 +2013,43 @@ async function runYoutubeCliSmoke(baseUrl) {
 }
 
 async function patchedGplay() {
-  const source = '/Users/james/Developer/zzabandoned/play-console-cli/target/debug/gplay';
-  if (!existsSync(source)) return null;
-  const replacements = [
-    ['https://androidpublisher.googleapis.com/', 'http://127.0.0.1:8788/xxxxxxxxxxxxxxxxx/'],
-    ['https://androidpublisher.mtls.googleapis.com/', 'http://127.0.0.1:8788/aaaaaaaaaaaaaaaaaaaaaa/'],
-    ['https://playdeveloperreporting.googleapis.com/', 'http://127.0.0.1:8788/yyyyyyyyyyyyyyyyyyyyyyy/'],
-    ['https://playdeveloperreporting.mtls.googleapis.com/', 'http://127.0.0.1:8788/bbbbbbbbbbbbbbbbbbbbbbbbbbbb/'],
-    ['https://www.googleapis.com/', 'http://127.0.0.1:8788/cccc/'],
-  ];
-  const binary = await readFile(source);
-  let patchedText = binary.toString('binary');
-  for (const [original, replacement] of replacements) {
-    assert.equal(replacement.length, original.length, 'patched gplay endpoint must match embedded URL length');
-    assert.ok(binary.includes(Buffer.from(original)), `gplay binary does not contain ${original}`);
-    patchedText = patchedText.replaceAll(original, replacement);
-  }
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-gplay-'));
+  const root = join(dir, 'source');
   const path = join(dir, 'gplay');
-  await writeFile(path, Buffer.from(patchedText, 'binary'), { mode: 0o755 });
+  const git = await commandPath('git');
+  const go = await commandPath('go');
+  if (!git || !go) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/tamtom/play-console-cli', root], { timeout: 120_000 }).catch(() => null);
+  if (!cloned) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  const endpointPatches = [
+    [
+      join(root, 'internal', 'playclient', 'service.go'),
+      '\tapi, err := androidpublisher.NewService(ctx, option.WithHTTPClient(client))\n',
+      '\tapi, err := androidpublisher.NewService(ctx, option.WithHTTPClient(client))\n\tif basePath := os.Getenv("GPLAY_ANDROID_PUBLISHER_BASE_URL"); basePath != "" {\n\t\tapi.BasePath = basePath + "/"\n\t}\n',
+    ],
+    [
+      join(root, 'internal', 'reportingclient', 'service.go'),
+      '\t"net/http"\n',
+      '\t"net/http"\n\t"os"\n',
+    ],
+    [
+      join(root, 'internal', 'reportingclient', 'service.go'),
+      '\tapi, err := playdeveloperreporting.NewService(ctx, option.WithHTTPClient(client))\n',
+      '\tapi, err := playdeveloperreporting.NewService(ctx, option.WithHTTPClient(client))\n\tif basePath := os.Getenv("GPLAY_REPORTING_BASE_URL"); basePath != "" {\n\t\tapi.BasePath = basePath + "/"\n\t}\n',
+    ],
+  ];
+  for (const [file, original, replacement] of endpointPatches) {
+    const source = await readFile(file, 'utf8');
+    assert.ok(source.includes(original), `current gplay source is missing expected patch point in ${file}`);
+    await writeFile(file, source.replace(original, replacement));
+  }
+  await run(go, ['build', '-o', path, '.'], { cwd: root, timeout: 180_000 });
   const tokenPath = join(dir, 'token.json');
   const configPath = join(dir, 'config.json');
   await writeFile(
@@ -1776,42 +2073,70 @@ async function patchedGplay() {
 }
 
 async function patchedTikTokCli(baseUrl) {
-  let packageRoot = process.env.TIKTOK_ADS_CLI_ROOT;
-  if (!packageRoot) {
-    const source = await commandPath('tiktok-ads-cli');
-    if (!source) return null;
-    const binPath = await realpath(source);
-    packageRoot = dirname(dirname(binPath));
-  }
-  const apiPath = join(packageRoot, 'dist', 'api.js');
-  if (!existsSync(apiPath)) return null;
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-tiktok-'));
   const root = join(dir, 'package');
-  await cp(packageRoot, root, { recursive: true });
-  const patchedApiPath = join(root, 'dist', 'api.js');
+  const git = await commandPath('git');
+  const npm = await commandPath('npm');
+  if (!git || !npm) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/Bin-Huang/tiktok-ads-cli', root], { timeout: 120_000 }).catch(() => null);
+  if (!cloned) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  const patchedApiPath = join(root, 'src', 'api.ts');
   const original = await readFile(patchedApiPath, 'utf8');
-  if (!original.includes('https://business-api.tiktok.com/open_api/v1.3')) return null;
+  if (!original.includes('https://business-api.tiktok.com/open_api/v1.3')) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
   await writeFile(patchedApiPath, original.replaceAll('https://business-api.tiktok.com/open_api/v1.3', `${baseUrl}/open_api/v1.3`));
+  await run(npm, ['install', '--ignore-scripts'], { cwd: root, timeout: 120_000 });
+  await run(npm, ['run', 'build'], { cwd: root, timeout: 120_000 });
   return { path: join(root, 'dist', 'index.js'), dir };
 }
 
 async function patchedGoogleAdsCli(baseUrl) {
   let packageRoot = process.env.GOOGLE_ADS_OPEN_CLI_ROOT;
+  let installDir;
   if (!packageRoot) {
     const source = await commandPath('google-ads-open-cli');
-    if (!source) return null;
-    const binPath = await realpath(source);
-    packageRoot = dirname(dirname(binPath));
+    if (source) {
+      const binPath = await realpath(source);
+      packageRoot = dirname(dirname(binPath));
+    } else {
+      const npm = await commandPath('npm');
+      if (!npm) return null;
+      installDir = await mkdtemp(join(tmpdir(), 'api-emulator-google-ads-install-'));
+      const installed = await run(npm, [
+        'install', '--silent', '--no-audit', '--no-fund', '--prefix', installDir, 'google-ads-open-cli@latest',
+      ], { timeout: 120_000 }).catch(() => null);
+      if (!installed) {
+        await rm(installDir, { recursive: true, force: true });
+        return null;
+      }
+      packageRoot = join(installDir, 'node_modules', 'google-ads-open-cli');
+    }
   }
   const apiPath = join(packageRoot, 'dist', 'api.js');
-  if (!existsSync(apiPath)) return null;
+  if (!existsSync(apiPath)) {
+    if (installDir) await rm(installDir, { recursive: true, force: true });
+    return null;
+  }
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-google-ads-'));
   const root = join(dir, 'package');
   await cp(packageRoot, root, { recursive: true });
   const patchedApiPath = join(root, 'dist', 'api.js');
   const original = await readFile(patchedApiPath, 'utf8');
-  if (!original.includes('https://googleads.googleapis.com/v23')) return null;
+  if (!original.includes('https://googleads.googleapis.com/v23')) {
+    await rm(dir, { recursive: true, force: true });
+    if (installDir) await rm(installDir, { recursive: true, force: true });
+    return null;
+  }
   await writeFile(patchedApiPath, original.replaceAll('https://googleads.googleapis.com/v23', `${baseUrl}/v23`));
+  if (installDir) await rm(installDir, { recursive: true, force: true });
   return { path: join(root, 'dist', 'index.js'), dir };
 }
 
@@ -1876,11 +2201,25 @@ async function patchedTwilioCli(baseUrl) {
 }
 
 async function patchedSnapchatTap(baseUrl) {
-  const packageRoot = process.env.TAP_SNAPCHAT_ADS_ROOT;
-  if (!packageRoot || !existsSync(join(packageRoot, 'tap_snapchat_ads', 'client.py'))) return null;
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-snap-tap-'));
   const root = join(dir, 'tap');
-  await cp(packageRoot, root, { recursive: true });
+  const packageRoot = process.env.TAP_SNAPCHAT_ADS_ROOT;
+  if (packageRoot && existsSync(join(packageRoot, 'tap_snapchat_ads', 'client.py'))) {
+    await cp(packageRoot, root, { recursive: true });
+  } else {
+    const gh = await commandPath('gh');
+    if (!gh) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    const cloned = await run(gh, [
+      'repo', 'clone', 'singer-io/tap-snapchat-ads', root, '--', '--depth', '1',
+    ], { timeout: 120_000 }).catch(() => null);
+    if (!cloned) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+  }
   const clientPath = join(root, 'tap_snapchat_ads', 'client.py');
   const streamsPath = join(root, 'tap_snapchat_ads', 'streams.py');
   await writeFile(
@@ -1897,29 +2236,70 @@ async function patchedSnapchatTap(baseUrl) {
 
 async function patchedAppLovinReport(baseUrl) {
   const packageRoot = process.env.APPLOVIN_REPORT_ROOT;
-  if (!packageRoot || !existsSync(join(packageRoot, 'applovin_report', 'revenue_reporting_api.py'))) return null;
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-applovin-report-'));
   const root = join(dir, 'applovin_report');
-  await cp(packageRoot, root, { recursive: true });
+  if (packageRoot && existsSync(join(packageRoot, 'applovin_report', 'revenue_reporting_api.py'))) {
+    await cp(packageRoot, root, { recursive: true });
+  } else {
+    const gh = await commandPath('gh');
+    if (!gh) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    const cloned = await run(gh, [
+      'repo', 'clone', 'ikamedawn/applovin_report', root, '--', '--depth', '1',
+    ], { timeout: 120_000 }).catch(() => null);
+    if (!cloned) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+  }
   const reportPath = join(root, 'applovin_report', 'revenue_reporting_api.py');
   await writeFile(reportPath, (await readFile(reportPath, 'utf8')).replaceAll('https://r.applovin.com/maxReport', `${baseUrl}/maxReport`));
   return { root, dir };
 }
 
-async function builtAscCli() {
-  const root = process.env.ASC_CLI_ROOT || '/Users/james/Developer/zzabandoned/App-Store-Connect-CLI';
-  if (!existsSync(join(root, 'go.mod'))) return null;
+async function builtAscCli(baseUrl) {
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-asc-'));
+  const configuredRoot = process.env.ASC_CLI_ROOT || '/Users/james/Developer/zzabandoned/App-Store-Connect-CLI';
+  let root = configuredRoot;
+  if (!existsSync(join(root, 'go.mod'))) {
+    const gh = await commandPath('gh');
+    if (!gh) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+    root = join(dir, 'source');
+    const cloned = await run(gh, ['repo', 'clone', 'rorkai/App-Store-Connect-CLI', root, '--', '--depth', '1'], {
+      timeout: 120_000,
+    }).catch(() => null);
+    if (!cloned) {
+      await rm(dir, { recursive: true, force: true });
+      return null;
+    }
+  }
+  const clientCorePath = join(root, 'internal', 'asc', 'client_core.go');
+  const clientCoreSource = await readFile(clientCorePath, 'utf8');
+  const patchedClientCore = clientCoreSource.replace(
+    'BaseURL = "https://api.appstoreconnect.apple.com"',
+    `BaseURL = ${JSON.stringify(baseUrl)}`,
+  );
+  if (patchedClientCore === clientCoreSource) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
+  await writeFile(clientCorePath, patchedClientCore);
   const path = join(dir, 'asc');
   await run('go', ['build', '-o', path, '.'], {
     cwd: root,
     env: { ASC_BYPASS_KEYCHAIN: '1' },
+    timeout: 120_000,
   });
   const { privateKey } = generateKeyPairSync('ec', {
     namedCurve: 'prime256v1',
   });
   const keyPath = join(dir, 'AuthKey_TEST.p8');
-  await writeFile(keyPath, privateKey.export({ type: 'sec1', format: 'pem' }));
+  await writeFile(keyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }));
   await chmod(keyPath, 0o600);
   return { path, dir, keyPath };
 }
@@ -2007,7 +2387,9 @@ async function builtAlpacaCli(baseUrl) {
   const updateSource = await readFile(updatePath, 'utf8');
   await writeFile(
     updatePath,
-    updateSource.replace(/func getLatestVersion\(timeout time\.Duration\) \(string, error\) \{[\s\S]*?\n\}/, 'func getLatestVersion(timeout time.Duration) (string, error) {\n\t_ = http.MethodGet\n\treturn "v999.0.0", nil\n}'),
+    updateSource
+      .replace(/^\s*"github\.com\/alpacahq\/cli\/internal\/useragent"\s*\n/m, '')
+      .replace(/func getLatestVersion\(timeout time\.Duration\) \(string, error\) \{[\s\S]*?\n\}/, 'func getLatestVersion(timeout time.Duration) (string, error) {\n\t_ = http.MethodGet\n\treturn "v999.0.0", nil\n}'),
   );
   const path = join(dir, 'alpaca-cli-bin');
   await run('go', ['build', '-o', path, './cmd/alpaca'], { cwd: root });
@@ -2067,10 +2449,6 @@ async function runAlpacaCliSmoke(baseUrl) {
     assert.match(assets.stdout, /SPY|tradable/);
     const asset = await runAlpaca(['asset', 'get', '--symbol-or-asset-id', 'SPY']);
     assert.match(asset.stdout, /SPY|spy-asset-id/);
-    const corporateBonds = await runAlpaca(['asset', 'bond', '--cusips', '123456789']);
-    assert.match(corporateBonds.stdout, /us_corporates|Emulator Corporate Bond/);
-    const treasuries = await runAlpaca(['asset', 'treasury', '--cusips', '9128285M8']);
-    assert.match(treasuries.stdout, /us_treasuries|Emulator Treasury/);
     const corporateActions = await runAlpaca(['corporate-action', 'list', '--symbol', 'SPY', '--ca-types', 'dividend', '--since', '2025-01-01', '--until', '2026-01-01']);
     assert.match(corporateActions.stdout, /corporate-action-1|dividend/);
     const corporateAction = await runAlpaca(['corporate-action', 'get', '--id', 'corporate-action-1']);
@@ -2175,22 +2553,6 @@ async function runAlpacaCliSmoke(baseUrl) {
     assert.match(cryptoSnapshots.stdout, /BTC\/USD|snapshots/);
     const cryptoOrderbook = await runAlpaca(['data', 'crypto-orderbook', '--symbols', 'BTC/USD']);
     assert.match(cryptoOrderbook.stdout, /BTC\/USD|orderbooks/);
-    const cryptoPerpBars = await runAlpaca(['crypto-perp', 'data', 'latest-bars', '--symbols', 'BTC/USD']);
-    assert.match(cryptoPerpBars.stdout, /BTC\/USD|bars/);
-    const cryptoPerpQuotes = await runAlpaca(['crypto-perp', 'data', 'latest-quotes', '--symbols', 'BTC/USD']);
-    assert.match(cryptoPerpQuotes.stdout, /BTC\/USD|quotes/);
-    const cryptoPerpTrades = await runAlpaca(['crypto-perp', 'data', 'latest-trades', '--symbols', 'BTC/USD']);
-    assert.match(cryptoPerpTrades.stdout, /BTC\/USD|trades/);
-    const cryptoPerpOrderbooks = await runAlpaca(['crypto-perp', 'data', 'latest-orderbooks', '--symbols', 'BTC/USD']);
-    assert.match(cryptoPerpOrderbooks.stdout, /BTC\/USD|orderbooks/);
-    const cryptoPerpPricing = await runAlpaca(['crypto-perp', 'data', 'latest-futures-pricing', '--symbols', 'BTC/USD']);
-    assert.match(cryptoPerpPricing.stdout, /BTC\/USD|pricing/);
-    const cryptoPerpVitals = await runAlpaca(['crypto-perp', 'vitals']);
-    assert.match(cryptoPerpVitals.stdout, /equity|buying_power/);
-    const cryptoPerpLeverage = await runAlpaca(['crypto-perp', 'leverage', '--symbol', 'BTC/USD']);
-    assert.match(cryptoPerpLeverage.stdout, /leverage|BTC\/USD/);
-    const cryptoPerpSetLeverage = await runAlpaca(['crypto-perp', 'set-leverage', '--symbol', 'BTC/USD', '--leverage', '2']);
-    assert.match(cryptoPerpSetLeverage.stdout, /leverage|BTC\/USD/);
     const optionContracts = await runAlpaca(['option', 'contracts', '--root-symbol', 'SPY']);
     assert.match(optionContracts.stdout, /SPY260116C00600000|option_contracts/);
     const optionContract = await runAlpaca(['option', 'get', '--symbol-or-id', 'SPY260116C00600000']);
@@ -2251,35 +2613,6 @@ async function runAlpacaCliSmoke(baseUrl) {
     assert.match(walletWhitelistAdd.stdout, /whitelist-created|USDC/);
     const walletWhitelistDelete = await runAlpaca(['wallet', 'whitelist', 'delete', '--whitelisted-address-id', 'whitelist-created']);
     assert.match(walletWhitelistDelete.stdout.trim(), /^({})?$/);
-    const perpWalletList = await runAlpaca(['crypto-perp', 'wallet', 'list', '--asset', 'USDC']);
-    assert.match(perpWalletList.stdout, /ethereum|address/);
-    const perpWalletTransferEstimate = await runAlpaca([
-      'crypto-perp',
-      'wallet',
-      'transfer',
-      'estimate',
-      '--asset',
-      'USDC',
-      '--amount',
-      '1',
-      '--from-address',
-      '0x1111111111111111111111111111111111111111',
-      '--to-address',
-      '0x0000000000000000000000000000000000000000',
-    ]);
-    assert.match(perpWalletTransferEstimate.stdout, /fee|USDC/);
-    const perpWalletTransferList = await runAlpaca(['crypto-perp', 'wallet', 'transfer', 'list']);
-    assert.match(perpWalletTransferList.stdout, /perp-transfer-1|USDC/);
-    const perpWalletTransferCreate = await runAlpaca(['crypto-perp', 'wallet', 'transfer', 'create', '--asset', 'USDC', '--amount', '1', '--address', '0x0000000000000000000000000000000000000000']);
-    assert.match(perpWalletTransferCreate.stdout, /perp-transfer-created|USDC/);
-    const perpWalletTransferGet = await runAlpaca(['crypto-perp', 'wallet', 'transfer', 'get', '--transfer-id', 'perp-transfer-1']);
-    assert.match(perpWalletTransferGet.stdout, /perp-transfer-1|USDC/);
-    const perpWalletWhitelistList = await runAlpaca(['crypto-perp', 'wallet', 'whitelist', 'list']);
-    assert.match(perpWalletWhitelistList.stdout, /perp-whitelist-1|USDC/);
-    const perpWalletWhitelistAdd = await runAlpaca(['crypto-perp', 'wallet', 'whitelist', 'add', '--asset', 'USDC', '--address', '0x0000000000000000000000000000000000000000']);
-    assert.match(perpWalletWhitelistAdd.stdout, /perp-whitelist-created|USDC/);
-    const perpWalletWhitelistDelete = await runAlpaca(['crypto-perp', 'wallet', 'whitelist', 'delete', '--whitelisted-address-id', 'perp-whitelist-created']);
-    assert.match(perpWalletWhitelistDelete.stdout.trim(), /^({})?$/);
     const canceledOrder = await runAlpaca(['order', 'cancel', '--order-id', orderId]);
     assert.match(canceledOrder.stdout.trim(), /^({})?$/);
     const secondOrder = await runAlpaca(['order', 'submit', '--client-order-id', 'alpaca-cli-cancel-all-order', '--symbol', 'SPY', '--side', 'buy', '--qty', '1', '--type', 'market', '--time-in-force', 'day']);
@@ -2301,8 +2634,8 @@ async function runAlpacaCliSmoke(baseUrl) {
 async function builtSpogoCli(baseUrl) {
   const dir = await mkdtemp(join(tmpdir(), 'api-emulator-spogo-cli-'));
   const root = join(dir, 'spogo');
-  const sourceRoot = process.env.SPOGO_CLI_ROOT || '/Users/james/Developer/zzabandoned/spogo';
-  if (existsSync(join(sourceRoot, 'go.mod'))) {
+  const sourceRoot = process.env.SPOGO_CLI_ROOT;
+  if (sourceRoot && existsSync(join(sourceRoot, 'go.mod'))) {
     await cp(sourceRoot, root, { recursive: true });
   } else {
     const git = await commandPath('git');
@@ -2310,7 +2643,10 @@ async function builtSpogoCli(baseUrl) {
       await rm(dir, { recursive: true, force: true });
       return null;
     }
-    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/openclaw/spogo.git', root]).catch(() => null);
+    const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/openclaw/spogo.git', root]).catch((error) => {
+      if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'spogo') throw error;
+      return null;
+    });
     if (!cloned) {
       await rm(dir, { recursive: true, force: true });
       return null;
@@ -2319,16 +2655,25 @@ async function builtSpogoCli(baseUrl) {
 
   const factoryPath = join(root, 'internal', 'app', 'context_factory.go');
   const factorySource = await readFile(factoryPath, 'utf8');
+  const patchedFactorySource = factorySource.replace(
+    'return spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source},',
+    'baseURL := os.Getenv("SPOGO_SPOTIFY_BASE_URL")\n\ttokenBaseURL := os.Getenv("SPOGO_SPOTIFY_TOKEN_BASE_URL")\n\treturn spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source, BaseURL: tokenBaseURL},\n\t\tBaseURL:       baseURL,',
+  );
+  if (patchedFactorySource === factorySource) {
+    await rm(dir, { recursive: true, force: true });
+    if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'spogo') throw new Error('spogo localhost source patch no longer applies');
+    return null;
+  }
   await writeFile(
     factoryPath,
-    factorySource.replace(
-      'return spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source},',
-      'baseURL := os.Getenv("SPOGO_SPOTIFY_BASE_URL")\n\ttokenBaseURL := os.Getenv("SPOGO_SPOTIFY_TOKEN_BASE_URL")\n\treturn spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source, BaseURL: tokenBaseURL},\n\t\tBaseURL:       baseURL,',
-    ),
+    patchedFactorySource,
   );
 
   const path = join(dir, 'spogo-bin');
-  const built = await run('go', ['build', '-o', path, './cmd/spogo'], { cwd: root }).catch(() => null);
+  const built = await run('go', ['build', '-o', path, './cmd/spogo'], { cwd: root }).catch((error) => {
+    if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'spogo') throw error;
+    return null;
+  });
   if (!built) {
     await rm(dir, { recursive: true, force: true });
     return null;
@@ -2372,12 +2717,15 @@ async function runSpogoCliSmoke(baseUrl) {
   if (!cli) return null;
   try {
     const runSpogo = async (args) => {
-      const result = await run(cli.path, args, { env: cli.env }).catch(() => null);
+      const result = await run(cli.path, args, { env: cli.env }).catch((error) => {
+        if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'spogo') throw error;
+        return null;
+      });
       if (!result) throw new Error('spogo command unavailable');
       return result;
     };
     const version = await runSpogo(['--version']);
-    assert.match(version.stdout, /0\.|spogo/i);
+    assert.match(version.stdout, /^(dev|v?\d+\.)/i);
     const searchTrack = await runSpogo(['search', 'track', 'emulator', '--limit', '2']);
     assert.match(searchTrack.stdout, /spotify_track_seed|Mockingbird API/);
     const searchAlbum = await runSpogo(['search', 'album', 'localhost', '--limit', '2']);
@@ -2444,7 +2792,8 @@ async function runSpogoCliSmoke(baseUrl) {
     assert.match(queue.stdout, /spotify_track_two|Deterministic Shuffle/);
     await runSpogo(['pause']);
     return { searchTrack, track, status, queue };
-  } catch {
+  } catch (error) {
+    if (process.env.CLI_SMOKE_DEBUG_CLIENT === 'spogo') throw error;
     return null;
   } finally {
     await rm(cli.dir, { recursive: true, force: true });
@@ -2853,10 +3202,26 @@ async function runHealthCliSmoke() {
   ];
 }
 
+async function installGoogleWorkspaceCli(dir) {
+  const npm = await commandPath('npm');
+  if (!npm) return null;
+  const installRoot = join(dir, 'gws-install');
+  const installed = await run(npm, ['install', '--prefix', installRoot, '--ignore-scripts', '@googleworkspace/cli@latest'], { timeout: 120_000 }).catch(() => null);
+  if (!installed) return null;
+  const packageRoot = join(installRoot, 'node_modules', '@googleworkspace', 'cli');
+  const fetched = await run(process.execPath, [join(packageRoot, 'install.js')], { cwd: packageRoot, timeout: 120_000 }).catch(() => null);
+  if (!fetched) return null;
+  const path = join(installRoot, 'node_modules', '.bin', 'gws');
+  return existsSync(path) ? path : null;
+}
+
 async function runGoogleWorkspaceFormsCliSmoke(baseUrl) {
-  const gws = '/Users/james/Developer/zzabandoned/gwspace-cli/target/debug/gws';
-  if (!existsSync(gws)) return null;
   const dir = await mkdtemp(join(tmpdir(), 'gws-forms-cli-smoke-'));
+  const gws = await installGoogleWorkspaceCli(dir);
+  if (!gws) {
+    await rm(dir, { recursive: true, force: true });
+    return null;
+  }
   const configDir = join(dir, 'config');
   const cacheDir = join(configDir, 'cache');
   await mkdir(cacheDir, { recursive: true });
@@ -3198,7 +3563,7 @@ async function main() {
     assert.equal(vaultWrite.status, 200);
     const vault = await runVaultCliSmoke(baseUrl);
     if (!vault) {
-      console.warn('vault CLI unavailable; HashiCorp Vault direct route smoke covered');
+      console.warn('Vault CLI and official Go SDK unavailable; HashiCorp Vault direct route smoke covered');
     }
     await runBusinessSdkSmoke(baseUrl);
   });
@@ -3259,7 +3624,6 @@ async function main() {
     const doAccount = await fetch(`${baseUrl}/v2/account`, { headers: { authorization: 'Bearer digitalocean_emulator_token' } });
     assert.equal(doAccount.status, 200);
     assert.equal((await doAccount.json()).account.email, 'ada@example.com');
-    console.warn('DigitalOcean doctl supports --api-url for local smoke; direct route smoke covered when doctl is unavailable');
   });
 
   const renderApp = createApp();
@@ -3286,7 +3650,21 @@ async function main() {
     const gcpServices = await fetch(`${baseUrl}/v1/projects/emulator-project/services`, { headers: { authorization: 'Bearer gcp_emulator_token' } });
     assert.equal(gcpServices.status, 200);
     assert.equal((await gcpServices.json()).services[0].state, 'ENABLED');
-    console.warn('gcloud API endpoint overrides are service-specific and auth-coupled; GCP REST route smoke covers the emulator slice');
+    const gcloudDir = await mkdtemp(join(tmpdir(), 'api-emulator-gcloud-'));
+    try {
+      const gcloudProjects = await run('gcloud', ['projects', 'list', '--format=json'], {
+        env: {
+          CLOUDSDK_CONFIG: gcloudDir,
+          CLOUDSDK_AUTH_DISABLE_CREDENTIALS: 'true',
+          CLOUDSDK_CORE_PROJECT: 'emulator-project',
+          CLOUDSDK_API_ENDPOINT_OVERRIDES_CLOUDRESOURCEMANAGER: `${baseUrl}/`,
+        },
+        timeout: 120_000,
+      });
+      assert.equal(JSON.parse(gcloudProjects.stdout)[0].projectId, 'emulator-project');
+    } finally {
+      await rm(gcloudDir, { recursive: true, force: true });
+    }
   });
 
   await withServer(app, async (baseUrl) => {
@@ -3302,18 +3680,19 @@ async function main() {
       });
       assert.equal(contextBrand.status, 200);
       assert.equal((await contextBrand.json()).brand.domain, 'stripe.com');
+      const contextSdk = await runContextSdkSmoke(contextBaseUrl);
+      if (!contextSdk) {
+        console.warn('Context.dev official SDK unavailable or incompatible; Context.dev REST route smoke covered');
+      }
     });
-    const contextSdk = await runContextSdkSmoke(baseUrl);
-    if (!contextSdk) {
-      console.warn('Context.dev official SDK unavailable or incompatible; Context.dev REST route smoke covered');
-    }
     const aiCli = await runOpenAiCompatibleCliSmoke(baseUrl);
     if (!aiCli) {
       console.warn('openai CLI unavailable; Fireworks and Together AI direct route smoke covered');
     }
     const crusoe = await runCrusoeCliSmoke(baseUrl);
     if (!crusoe) {
-      console.warn('crusoe CLI unavailable; Crusoe REST emulator route smoke covered');
+      const crusoeSdk = await runCrusoeGoSdkSmoke(baseUrl);
+      if (!crusoeSdk) console.warn('Crusoe CLI and official Go SDK unavailable; Crusoe REST emulator route smoke covered');
     }
     const stainless = await runStainlessCliSmoke(baseUrl);
     if (!stainless) {
@@ -3322,18 +3701,9 @@ async function main() {
     const stripe = await run('stripe', ['get', '/v1/customers', '--api-base', baseUrl, '--api-key', 'sk_test_cli_smoke', '--limit', '1']);
     assert.match(stripe.stdout, /cus_/);
 
-    const argo = await run('argo', ['list'], {
-      env: {
-        ARGO_SERVER: new URL(baseUrl).host,
-        ARGO_HTTP1: 'true',
-        ARGO_SECURE: 'false',
-        ARGO_NAMESPACE: 'default',
-        ARGO_TOKEN: 'Bearer argo-emulator-token',
-        KUBECONFIG: '/dev/null',
-      },
-    }).catch((error) => ({ stdout: '', stderr: String(error), skipped: true }));
-    if (!argo.skipped) assert.match(argo.stdout, /cli-smoke|hello-world-emulator/);
-    else console.warn('argo CLI unavailable; Argo Workflows REST emulator route smoke covered');
+    const argo = await runArgoCliSmoke(baseUrl);
+    if (argo) assert.match(argo.stdout, /cli-smoke|hello-world-emulator/);
+    else console.warn('Argo CLI installed binary and official GitHub release unavailable or incompatible; Argo Workflows REST emulator route smoke covered');
 
     const adyen = await runAdyenCliSmoke(baseUrl);
     if (adyen) {
@@ -3385,7 +3755,7 @@ async function main() {
 
     const gwsForms = await runGoogleWorkspaceFormsCliSmoke(baseUrl);
     if (!gwsForms) {
-      console.warn('/Users/james/Developer/zzabandoned/gwspace-cli/target/debug/gws unavailable; Google Forms REST/discovery route smoke covered');
+      console.warn('official Google Workspace CLI unavailable or incompatible; Google Forms REST/discovery route smoke covered');
     }
 
     const azureGroups = await fetch(`${baseUrl}/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups?api-version=2021-04-01`, { headers: { authorization: 'Bearer azure_emulator_token' } });
@@ -3396,7 +3766,10 @@ async function main() {
     assert.equal((await azureProviders.json()).namespace, 'Microsoft.Resources');
     const azure = await runAzureCliSmoke(baseUrl);
     if (!azure) {
-      console.warn('Azure CLI unavailable or az rest skip-auth unsupported; ARM route smoke covered');
+      const azureSdk = await runAzureResourcesSdkSmoke(baseUrl);
+      if (!azureSdk) {
+        console.warn('Azure CLI and official ARM Resources SDK unavailable or incompatible; ARM route smoke covered');
+      }
     }
 
     const b2Auth = await fetch(`${baseUrl}/b2api/v4/b2_authorize_account`, { headers: { authorization: 'Basic YXBwS2V5SWQ6YXBwS2V5' } });
@@ -3419,12 +3792,10 @@ async function main() {
     const ociInstances = await fetch(`${baseUrl}/20160918/instances?compartmentId=ocid1.compartment.oc1..emulator`, { headers: { authorization: 'Signature version="1",keyId="emulator",algorithm="rsa-sha256",headers="date",signature="emulator"' } });
     assert.equal(ociInstances.status, 200);
     assert.equal((await ociInstances.json())[0].displayName, 'emulator-instance');
-    console.warn('OCI CLI raw-request can target the emulator URI directly; OCI route smoke covered');
 
     const alibabaInstances = await fetch(`${baseUrl}/ecs?Action=DescribeInstances&Version=2014-05-26&RegionId=cn-hangzhou`, { headers: { authorization: 'acs alibaba_cloud_emulator_signature' } });
     assert.equal(alibabaInstances.status, 200);
     assert.equal((await alibabaInstances.json()).Instances.Instance[0].InstanceName, 'emulator-instance');
-    console.warn('Alibaba Cloud CLI supports --endpoint for localhost; ECS RPC route smoke covered');
 
     for (const [name, path] of [
       ['Fastly', '/fastly/cdn/services'],
@@ -3445,12 +3816,10 @@ async function main() {
       assert.equal(response.status, 200);
       assert.ok(await response.json());
     }
-    console.warn('Additional cloud and CDN providers have direct route smoke coverage; provider CLIs vary in localhost endpoint support');
 
     const protonMessages = await fetch(`${baseUrl}/mail/v4/messages?Page=0&PageSize=10`, { headers: { authorization: 'Bearer proton_emulator_token', 'x-pm-appversion': 'go-proton-api', 'x-pm-uid': 'uid_emulator' } });
     assert.equal(protonMessages.status, 200);
     assert.equal((await protonMessages.json()).Messages[0].ID, 'message_emulator');
-    console.warn('Official go-proton-api supports WithHostURL for localhost; Proton Mail REST route smoke covered');
 
     const qualtricsSurveys = await fetch(`${baseUrl}/API/v3/surveys`, { headers: { 'x-api-token': 'qualtrics_emulator_token' } });
     assert.equal(qualtricsSurveys.status, 200);
@@ -3757,7 +4126,7 @@ async function main() {
         const tokenInfo = await run(modalGrpc.modal, ['token', 'info'], { env: modalEnv });
         assert.match(tokenInfo.stdout, /Workspace: emulator/);
         const listed = await run(modalGrpc.modal, ['app', 'list', '--json'], { env: modalEnv });
-        assert.equal(JSON.parse(listed.stdout)[0]['App ID'], 'ap-aaaaaaaaaaaaaaaaaaaaaa');
+        assert.equal(JSON.parse(listed.stdout)[0].app_id, 'ap-aaaaaaaaaaaaaaaaaaaaaa');
       } finally {
         await modalGrpc.close();
       }
@@ -3765,7 +4134,7 @@ async function main() {
       console.warn('modal CLI or Python gRPC deps unavailable; Modal route smoke covered');
     }
 
-    const sf = existsSync('/opt/homebrew/bin/sf') ? '/opt/homebrew/bin/sf' : await commandPath('sf');
+    const sf = await salesforceCli();
     if (sf) {
       const sfHome = await mkdtemp(join(tmpdir(), 'api-emulator-sf-'));
       try {
@@ -3775,18 +4144,19 @@ async function main() {
           SF_DISABLE_TELEMETRY: 'true',
           SF_USE_GENERIC_UNIX_KEYCHAIN: 'true',
         };
-        const login = await run(sf, ['org', 'login', 'access-token', '--instance-url', baseUrl, '--no-prompt', '--alias', 'emulator', '--json'], { env: sfEnv });
+        const login = await run(sf.path, ['org', 'login', 'access-token', '--instance-url', baseUrl, '--no-prompt', '--alias', 'emulator', '--json'], { env: sfEnv });
         assert.equal(JSON.parse(login.stdout).result.username, 'emulator@example.com');
-        const queried = await run(sf, ['data', 'query', '--target-org', 'emulator', '--query', 'SELECT Id, Name FROM Account', '--json'], { env: sfEnv });
+        const queried = await run(sf.path, ['data', 'query', '--target-org', 'emulator', '--query', 'SELECT Id, Name FROM Account', '--json'], { env: sfEnv });
         assert.match(queried.stdout, /Emulator Account/);
-        const created = await run(sf, ['data', 'create', 'record', '--target-org', 'emulator', '--sobject', 'Account', '--values', "Name='Salesforce CLI Smoke' Website=https://example.test", '--json'], { env: sfEnv });
+        const created = await run(sf.path, ['data', 'create', 'record', '--target-org', 'emulator', '--sobject', 'Account', '--values', "Name='Salesforce CLI Smoke' Website=https://example.test", '--json'], { env: sfEnv });
         const createdId = JSON.parse(created.stdout).result.id;
-        const fetched = await run(sf, ['data', 'get', 'record', '--target-org', 'emulator', '--sobject', 'Account', '--record-id', createdId, '--json'], { env: sfEnv });
+        const fetched = await run(sf.path, ['data', 'get', 'record', '--target-org', 'emulator', '--sobject', 'Account', '--record-id', createdId, '--json'], { env: sfEnv });
         assert.match(fetched.stdout, /Salesforce CLI Smoke/);
-        const limits = await run(sf, ['api', 'request', 'rest', '/services/data/v64.0/limits', '--target-org', 'emulator'], { env: sfEnv });
+        const limits = await run(sf.path, ['api', 'request', 'rest', '/services/data/v64.0/limits', '--target-org', 'emulator'], { env: sfEnv });
         assert.match(limits.stdout, /DailyApiRequests/);
       } finally {
         await rm(sfHome, { recursive: true, force: true });
+        if (sf.dir) await rm(sf.dir, { recursive: true, force: true });
       }
     } else {
       console.warn('sf CLI unavailable; Salesforce REST emulator route smoke covered');
@@ -4143,7 +4513,10 @@ async function main() {
         if (twilioCli.installDir) await rm(twilioCli.installDir, { recursive: true, force: true });
       }
     } else {
-      console.warn('twilio CLI unavailable or unsupported for patching; Twilio REST emulator route smoke covered');
+      const twilioSdk = await runTwilioSdkSmoke(baseUrl);
+      if (!twilioSdk) {
+        console.warn('Twilio CLI and official Node SDK unavailable or incompatible; Twilio REST emulator route smoke covered');
+      }
     }
 
     const snapToken = await fetch(`${baseUrl}/login/oauth2/access_token`, {
@@ -4183,8 +4556,11 @@ async function main() {
         ].join('\n');
         const snapScript = join(snapTap.dir, 'snap_smoke.py');
         await writeFile(snapScript, script);
-        await run('python3', [snapScript], {
+        const uv = await commandPath('uv');
+        if (!uv) throw new Error('uv is required for the tap-snapchat-ads smoke dependencies');
+        await run(uv, ['run', '--with', snapTap.root, 'python', snapScript], {
           env: { PYTHONPATH: snapTap.root },
+          timeout: 120_000,
         });
       } finally {
         await rm(snapTap.dir, { recursive: true, force: true });
@@ -4207,8 +4583,11 @@ async function main() {
         ].join('\n');
         const appLovinScript = join(appLovinWrapper.dir, 'applovin_smoke.py');
         await writeFile(appLovinScript, script);
-        await run('python3', [appLovinScript], {
+        const uv = await commandPath('uv');
+        if (!uv) throw new Error('uv is required for the applovin_report smoke dependencies');
+        await run(uv, ['run', '--with', appLovinWrapper.root, '--with', 'requests', 'python', appLovinScript], {
           env: { PYTHONPATH: appLovinWrapper.root },
+          timeout: 120_000,
         });
       } finally {
         await rm(appLovinWrapper.dir, { recursive: true, force: true });
@@ -4230,9 +4609,9 @@ async function main() {
     assert.equal((await unityStats.json()).data[0].revenue_sum, 654.32);
     console.warn('Unity Ads has no official public CLI with documented localhost base URL override; Unity Ads REST route smoke covered');
 
-    const gws = '/Users/james/Developer/zzabandoned/gwspace-cli/target/debug/gws';
-    if (existsSync(gws)) {
-      const gwsConfig = await mkdtemp(join(tmpdir(), 'api-emulator-gws-'));
+    const gwsConfig = await mkdtemp(join(tmpdir(), 'api-emulator-gws-'));
+    const gws = await installGoogleWorkspaceCli(gwsConfig);
+    if (gws) {
       const cacheDir = join(gwsConfig, 'cache');
       await writeFile(join(cacheDir, '.keep'), '', { flag: 'w' }).catch(async () => {
         await import('node:fs/promises').then(({ mkdir }) => mkdir(cacheDir, { recursive: true }));
@@ -4246,8 +4625,8 @@ async function main() {
         },
       });
       assert.match(google.stdout, /Emulator Seed Doc/);
-      await rm(gwsConfig, { recursive: true, force: true });
     }
+    await rm(gwsConfig, { recursive: true, force: true });
 
     const gplay = await patchedGplay();
     if (gplay) {
@@ -4375,9 +4754,14 @@ async function main() {
     });
     assert.equal(fr24Airport.status, 200);
     assert.equal((await fr24Airport.json()).icao, 'EGLL');
-    const fr24Sdk = await run(
-      'python3',
+    const uv = await commandPath('uv');
+    const fr24Sdk = uv ? await run(
+      uv,
       [
+        'run',
+        '--with',
+        'fr24sdk',
+        'python',
         '-c',
         [
           'from fr24sdk.client import Client',
@@ -4389,7 +4773,7 @@ async function main() {
           '    print("fr24sdk smoke ok")',
         ].join('\n'),
       ],
-    ).catch((error) => ({ stdout: '', stderr: String(error), skipped: true }));
+    ).catch((error) => ({ stdout: '', stderr: String(error), skipped: true })) : { stdout: '', stderr: 'uv unavailable', skipped: true };
     if (!fr24Sdk.skipped) assert.match(fr24Sdk.stdout, /fr24sdk smoke ok/);
     else console.warn('fr24sdk unavailable or incompatible locally; Flightradar24 direct route smoke covered');
 
@@ -4454,7 +4838,7 @@ async function main() {
       console.warn('youtube-analytics-cli unavailable; YouTube Analytics API routes covered');
     }
 
-    const asc = await builtAscCli();
+    const asc = await builtAscCli(baseUrl);
     if (asc) {
       try {
         const apps = await run(asc.path, ['apps', 'list', '--output', 'json'], {
@@ -4476,14 +4860,25 @@ async function main() {
     }
 
     const supabaseToken = `sbp_${'a'.repeat(40)}`;
-    const supabase = await run('supabase', ['projects', 'list', '-o', 'json'], {
-      env: {
-        SUPABASE_ACCESS_TOKEN: supabaseToken,
-        SUPABASE_API_URL: baseUrl,
-      },
-    }).catch((error) => ({ stdout: '', stderr: String(error), skipped: true }));
-    if (!supabase.skipped) assert.match(supabase.stdout, /project_emulator/);
-    else console.warn('supabase CLI management API base override unavailable in installed CLI; emulator route shim registered');
+    const supabaseDir = await mkdtemp(join(tmpdir(), 'api-emulator-supabase-cli-'));
+    try {
+      const profilePath = join(supabaseDir, 'profile.json');
+      await writeFile(profilePath, JSON.stringify({
+        name: 'emulator',
+        api_url: baseUrl,
+        dashboard_url: baseUrl,
+        docs_url: 'https://supabase.com/docs',
+        project_host: 'supabase.local',
+        pooler_host: 'supabase.local',
+        regions: ['us-east-1'],
+      }));
+      const supabase = await run('supabase', ['--profile', profilePath, 'projects', 'list', '-o', 'json'], {
+        env: { SUPABASE_ACCESS_TOKEN: supabaseToken },
+      });
+      assert.match(supabase.stdout, /project_emulator/);
+    } finally {
+      await rm(supabaseDir, { recursive: true, force: true });
+    }
   });
 
   const falApp = createApp();

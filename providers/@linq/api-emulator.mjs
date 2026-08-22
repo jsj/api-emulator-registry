@@ -40,6 +40,7 @@ function makeMessage(chat, content = {}, index = 1) {
     effect: content.effect ?? null,
     from: content.from ?? fromHandle?.handle,
     from_handle: fromHandle,
+    idempotency_key: content.idempotency_key ?? null,
     parts: (content.parts ?? [{ type: 'text', value: 'Hello from the Linq emulator.' }]).map((part) => ({ reactions: [], ...part })),
     preferred_service: content.preferred_service ?? null,
     reply_to: content.reply_to ?? null,
@@ -54,10 +55,12 @@ function initialState(config = {}) {
   return {
     chats,
     messages,
+    attachments: config.attachments ?? [],
     phone_numbers: config.phone_numbers ?? [{ id: uuid(2001), phone_number: '+12025550100', forwarding_number: null, reputation: { status: 'HEALTHY', doc_url: 'https://docs.linqapp.com/guides/phone-numbers/phone-reputation#healthy' } }],
     webhook_subscriptions: config.webhook_subscriptions ?? [],
     next_chat: chats.length + 1,
     next_message: messages.length + 1,
+    next_attachment: (config.attachments ?? []).length + 1,
     next_subscription: (config.webhook_subscriptions ?? []).length + 1,
   };
 }
@@ -135,11 +138,77 @@ function registerRoutes(app, store, prefix) {
     const chat = findChat(current, c.req.param('chatId'));
     if (!chat) return error(c, 404, 2001, 'Resource not found');
     const body = await readBody(c);
-    if (!Array.isArray(body.parts) && !body.action) return error(c, 400, 1004, 'Invalid message content');
-    const message = makeMessage(chat, body, current.next_message++);
+    const content = body.message ?? body;
+    if (!Array.isArray(content.parts) || content.parts.length === 0) return error(c, 400, 1004, 'Invalid message content');
+    const message = makeMessage(chat, content, current.next_message++);
     current.messages.unshift(message);
     save(store, current);
-    return c.json({ chat_id: chat.id, message });
+    return c.json({ chat_id: chat.id, message }, 202, { 'X-Trace-ID': '00000000000000000000000000000001' });
+  });
+
+  app.post(`${prefix}/messages`, async (c) => {
+    const current = state(store);
+    const body = await readBody(c);
+    if (!Array.isArray(body.to) || body.to.length === 0) return error(c, 400, 1001, 'Missing required field: to');
+    if (!Array.isArray(body.message?.parts) || body.message.parts.length === 0) return error(c, 400, 1004, 'Invalid message content');
+    const idempotencyKey = c.req.header('Idempotency-Key') ?? body.message.idempotency_key;
+    const duplicate = idempotencyKey && current.messages.find((message) => message.idempotency_key === idempotencyKey);
+    if (duplicate) {
+      const duplicateChat = findChat(current, duplicate.chat_id);
+      return c.json(messageCreateResponse(duplicateChat, duplicate, false, 'idempotency_replay'));
+    }
+    let chat = current.chats.find((item) => body.to.every((recipient) => item.handles.some((handle) => !handle.is_me && handle.handle === recipient)));
+    const createdNewChat = !chat;
+    if (!chat) {
+      const from = current.phone_numbers[0]?.phone_number;
+      if (!from) return error(c, 409, 2001, 'No sending phone number is available');
+      chat = makeChat({ from, to: body.to }, current.next_chat++);
+      current.chats.unshift(chat);
+    }
+    const message = makeMessage(chat, { ...body.message, idempotency_key: idempotencyKey }, current.next_message++);
+    current.messages.unshift(message);
+    save(store, current);
+    return c.json(messageCreateResponse(chat, message, createdNewChat, createdNewChat ? 'new_best_number' : 'reused_active_chat'), 202, { 'X-Trace-ID': '00000000000000000000000000000001' });
+  });
+
+  app.post(`${prefix}/attachments`, async (c) => {
+    const current = state(store);
+    const body = await readBody(c);
+    if (!body.filename || !body.content_type || !Number.isInteger(body.size_bytes)) return error(c, 400, 1001, 'filename, content_type, and size_bytes are required');
+    if (body.size_bytes > 100_000_000) return error(c, 400, 1004, 'File exceeds the 100MB limit');
+    const attachment = {
+      id: uuid(4000 + current.next_attachment++),
+      filename: body.filename,
+      content_type: body.content_type,
+      size_bytes: body.size_bytes,
+      status: 'complete',
+      download_url: `${prefix}/attachments/${uuid(4000 + current.next_attachment - 1)}/download`,
+      created_at: fixedNow,
+    };
+    current.attachments.unshift(attachment);
+    save(store, current);
+    return c.json({
+      attachment_id: attachment.id,
+      upload_url: `${prefix}/attachments/${attachment.id}/upload`,
+      download_url: attachment.download_url,
+      http_method: 'PUT',
+      expires_at: fixedNow,
+      required_headers: { 'Content-Type': body.content_type, 'Content-Length': String(body.size_bytes) },
+    });
+  });
+
+  app.get(`${prefix}/attachments/:attachmentId`, (c) => {
+    const attachment = state(store).attachments.find((item) => item.id === c.req.param('attachmentId'));
+    return attachment ? c.json(attachment) : error(c, 404, 2001, 'Resource not found');
+  });
+
+  app.delete(`${prefix}/attachments/:attachmentId`, (c) => {
+    const current = state(store);
+    const attachment = current.attachments.find((item) => item.id === c.req.param('attachmentId'));
+    if (!attachment) return error(c, 404, 2001, 'Resource not found');
+    current.attachments = current.attachments.filter((item) => item.id !== attachment.id);
+    save(store, current);
+    return c.body(null, 204);
   });
 
   app.get(`${prefix}/messages/:messageId`, (c) => {
@@ -181,6 +250,20 @@ function registerRoutes(app, store, prefix) {
     return subscription ? c.json(subscription) : error(c, 404, 2001, 'Resource not found');
   });
 
+  app.put(`${prefix}/webhook_subscriptions/:subscriptionId`, async (c) => {
+    const current = state(store);
+    const subscription = current.webhook_subscriptions.find((item) => item.id === c.req.param('subscriptionId'));
+    if (!subscription) return error(c, 404, 2001, 'Resource not found');
+    const body = await readBody(c);
+    for (const key of ['target_url', 'subscribed_events', 'is_active', 'phone_numbers']) {
+      if (body[key] !== undefined) subscription[key] = body[key];
+    }
+    subscription.updated_at = fixedNow;
+    save(store, current);
+    const { signing_secret: _secret, ...response } = subscription;
+    return c.json(response);
+  });
+
   app.delete(`${prefix}/webhook_subscriptions/:subscriptionId`, (c) => {
     const current = state(store);
     const subscription = current.webhook_subscriptions.find((item) => item.id === c.req.param('subscriptionId'));
@@ -191,17 +274,29 @@ function registerRoutes(app, store, prefix) {
   });
 }
 
+function messageCreateResponse(chat, message, createdNewChat, reason) {
+  return {
+    chat_id: chat.id,
+    created_new_chat: createdNewChat,
+    from: chat.handles.find((handle) => handle.is_me)?.handle,
+    from_selection: { reason, reused_existing_chat: !createdNewChat },
+    is_group: chat.is_group,
+    service: chat.service,
+    message
+  };
+}
+
 export function seedFromConfig(store, _baseUrl, config = {}) {
   return save(store, initialState(config));
 }
 
 export const contract = {
   provider: 'linq',
-  source: 'Official Linq Partner API v3 documentation and @linqapp/sdk 0.33.1',
+  source: 'Official Linq Partner API v3 OpenAPI contract and @linqapp/sdk 0.44.3, verified 2026-08-22',
   docs: 'https://docs.linqapp.com/api/',
   baseUrl: 'https://api.linqapp.com/api/partner',
   auth: 'Authorization: Bearer <token>',
-  scope: ['chats.create', 'chats.list', 'chats.get', 'chats.update', 'messages.send', 'messages.list', 'messages.get', 'messages.update', 'messages.delete', 'phone_numbers.list', 'webhook_subscriptions.create', 'webhook_subscriptions.list', 'webhook_subscriptions.get', 'webhook_subscriptions.delete'],
+  scope: ['chats.create', 'chats.list', 'chats.get', 'chats.update', 'messages.create', 'messages.send', 'messages.list', 'messages.get', 'messages.update', 'messages.delete', 'attachments.create', 'attachments.get', 'attachments.delete', 'phone_numbers.list', 'webhook_subscriptions.create', 'webhook_subscriptions.list', 'webhook_subscriptions.get', 'webhook_subscriptions.update', 'webhook_subscriptions.delete'],
   fidelity: 'stateful-rest-subset',
 };
 

@@ -40,8 +40,8 @@ export const contract = {
     "fdx",
   ],
   fidelity: "stateful-core-plus-openapi-compatible-generic-fallback",
-  openapiVersion: "2020-09-14_1.708.0",
-  openapiRouteCount: 335,
+  openapiVersion: "2020-09-14_1.729.1",
+  openapiRouteCount: 351,
 } as const;
 
 export const label = "Plaid API emulator";

@@ -9,7 +9,7 @@ import { plugin } from './api-emulator.mjs';
 const directory = await mkdtemp(join(tmpdir(), 'api-emulator-linq-sdk-'));
 
 try {
-  await run('npm', ['install', '--silent', '--no-audit', '--no-fund', '--prefix', directory, '@linqapp/sdk@0.33.1'], { timeout: 120_000 });
+  await run('npm', ['install', '--silent', '--no-audit', '--no-fund', '--prefix', directory, '@linqapp/sdk@0.44.3'], { timeout: 120_000 });
   const sdkUrl = pathToFileURL(join(directory, 'node_modules/@linqapp/sdk/index.mjs')).href;
   const { default: Linq } = await import(sdkUrl);
   const app = createApp();
@@ -29,6 +29,10 @@ try {
 
     const sent = await client.chats.messages.send(created.chat.id, { parts: [{ type: 'text', value: 'Second SDK message.' }] });
     assert.equal(sent.message.parts[0].value, 'Second SDK message.');
+
+    const automatic = await client.messages.create({ to: ['+12025550177'], message: { parts: [{ type: 'text', value: 'Automatic SDK message.' }] }, idempotency_key: 'sdk-smoke:1' });
+    assert.equal(automatic.from, '+12025550100');
+    assert.equal(automatic.message.parts[0].value, 'Automatic SDK message.');
   });
 } finally {
   await rm(directory, { recursive: true, force: true });

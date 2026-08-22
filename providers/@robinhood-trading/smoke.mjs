@@ -71,7 +71,7 @@ const tools = await callHarness('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 52);
+assert.equal(tools.payload.result.structuredContent.tools.length, 54);
 liveToolSchemas = new Map(tools.payload.result.structuredContent.tools.map((tool) => [tool.name, tool]));
 assert.deepEqual([...liveToolSchemas.keys()].sort(), [...contract.scope].sort());
 assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
@@ -93,6 +93,8 @@ assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name 
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_chains'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_instruments'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_option_level_upgrade_info'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_index_historicals'));
+assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'get_limited_margin_upgrade_info'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'add_option_to_watchlist'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'follow_watchlist'));
 assert.ok(tools.payload.result.structuredContent.tools.some((tool) => tool.name === 'unfollow_watchlist'));
@@ -220,6 +222,30 @@ const indexQuotes = await callHarness('POST', '/mcp/trading', {
   params: { name: 'get_index_quotes', arguments: { instrument_ids: [spxIndex.id] } },
 });
 assert.equal(data(indexQuotes).quotes[0].symbol, 'SPX');
+
+const indexHistoricals = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'index-historicals',
+  method: 'tools/call',
+  params: {
+    name: 'get_index_historicals',
+    arguments: { instrument_ids: [spxIndex.id], start_time: '2026-01-01T00:00:00Z', interval: 'day' },
+  },
+});
+assert.equal(data(indexHistoricals).results[0].instrument_id, spxIndex.id);
+assert.equal(data(indexHistoricals).results[0].symbol, 'SPX');
+assert.equal(data(indexHistoricals).results[0].interval, 'day');
+assert.equal(data(indexHistoricals).results[0].bars[0].interpolated, false);
+
+const limitedMarginUpgrade = await callHarness('POST', '/mcp/trading', {
+  jsonrpc: '2.0',
+  id: 'limited-margin-upgrade',
+  method: 'tools/call',
+  params: { name: 'get_limited_margin_upgrade_info', arguments: { account_number: 'RHAGENTIC001' } },
+});
+assert.equal(data(limitedMarginUpgrade).account_number, 'RHAGENTIC001');
+assert.equal(data(limitedMarginUpgrade).current_account_type, 'cash');
+assert.equal(data(limitedMarginUpgrade).eligible, true);
 
 const search = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',

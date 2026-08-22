@@ -39,6 +39,9 @@ async function request(method, path, body) {
 
 const me = await request('GET', '/v1/me');
 assert.equal(me.payload.email, 'emulator@example.com');
+const tokenInfo = await request('GET', '/v1/token_info');
+assert.equal(tokenInfo.payload.resource.uuid, 'company_1');
+assert.equal(tokenInfo.payload.resource_owner.type, 'CompanyAdmin');
 const employees = await request('GET', '/v1/companies/company_1/employees');
 assert.equal(employees.payload[0].uuid, 'employee_1');
 const created = await request('POST', '/v1/companies/company_1/employees', { first_name: 'Grace', last_name: 'Hopper', email: 'grace@example.com' });

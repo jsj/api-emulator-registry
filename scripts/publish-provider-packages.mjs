@@ -1,3 +1,4 @@
+import { selectChangedPackageProviders } from './provider-release-selection.mjs';
 import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -35,11 +36,6 @@ function allPackageProviders() {
     .sort((a, b) => a.localeCompare(b));
 }
 
-function providerPathPrefixes(slug, entry) {
-  const specifier = entry.specifier ?? `./providers/@${slug}/api-emulator.mjs`;
-  return [`providers/@${slug}/`, specifier.replace(/^\.\//, '')];
-}
-
 async function changedFiles(baseRef) {
   const diffBase = baseRef || (await run('git', ['describe', '--tags', '--abbrev=0'], { capture: true }).catch(() => 'HEAD~1'));
   return (await run('git', ['diff', '--name-only', `${diffBase}..HEAD`], { capture: true }))
@@ -50,12 +46,7 @@ async function changedFiles(baseRef) {
 
 async function changedPackageProviders(baseRef) {
   const files = await changedFiles(baseRef);
-  if (files.includes('api-emulator.catalog.json')) return allPackageProviders();
-  return Object.entries(catalog)
-    .filter(([, entry]) => entry.kind === 'package')
-    .filter(([slug, entry]) => providerPathPrefixes(slug, entry).some((prefix) => files.some((file) => file === prefix || file.startsWith(prefix))))
-    .map(([slug]) => slug)
-    .sort((a, b) => a.localeCompare(b));
+  return selectChangedPackageProviders(catalog, files);
 }
 
 function run(command, args, options = {}) {

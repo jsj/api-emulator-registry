@@ -40,7 +40,7 @@ export const contract = {
     "fdx",
   ],
   fidelity: "stateful-core-plus-openapi-compatible-generic-fallback",
-  openapiVersion: "2020-09-14_1.729.1",
+  openapiVersion: "2020-09-14_1.740.1",
   openapiRouteCount: 351,
 } as const;
 

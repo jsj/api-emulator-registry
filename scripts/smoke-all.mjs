@@ -1,8 +1,13 @@
 import { spawn } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
+import { listSmokeFiles } from './smoke-discovery.mjs';
+
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const checkFiles = [
+  'scripts/registry-infrastructure.test.mjs',
   'scripts/check-conformance.mjs',
   'scripts/check-cloudflare-openapi-coverage.mjs',
   'scripts/check-github-openapi-coverage.mjs',
@@ -13,30 +18,14 @@ const checkFiles = [
   'scripts/check-restored-provider-packages.mjs',
 ];
 
-async function listSmokeFiles() {
-  const entries = await readdir('.', { withFileTypes: true });
-  const providers = entries
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('@'))
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
-  const smokeFiles = await Promise.all(
-    providers.map(async (provider) => {
-      const files = await readdir(provider);
-      return files.includes('smoke.mjs') ? `${provider}/smoke.mjs` : null;
-    }),
-  );
-
-  return smokeFiles.filter(Boolean);
-}
-
-const smokeFiles = await listSmokeFiles();
+const smokeFiles = await listSmokeFiles(root);
 const jobs = [...smokeFiles, ...checkFiles].map((file) => ({ file }));
 const concurrency = Math.max(1, Number(process.env.SMOKE_CONCURRENCY ?? Math.min(availableParallelism(), 8)) || 1);
 
 function runJob(job) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const child = spawn(process.execPath, [job.file], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [job.file], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf8');
@@ -70,7 +59,7 @@ async function runConcurrently(queue) {
   return results;
 }
 
-console.log(`running ${jobs.length} smoke jobs with concurrency ${concurrency}`);
+console.log(`running ${smokeFiles.length} provider smoke tests and ${checkFiles.length} checks (${jobs.length} jobs) with concurrency ${concurrency}`);
 const results = await runConcurrently(jobs);
 const failures = results.filter((result) => result.code !== 0);
 

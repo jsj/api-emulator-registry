@@ -45,13 +45,15 @@ export async function parseStripeBody(c: Context): Promise<Record<string, unknow
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of params) {
+    const parts = key.replace(/]/g, "").split("[");
+    // Never traverse or assign prototype-related properties from request input.
+    if (parts.some((part) => ["__proto__", "constructor", "prototype"].includes(part))) continue;
     if (key.includes("[")) {
-      const parts = key.replace(/]/g, "").split("[");
       let target: Record<string, unknown> | unknown[] = result;
       for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
-        const nextIsIndex = /^\d+$/.test(parts[i + 1]);
-        const current = (target as Record<string, unknown>)[part];
+        const nextIsIndex = parts[i + 1] === "" || /^\d+$/.test(parts[i + 1]);
+        const current = Object.hasOwn(target, part) ? (target as Record<string, unknown>)[part] : undefined;
         if (current === undefined || current === null || typeof current !== "object") {
           (target as Record<string, unknown>)[part] = nextIsIndex ? [] : {};
         }

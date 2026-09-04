@@ -22,6 +22,18 @@ Run all smoke tests:
 bun run smoke
 ```
 
+The smoke runner discovers `providers/@*/smoke.mjs` and runs the repository checks.
+It fails if discovery finds no tests or a conformance manifest names a missing smoke test.
+Use `SMOKE_CONCURRENCY=4 bun run smoke` to limit parallel jobs.
+
+For registry discovery and release-selection changes, run `bun run test:infrastructure`.
+For Stripe changes, run `bun run test` in `providers/@stripe/api-emulator`.
+
+`publish:providers --changed-only` selects all package providers when shared scripts,
+the catalog, package metadata, or lockfiles change. This covers shared code bundled
+into providers; the publisher still compares package content before publishing.
+Provider-only changes select their corresponding packages.
+
 Make sure that the provider catalog and README files are current:
 
 ```bash

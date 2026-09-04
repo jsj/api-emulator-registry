@@ -43,7 +43,6 @@ import { plugin as alibabaCloudPlugin } from '../providers/@alibaba-cloud/api-em
 import { plugin as alpacaPlugin } from '../providers/@alpaca/api-emulator/src/index.ts';
 import { developerToken as appleMusicDeveloperToken, plugin as appleMusicPlugin } from '../providers/@apple-music/api-emulator.mjs';
 import { plugin as audiblePlugin } from '../providers/@audible/api-emulator.mjs';
-import { plugin as goodreadsPlugin } from '../providers/@goodreads/api-emulator.mjs';
 import { plugin as wikipediaPlugin } from '../providers/@wikipedia/api-emulator.mjs';
 import { plugin as googlePlugin } from '../providers/@google/api-emulator.mjs';
 import { plugin as googleFormsPlugin } from '../providers/@google-forms/api-emulator.mjs';
@@ -1079,7 +1078,7 @@ async function runGrafanactlCliSmoke(baseUrl) {
       const cloned = await run(git, ['clone', '--depth', '1', 'https://github.com/grafana/grafanactl.git', source]).catch(() => null);
       if (!cloned) return null;
       grafanactl = join(dir, 'grafanactl-bin');
-      const built = await run(go, ['build', '-o', grafanactl, './cmd/grafanactl'], { cwd: source }).catch(() => null);
+      const built = await run(go, ['build', '-o', grafanactl, './cmd/grafanactl'], { cwd: source, timeout: 180_000 }).catch(() => null);
       if (!built) return null;
     }
     const env = {
@@ -3417,7 +3416,6 @@ function registerCoreProviders({ app, store, webhooks, tokenMap }) {
   spotifyPlugin.register(app, store);
   appleMusicPlugin.register(app, store);
   audiblePlugin.register(app, store);
-  goodreadsPlugin.register(app, store);
   wikipediaPlugin.register(app, store);
   nextdoorPlugin.register(app, store);
   elevenLabsPlugin.register(app, store);
@@ -3737,11 +3735,6 @@ async function main() {
     if (!audibleSdk) {
       console.warn('mkb79/audible SDK unavailable or incompatible; Audible direct route smoke covered');
     }
-
-    const goodreadsSearch = await fetch(`${baseUrl}/search/index.xml?key=goodreads_emulator_key&q=localhost`);
-    assert.equal(goodreadsSearch.status, 200);
-    assert.match(await goodreadsSearch.text(), /Localhost Library/);
-    console.warn('Goodreads public API is deprecated and no maintained official CLI is available; historical XML route smoke covered');
 
     const wikipediaSummary = await fetch(`${baseUrl}/api/rest_v1/page/summary/Ada_Lovelace`, {
       headers: { 'api-user-agent': 'api-emulator-cli-smoke/1.0' },

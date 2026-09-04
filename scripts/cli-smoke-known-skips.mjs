@@ -5,7 +5,6 @@ export const knownCliSmokeSkipPrefixes = [
   'health CLI smoke skipped: muinmomin/whoop-cli hardcodes',
   'health CLI smoke skipped: steipete/eightctl and pyEight hardcode',
   'health CLI smoke skipped: Oura community CLIs and SDKs hardcode',
-  'Goodreads public API is deprecated',
   'Wikipedia has no official CLI',
   'Azure CLI and official ARM Resources SDK unavailable or incompatible',
   'Backblaze b2 CLI has no documented initial auth host override',

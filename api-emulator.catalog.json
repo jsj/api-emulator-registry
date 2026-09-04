@@ -468,12 +468,6 @@
       "specifier": "./providers/@gong/api-emulator.mjs",
       "description": "Gong provides conversation intelligence APIs for users, recorded calls, transcripts, and CRM activity exports."
     },
-    "goodreads": {
-      "kind": "package",
-      "packageName": "@api-emulator/goodreads",
-      "specifier": "./providers/@goodreads/api-emulator.mjs",
-      "description": "Goodreads provides historical XML APIs for book search, book details, authors, and user review lists."
-    },
     "google": {
       "kind": "package",
       "packageName": "@api-emulator/google",

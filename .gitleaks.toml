@@ -4,7 +4,7 @@ useDefault = true
 [[allowlists]]
 description = "Historical emulator fixtures and public OpenAPI revision identifiers"
 commits = [
-  "2a4e9b74f51f23a996bbaeffb4d5f511e786b8f7",
-  "870877034a687a9fdb80a905df567f25def4f082",
-  "306c28d71f8c97ebc21ec5300cb38ae6d0f40ccd",
+  "23dec32d00680c026992c7ec3a20823713b465b5",
+  "fd33048e57cf9606bf36f99f84be50aa611aeec6",
+  "00b18a7eab6bf6ac64313efbd969d1be5f5ac7c4",
 ]

@@ -34,6 +34,8 @@
     "supabase:pg:reset": "node providers/@supabase/local-postgres/branch.mjs reset",
     "planetscale:mysql": "node providers/@planetscale/local-mysql/branch.mjs start",
     "planetscale:mysql:reset": "node providers/@planetscale/local-mysql/branch.mjs reset",
-    "test:robinhood-trading": "node providers/@robinhood-trading/smoke.mjs && node --test providers/@robinhood-trading/crypto-tools.test.mjs providers/@robinhood-trading/extended-tools.test.mjs providers/@robinhood-trading/package.test.mjs"
+    "test:robinhood-trading": "node providers/@robinhood-trading/smoke.mjs && node --test providers/@robinhood-trading/crypto-tools.test.mjs providers/@robinhood-trading/extended-tools.test.mjs providers/@robinhood-trading/package.test.mjs",
+    "parity": "node scripts/parity.mjs",
+    "test:parity": "node --test scripts/parity/*.test.mjs"
   }
 }

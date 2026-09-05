@@ -1573,8 +1573,10 @@ export const plugin = {
           const symbols = requestedSymbols(args);
           return c.json(liveToolResult(id, tool, { results: symbols.map((symbol) => ({ symbol, tradeable: true, fractional_tradability: 'tradable' })) }, 'Tradability by requested symbol.'));
         }
-        case 'get_indexes':
-          return c.json(liveToolResult(id, tool, { indexes: s.indexes ?? [] }, 'Market indexes matching the requested symbols.'));
+        case 'get_indexes': {
+          const symbols = args.symbols ? new Set(args.symbols.split(',').map(normalizeSymbol)) : null;
+          return c.json(liveToolResult(id, tool, { indexes: (s.indexes ?? []).filter(index => !symbols || symbols.has(index.symbol)) }, 'Market indexes matching the requested symbols.'));
+        }
         case 'get_index_historicals': {
           if (!parseRfc3339(args.start_time)) {
             const error = mcpError(id, "start_time must be RFC3339 (e.g. '2026-01-01T00:00:00Z')", 400);

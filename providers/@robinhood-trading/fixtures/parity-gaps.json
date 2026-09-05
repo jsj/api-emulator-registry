@@ -1,0 +1,852 @@
+[
+  {
+    "id": "currency-pairs-limit-0",
+    "reason": "Live limit=0 returned 23 catalog rows; emulator clamps it to 1. Upstream default/filtering semantics need further capture before changing pagination. Cursor URL values are excluded, but their type and presence are checked.",
+    "differences": [
+      {
+        "path": "/results",
+        "kind": "length",
+        "expected": 23,
+        "actual": 1
+      },
+      {
+        "path": "/results/1",
+        "kind": "missing",
+        "expected": {
+          "id": "662f1749-733f-44a3-951c-29c8628ee3bc",
+          "symbol": "CASHCAT-USD",
+          "display_symbol": "CASHCAT-USD",
+          "name": "Cash Cat to US Dollar",
+          "asset_currency": {
+            "id": "afb6e455-2c01-463b-9aec-30594cfb22d8",
+            "code": "CASHCAT",
+            "name": "Cash Cat",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "700000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/2",
+        "kind": "missing",
+        "expected": {
+          "id": "a8aa877b-ccee-44a5-95ab-1a3160578963",
+          "symbol": "RE-USD",
+          "display_symbol": "RE-USD",
+          "name": "RE to US Dollar",
+          "asset_currency": {
+            "id": "f0630f2e-3c8b-477c-a9eb-246f37acd90d",
+            "code": "RE",
+            "name": "RE",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "500000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/3",
+        "kind": "missing",
+        "expected": {
+          "id": "53c562b1-60ea-486e-adb7-5f50e7e8ddaf",
+          "symbol": "FLR-USD",
+          "display_symbol": "FLR-USD",
+          "name": "Flare  to US Dollar",
+          "asset_currency": {
+            "id": "6147a5d4-dc7e-4c85-8173-1612cb71de04",
+            "code": "FLR",
+            "name": "Flare",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "20",
+          "max_order_size": "30000000",
+          "min_order_quantity_increment": "1",
+          "min_order_price_increment": "0.0000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/4",
+        "kind": "missing",
+        "expected": {
+          "id": "c2491a19-91e0-4ec6-bb2a-98a631fb7188",
+          "symbol": "CHIP-USD",
+          "display_symbol": "CHIP-USD",
+          "name": "USD.AI to US Dollar",
+          "asset_currency": {
+            "id": "ada8d357-356e-4df4-8b7a-235be9a9897e",
+            "code": "CHIP",
+            "name": "USD.AI",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "4500000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/5",
+        "kind": "missing",
+        "expected": {
+          "id": "abd78d5c-f3a1-4632-a26f-b31044f2fd7c",
+          "symbol": "CC-USD",
+          "display_symbol": "CC-USD",
+          "name": "Canton to USD",
+          "asset_currency": {
+            "id": "4df123eb-8591-4640-9bd0-214b8f34266a",
+            "code": "CC",
+            "name": "Canton",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "1500000",
+          "min_order_quantity_increment": "0.001",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/6",
+        "kind": "missing",
+        "expected": {
+          "id": "55ad7d67-d56b-44fd-98bc-02123cd0f015",
+          "symbol": "SENT-USD",
+          "display_symbol": "SENT-USD",
+          "name": "Sentient to US Dollar",
+          "asset_currency": {
+            "id": "3cec4209-c596-4dec-9c4c-75840c4a64f8",
+            "code": "SENT",
+            "name": "Sentient",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "10",
+          "max_order_size": "16000000",
+          "min_order_quantity_increment": "1",
+          "min_order_price_increment": "0.000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/7",
+        "kind": "missing",
+        "expected": {
+          "id": "ff336d85-c52e-41af-982f-b71e57ad0a88",
+          "symbol": "USDG-USD",
+          "display_symbol": "USDG-USD",
+          "name": "Global Dollar to US Dollar",
+          "asset_currency": {
+            "id": "60962b88-85fc-4445-b4ae-04f07d28fe0f",
+            "code": "USDG",
+            "name": "USD Global Dollar",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.01",
+          "max_order_size": "1000000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.01",
+          "market_orders_only": true,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY",
+            "TX"
+          ]
+        }
+      },
+      {
+        "path": "/results/8",
+        "kind": "missing",
+        "expected": {
+          "id": "2fa8ba72-5e1b-4246-ade9-7c1a09865d4b",
+          "symbol": "MEGA-USD",
+          "display_symbol": "MEGA-USD",
+          "name": "MegaETH to US Dollar",
+          "asset_currency": {
+            "id": "b4260917-b799-4a54-9186-93fcd0e97d11",
+            "code": "MEGA",
+            "name": "MegaETH",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "3000000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/9",
+        "kind": "missing",
+        "expected": {
+          "id": "cce259f6-f571-4838-a41c-dea89bbc2faf",
+          "symbol": "SKR-USD",
+          "display_symbol": "SKR-USD",
+          "name": "Seeker to US Dollar",
+          "asset_currency": {
+            "id": "52195d74-6fbe-4ad4-a53b-041f8ade98aa",
+            "code": "SKR",
+            "name": "Seeker",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "10",
+          "max_order_size": "15000000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/10",
+        "kind": "missing",
+        "expected": {
+          "id": "43f6f3b2-d84d-4042-8129-6ca2fb392735",
+          "symbol": "LIT-USD",
+          "display_symbol": "LIT-USD",
+          "name": "Lighter to US Dollar",
+          "asset_currency": {
+            "id": "7c29f00a-bf22-49e8-bf3b-976598706216",
+            "code": "LIT",
+            "name": "Lighter",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.01",
+          "max_order_size": "100000",
+          "min_order_quantity_increment": "0.001",
+          "min_order_price_increment": "0.0001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/11",
+        "kind": "missing",
+        "expected": {
+          "id": "3a8918d5-427d-4c6e-b7cf-5892dd13e979",
+          "symbol": "SYRUP-USD",
+          "display_symbol": "SYRUP-USD",
+          "name": "Syrup Token to US Dollar",
+          "asset_currency": {
+            "id": "d0dcd081-3de8-4f7d-a071-5ce18b7ac19e",
+            "code": "SYRUP",
+            "name": "Maple Finance",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "900000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/12",
+        "kind": "missing",
+        "expected": {
+          "id": "83189e8c-ee50-47b5-816a-4632c0601df9",
+          "symbol": "AVNT-USD",
+          "display_symbol": "AVNT-USD",
+          "name": "Avantis to USD",
+          "asset_currency": {
+            "id": "d560313c-befe-46cb-b778-da436db00a66",
+            "code": "AVNT",
+            "name": "Avantis",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "1200000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/13",
+        "kind": "missing",
+        "expected": {
+          "id": "a5d5a69e-711d-47be-87b3-10446bc1a492",
+          "symbol": "HYPE-USD",
+          "display_symbol": "HYPE-USD",
+          "name": "Hyperliquid to USD",
+          "asset_currency": {
+            "id": "47616682-9cde-4af0-995d-124ea6712ef8",
+            "code": "HYPE",
+            "name": "Hyperliquid",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.001",
+          "max_order_size": "7000",
+          "min_order_quantity_increment": "0.0001",
+          "min_order_price_increment": "0.001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/14",
+        "kind": "missing",
+        "expected": {
+          "id": "ad251327-8027-43ba-9d31-be8f0dc169a7",
+          "symbol": "XPL-USD",
+          "display_symbol": "XPL-USD",
+          "name": "Plasma to US Dollar",
+          "asset_currency": {
+            "id": "4c4971c2-5ae8-46a7-bb27-8609a3c36790",
+            "code": "XPL",
+            "name": "Plasma",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "1500000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.0001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/15",
+        "kind": "missing",
+        "expected": {
+          "id": "5357b9fb-3915-42ba-9c47-fb44890d7ef0",
+          "symbol": "ASTER-USD",
+          "display_symbol": "ASTER-USD",
+          "name": "Aster to US Dollar",
+          "asset_currency": {
+            "id": "8834c526-be42-458e-a27c-2ceed37446bc",
+            "code": "ASTER",
+            "name": "Aster",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.01",
+          "max_order_size": "175000",
+          "min_order_quantity_increment": "0.001",
+          "min_order_price_increment": "0.0001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/16",
+        "kind": "missing",
+        "expected": {
+          "id": "456ad764-45a0-4a1a-8f3b-90cf1ee5043b",
+          "symbol": "SEI-USD",
+          "display_symbol": "SEI-USD",
+          "name": "Sei to US Dollar",
+          "asset_currency": {
+            "id": "21fe2fe8-75ac-4dec-ba51-9c6d27104a31",
+            "code": "SEI",
+            "name": "Sei",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "2500000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/17",
+        "kind": "missing",
+        "expected": {
+          "id": "c98f29ea-8bb9-4b71-bafd-8aad91a53667",
+          "symbol": "ZORA-USD",
+          "display_symbol": "ZORA-USD",
+          "name": "Zora to US Dollar",
+          "asset_currency": {
+            "id": "69342266-ba5e-40d9-9ba5-737bf75e7c5c",
+            "code": "ZORA",
+            "name": "Zora",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "20000000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/18",
+        "kind": "missing",
+        "expected": {
+          "id": "07f65f11-719d-4035-929f-471c223760f3",
+          "symbol": "WLFI-USD",
+          "display_symbol": "WLFI-USD",
+          "name": "World Liberty Financial to US Dollar",
+          "asset_currency": {
+            "id": "7f3a6ce1-88c4-4b50-8cf8-7a7e27dc96ab",
+            "code": "WLFI",
+            "name": "World Liberty Financial",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "1750000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.00001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/19",
+        "kind": "missing",
+        "expected": {
+          "id": "b1c9334c-4b85-4abb-8bbb-af14fd6344e6",
+          "symbol": "XCN-USD",
+          "display_symbol": "XCN-USD",
+          "name": "Onyxcoin to US Dollar",
+          "asset_currency": {
+            "id": "b9aff399-579f-486e-8682-beb0768a24b4",
+            "code": "XCN",
+            "name": "Onyxcoin",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "10",
+          "max_order_size": "50000000",
+          "min_order_quantity_increment": "1",
+          "min_order_price_increment": "0.0000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/20",
+        "kind": "missing",
+        "expected": {
+          "id": "326acd7a-7d2b-4164-a329-602ab17b6588",
+          "symbol": "SKY-USD",
+          "display_symbol": "SKY-USD",
+          "name": "Sky to US Dollar",
+          "asset_currency": {
+            "id": "0e3ddfeb-1531-46f3-87cc-c5adfa9c5808",
+            "code": "SKY",
+            "name": "Sky",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "1",
+          "max_order_size": "4000000",
+          "min_order_quantity_increment": "0.1",
+          "min_order_price_increment": "0.000001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      },
+      {
+        "path": "/results/21",
+        "kind": "missing",
+        "expected": {
+          "id": "c3a2d7e6-5d87-4ad5-a23a-dbb24378c074",
+          "symbol": "SUI-USD",
+          "display_symbol": "SUI-USD",
+          "name": "Sui to US dollar",
+          "asset_currency": {
+            "id": "a42b6e16-5130-46f4-bf79-7aff8d28769e",
+            "code": "SUI",
+            "name": "Sui",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.01",
+          "max_order_size": "150000",
+          "min_order_quantity_increment": "0.001",
+          "min_order_price_increment": "0.001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": false
+        }
+      },
+      {
+        "path": "/results/22",
+        "kind": "missing",
+        "expected": {
+          "id": "3d28e79c-584d-43ad-b27d-5f2382efd3b8",
+          "symbol": "MOODENG-USD",
+          "display_symbol": "MOODENG-USD",
+          "name": "Moo Deng to US Dollar",
+          "asset_currency": {
+            "id": "dc4af52f-2fc5-45a8-a442-015e6050f05b",
+            "code": "MOODENG",
+            "name": "Moo Deng",
+            "type": "cryptocurrency"
+          },
+          "quote_currency": {
+            "id": "1072fc76-1862-41ab-82c2-485837590762",
+            "code": "USD",
+            "name": "US Dollar",
+            "type": "fiat"
+          },
+          "tradability": "tradable",
+          "tradability_by_account_type": {
+            "individual": "tradable",
+            "ira_roth": "untradable",
+            "ira_traditional": "untradable"
+          },
+          "display_only": false,
+          "min_order_size": "0.1",
+          "max_order_size": "2750000",
+          "min_order_quantity_increment": "0.01",
+          "min_order_price_increment": "0.0001",
+          "market_orders_only": false,
+          "type": "cryptocurrency",
+          "halted": true,
+          "halted_regions": [
+            "NY"
+          ]
+        }
+      }
+    ]
+  }
+]

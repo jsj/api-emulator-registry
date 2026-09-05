@@ -3,6 +3,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixedNow, getState, readBody, setState } from '../../scripts/provider-plugin-kit.mjs';
 
+import { CRYPTO_TOOL_NAMES, cryptoDefaults, handleCryptoTool } from './crypto-tools.mjs';
+import { EXTENDED_TOOL_NAMES, extendedDefaults, handleExtendedTool } from './extended-tools.mjs';
+
 const STATE_KEY = 'robinhood-trading:state';
 const FIXTURE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sanitized.json');
 const TOOLS_CONTRACT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tools-contract.sanitized.json');
@@ -195,6 +198,8 @@ function sanitizedFixtureState() {
 function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
   const fixture = sanitizedFixtureState();
   const defaults = {
+    ...cryptoDefaults(),
+    ...extendedDefaults(),
     baseUrl,
     accounts: [{ id: 'acct_agentic', account_number: 'RHAGENTIC001', status: 'active', type: 'agentic' }],
     portfolio: {
@@ -536,10 +541,6 @@ function defaultState(baseUrl = 'https://agent.robinhood.com/mcp/trading') {
           { ticker: 'NVDA', instrument_id: 'instrument-nvda', instrument_type: 'STOCK', columns: { Symbol: 'NVDA', '% Change': '4.80%', Volume: '55,000,000', Price: '125.50' } },
         ],
       },
-    ],
-    currencyPairs: [
-      { id: 'currency-pair-btc-usd', symbol: 'BTC-USD', name: 'Bitcoin' },
-      { id: 'currency-pair-eth-usd', symbol: 'ETH-USD', name: 'Ethereum' },
     ],
     followedWatchlists: ['watchlist-default'],
     orders: [],
@@ -1324,7 +1325,7 @@ export function seedFromConfig(store, baseUrl = 'https://agent.robinhood.com/mcp
 
 export const contract = {
   provider: 'robinhood-trading',
-  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, verified 2026-08-22',
+  source: 'Observed authenticated Robinhood Agentic Trading MCP tools/list contract, captured 2026-09-05',
   docs: 'https://robinhood.com/us/en/support/articles/trading-with-your-agent/',
   mcpUrl: 'https://agent.robinhood.com/mcp/trading',
   oauth: {
@@ -1333,6 +1334,8 @@ export const contract = {
   },
   scope: [
     ...ROBINHOOD_TRADING_TOOLS,
+    ...CRYPTO_TOOL_NAMES,
+    ...EXTENDED_TOOL_NAMES,
   ],
   fidelity: 'stateful-streamable-http-mcp-emulator',
 };
@@ -1436,11 +1439,10 @@ export const plugin = {
       if (body.method === 'notifications/initialized') return c.body(null, 202);
 
       if (body.method === 'tools/list') {
-        return c.json(
-          mcpResult(id, {
-            tools: contract.scope.map(toolSchema),
-          }),
-        );
+        const tools = contract.scope.map(toolSchema);
+        const response = mcpResult(id, { tools });
+        response.result.tools = tools;
+        return c.json(response);
       }
 
       if (body.method !== 'tools/call') {
@@ -1453,9 +1455,16 @@ export const plugin = {
       const argError = requireArgs(id, tool, args);
       if (argError) return c.json(argError.payload, argError.status);
 
+      const added = handleCryptoTool(tool, args, s, observedTools) ?? handleExtendedTool(tool, args, s);
+      if (added) {
+        if (added.error) return c.json(mcpError(id, added.error, added.status ?? 400).payload, added.status ?? 400);
+        save(store, s);
+        return c.json(liveToolResult(id, tool, added.data, added.guide));
+      }
+
       switch (tool) {
         case 'get_accounts':
-          return c.json(liveToolResult(id, tool, { accounts: s.accounts }, 'Use account_number from this response for trading and portfolio tools.'));
+          return c.json(liveToolResult(id, tool, { accounts: s.accounts }, 'Use rhs_account_number for crypto tools; use account_number for equities, options, and portfolio tools.'));
         case 'get_portfolio':
           return c.json(liveToolResult(id, tool, portfolioData(s.portfolio), 'Portfolio balances for the requested brokerage account.'));
         case 'get_equity_positions':

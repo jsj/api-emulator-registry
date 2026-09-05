@@ -982,7 +982,7 @@
       "kind": "package",
       "packageName": "@api-emulator/robinhood-trading",
       "specifier": "./providers/@robinhood-trading/api-emulator.mjs",
-      "description": "Robinhood Agentic Trading MCP provides account, portfolio, position, market data, watchlist, scanner, and order APIs. It supports equities and options."
+      "description": "Robinhood Agentic Trading MCP provides account, portfolio, market data, watchlist, scanner, alert, news, SEC filing, and order APIs. It supports equities, options, and crypto."
     },
     "rocketchat": {
       "kind": "package",

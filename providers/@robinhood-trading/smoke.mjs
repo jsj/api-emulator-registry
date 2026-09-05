@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHarness } from '../../scripts/provider-smoke-harness.mjs';
-import { contract, plugin, seedFromConfig } from './api-emulator.mjs';
+const { contract, plugin, seedFromConfig } = await import(process.env.ROBINHOOD_TEST_PLUGIN ?? './api-emulator.mjs');
 
 const harness = createHarness(plugin);
 const calledToolNames = new Set();
@@ -71,7 +71,8 @@ const tools = await callHarness('POST', '/mcp/trading', {
   method: 'tools/list',
   params: {},
 });
-assert.equal(tools.payload.result.structuredContent.tools.length, 54);
+assert.equal(tools.payload.result.tools.length, 73);
+assert.deepEqual(tools.payload.result.tools, tools.payload.result.structuredContent.tools);
 liveToolSchemas = new Map(tools.payload.result.structuredContent.tools.map((tool) => [tool.name, tool]));
 assert.deepEqual([...liveToolSchemas.keys()].sort(), [...contract.scope].sort());
 assert.ok(tools.payload.result.structuredContent.tools.every((tool) => tool.inputSchema && tool.outputSchema));
@@ -876,6 +877,36 @@ const cancelledExercise = await callHarness('POST', '/mcp/trading', {
 });
 assert.equal(data(cancelledExercise).cancelled_count, 1);
 assert.equal(data(cancelledExercise).events[0].state, 'voided');
+
+// Exercise every new route through the same schema-checking MCP harness.
+async function addedTool(name, args = {}) {
+  const response = await callHarness('POST', '/mcp/trading', { jsonrpc: '2.0', id: name, method: 'tools/call', params: { name, arguments: args } });
+  assert.equal(response.status, 200, JSON.stringify(response.payload));
+  return data(response);
+}
+const cryptoAccount = { rhs_account_number: '900000006' };
+await addedTool('get_crypto_account_onboarding_info');
+await addedTool('get_currency_pairs');
+await addedTool('get_crypto_quotes', { symbols: ['BTC-USD'] });
+await addedTool('get_crypto_positions', cryptoAccount);
+const cryptoArgs = { ...cryptoAccount, symbol: 'BTC', side: 'buy', type: 'limit', quantity: '0.001', limit_price: '10000' };
+await addedTool('preview_crypto_order', cryptoArgs);
+assert.equal((await addedTool('get_crypto_orders', cryptoAccount)).results.length, 0);
+const cryptoOrder = (await addedTool('place_crypto_order', cryptoArgs)).order;
+await addedTool('cancel_crypto_order', { ...cryptoAccount, order_id: cryptoOrder.id });
+assert.equal((await addedTool('get_crypto_orders', cryptoAccount)).results[0].state, 'canceled');
+const alert = (await addedTool('create_alert', { symbol: 'BTC', condition_type: 'price_above', threshold: '90000' })).alert;
+await addedTool('update_alert', { alert_id: alert.alert_id, enabled: false });
+assert.equal((await addedTool('get_alerts', { symbol: 'BTC' })).alerts[0].enabled, false);
+assert.equal((await addedTool('delete_alert', { alert_id: alert.alert_id })).deleted, false);
+await addedTool('delete_alert', { alert_id: alert.alert_id, confirm: true });
+const events = (await addedTool('get_alert_log')).events;
+await addedTool('mark_alerts_read', { alert_log_ids: [events[0].alert_log_id] });
+await addedTool('get_equity_news', { symbol: 'AAPL' });
+const filing = (await addedTool('get_sec_filing_index', { symbol: 'AAPL' })).filings[0];
+await addedTool('get_sec_filing', { filing_id: filing.filing_id });
+const concepts = (await addedTool('get_sec_filing_facts_catalog', { filing_id: filing.filing_id })).concepts;
+await addedTool('get_sec_filing_facts', { filing_ids: [filing.filing_id], concepts: [concepts[0].concept] });
 
 assert.deepEqual(conformanceIssues, []);
 assert.deepEqual(contract.scope.filter((name) => !calledToolNames.has(name)), []);

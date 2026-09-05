@@ -1,0 +1,142 @@
+{
+  "captured_at": "2026-09-05T18:09:22.752Z",
+  "source": "https://agent.robinhood.com/mcp/trading",
+  "observations": {
+    "get_accounts": {
+      "success": true,
+      "fields": [
+        "accounts"
+      ]
+    },
+    "get_currency_pairs": {
+      "success": true,
+      "fields": [
+        "results"
+      ]
+    },
+    "get_crypto_quotes": {
+      "success": true,
+      "fields": [
+        "results"
+      ]
+    },
+    "get_crypto_account_onboarding_info": {
+      "success": true,
+      "fields": [
+        "already_onboarded"
+      ]
+    },
+    "get_crypto_positions": {
+      "success": true,
+      "fields": [
+        "results"
+      ]
+    },
+    "get_crypto_orders": {
+      "success": true,
+      "fields": [
+        "crypto_account_number",
+        "results",
+        "rhs_account_number"
+      ]
+    },
+    "preview_crypto_order": {
+      "success": false,
+      "error_category": "invalid_request"
+    }
+  },
+  "currency_pairs": [
+    {
+      "id": "76637d50-c702-4ed1-bcb5-5b0732a81f48",
+      "symbol": "ETH-USD",
+      "display_symbol": "ETH-USD",
+      "name": "Ethereum to US Dollar",
+      "asset_currency": {
+        "id": "c527c04a-394b-4a44-ae07-19b901ca609c",
+        "code": "ETH",
+        "name": "Ethereum",
+        "type": "cryptocurrency"
+      },
+      "quote_currency": {
+        "id": "1072fc76-1862-41ab-82c2-485837590762",
+        "code": "USD",
+        "name": "US Dollar",
+        "type": "fiat"
+      },
+      "tradability": "tradable",
+      "tradability_by_account_type": {
+        "individual": "tradable",
+        "ira_roth": "untradable",
+        "ira_traditional": "untradable"
+      },
+      "display_only": false,
+      "min_order_size": "0.0001",
+      "max_order_size": "280",
+      "min_order_quantity_increment": "0.000001",
+      "min_order_price_increment": "0.01",
+      "min_order_quote_amount": "0.01",
+      "market_orders_only": false,
+      "type": "cryptocurrency",
+      "halted": false
+    },
+    {
+      "id": "3d961844-d360-45fc-989b-f6fca761d511",
+      "symbol": "BTC-USD",
+      "display_symbol": "BTC-USD",
+      "name": "Bitcoin to US Dollar",
+      "asset_currency": {
+        "id": "d674efea-e623-4396-9026-39574b92b093",
+        "code": "BTC",
+        "name": "Bitcoin",
+        "type": "cryptocurrency"
+      },
+      "quote_currency": {
+        "id": "1072fc76-1862-41ab-82c2-485837590762",
+        "code": "USD",
+        "name": "US Dollar",
+        "type": "fiat"
+      },
+      "tradability": "tradable",
+      "tradability_by_account_type": {
+        "individual": "tradable",
+        "ira_roth": "untradable",
+        "ira_traditional": "untradable"
+      },
+      "display_only": false,
+      "min_order_size": "0.000001",
+      "max_order_size": "20",
+      "min_order_quantity_increment": "0.00000001",
+      "min_order_price_increment": "0.01",
+      "min_order_quote_amount": "0.01",
+      "market_orders_only": false,
+      "type": "cryptocurrency",
+      "halted": false
+    }
+  ],
+  "quotes": [
+    {
+      "symbol": "BTCUSD",
+      "id": "3d961844-d360-45fc-989b-f6fca761d511",
+      "bid_price": "79274.7849346",
+      "bid_time": "2026-09-05T14:09:28.246-04:00",
+      "ask_price": "80774.05766148",
+      "ask_time": "2026-09-05T14:09:28.29-04:00",
+      "mark_price": "80024.42129804",
+      "open_price": "79604.5",
+      "routing": "Market Maker Routing",
+      "updated_at": "2026-09-05T14:09:28.42-04:00"
+    },
+    {
+      "symbol": "ETHUSD",
+      "id": "76637d50-c702-4ed1-bcb5-5b0732a81f48",
+      "bid_price": "2455.7",
+      "bid_time": "2026-09-05T14:09:28.427-04:00",
+      "ask_price": "2502.60337191",
+      "ask_time": "2026-09-05T14:09:28.407-04:00",
+      "mark_price": "2479.151685955",
+      "open_price": "2453.36",
+      "routing": "Market Maker Routing",
+      "updated_at": "2026-09-05T14:09:28.427-04:00"
+    }
+  ]
+}

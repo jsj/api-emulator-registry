@@ -5,6 +5,7 @@ export const contract = {
   "source": "Provider API docs",
   "docs": "",
   "scope": [
+    "management-project-list",
     "auth",
     "storage",
     "rest"

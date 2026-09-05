@@ -1,0 +1,79 @@
+{
+  "captured_at": "2026-09-05T18:19:43.499Z",
+  "source": "https://agent.robinhood.com/mcp/trading",
+  "contract_captured_at": "2026-09-05T18:04:55.774Z",
+  "scope": "Bounded live read-only schema checks; no previews or mutations; response values remain private.",
+  "observations": [
+    {
+      "tool": "get_alerts",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "alerts"
+      ]
+    },
+    {
+      "tool": "get_alert_log",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "events",
+        "next_cursor",
+        "total_unread_count"
+      ]
+    },
+    {
+      "tool": "get_equity_news",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "articles",
+        "next_cursor",
+        "symbol"
+      ]
+    },
+    {
+      "tool": "get_sec_filing_index",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "filings",
+        "symbol"
+      ]
+    },
+    {
+      "tool": "get_sec_filing",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "table_of_contents"
+      ]
+    },
+    {
+      "tool": "get_sec_filing",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "section"
+      ]
+    },
+    {
+      "tool": "get_sec_filing_facts_catalog",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "concepts",
+        "count"
+      ]
+    },
+    {
+      "tool": "get_sec_filing_facts",
+      "status": "passed",
+      "mismatches": [],
+      "data_fields": [
+        "facts"
+      ]
+    }
+  ],
+  "untested": []
+}

@@ -8,6 +8,11 @@ function state(store) {
   const existing = store.getData?.(key);
   if (existing) return existing;
   const initial = {
+    projects: [{
+      id: 'project_emulator', ref: 'project_emulator', name: 'Emulator Project',
+      organization_id: 'org_emulator', region: 'local', status: 'ACTIVE_HEALTHY',
+      database: { host: '127.0.0.1', version: '15' },
+    }],
     users: [],
     sessions: [],
     buckets: [],
@@ -164,6 +169,7 @@ async function getPgObject(bucket, path, fallback) {
   return rows[0] ?? fallback;
 }
 export function registerRoutes(app, store, contract) {
+  app.get('/v1/projects', (c) => c.json(state(store).projects ?? []));
   app.post('/auth/v1/signup', async (c) => { const next = state(store); const input = await body(c); const user = { id: id('user'), email: input.email, password: input.password, created_at: now(), user_metadata: input.data ?? {} }; next.users.push(user); const token = 'sb_' + crypto.randomUUID(); next.sessions.push({ access_token: token, user_id: user.id, created_at: now() }); save(store, next); return c.json({ access_token: token, token_type: 'bearer', user: publicUser(user) }); });
   app.post('/auth/v1/token', async (c) => { const next = state(store); const input = await body(c); const user = next.users.find((u) => u.email === input.email && (!u.password || u.password === input.password)); if (!user) return c.json({ error: 'invalid_grant' }, 400); const token = 'sb_' + crypto.randomUUID(); next.sessions.push({ access_token: token, user_id: user.id, created_at: now() }); save(store, next); return c.json({ access_token: token, token_type: 'bearer', user: publicUser(user) }); });
   app.get('/auth/v1/user', (c) => { const token = c.req.header?.('authorization')?.replace(/^Bearer\s+/i, ''); const session = state(store).sessions.find((s) => s.access_token === token); const user = state(store).users.find((u) => u.id === session?.user_id); return user ? c.json(publicUser(user)) : c.json({ error: 'invalid_token' }, 401); });

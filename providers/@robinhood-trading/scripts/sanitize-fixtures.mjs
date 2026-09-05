@@ -64,6 +64,8 @@ function sanitizeAccounts(accountsPayload) {
   }
   return accounts.map((account, index) => ({
     id: `acct_${index + 1}`,
+    rhs_account_number: String(900000001 + index),
+    ...(account.rhc_account_number ? { rhc_account_number: `RHCEMULATOR${String(index + 1).padStart(3, '0')}` } : {}),
     account_number: account.agentic_allowed ? 'RHAGENTIC001' : `RHACCOUNT${String(index + 1).padStart(3, '0')}`,
     status: account.state ?? 'active',
     type: account.type ?? 'cash',

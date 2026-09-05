@@ -86,3 +86,5 @@ On September 5, eight additional read-only live calls across seven alert/news/SE
 ### Simulation limits
 
 Orders remain queued until canceled or seeded with another state; the emulator does not execute fills or run a matching engine. Cancellation completes synchronously locally, while Robinhood's cancellation is asynchronous. Fee calculations use a configured fixed rate, without live routing, collaring, taxes, or approval workflows. Quote timezone inputs are validated, but seeded timestamps and previous close remain fixed. Alerts do not monitor markets or send notifications. News and SEC content are synthetic fixtures, not live research.
+
+The default account, portfolio, and watchlist fixture is entirely synthetic. The legacy `scripts/sanitize-fixtures.mjs` command ignores private capture input and copies only this synthetic fixture. Live account responses must remain under the ignored `.emu/` directory; replacing identifiers alone does not remove personal financial information.

@@ -550,8 +550,8 @@ const optionQuotes = await callHarness('POST', '/mcp/trading', {
   params: { name: 'get_option_quotes', arguments: { instrument_ids: [selectedInstrument.id] } },
 });
 assert.equal(data(optionQuotes).results[0].quote.instrument_id, selectedInstrument.id);
-assert.equal(data(optionQuotes).results[0].quote.delta, '0');
-assert.equal(data(optionQuotes).results[0].quote.gamma, '0');
+assert.equal(data(optionQuotes).results[0].quote.delta, '0.54');
+assert.equal(data(optionQuotes).results[0].quote.gamma, '0.036');
 
 const missingOptionHistoricalStart = await callHarness('POST', '/mcp/trading', {
   jsonrpc: '2.0',

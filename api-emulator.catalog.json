@@ -336,6 +336,12 @@
       "specifier": "./providers/@doordash/api-emulator.mjs",
       "description": "DoorDash provides Drive, Drive Classic, Developer, and Marketplace APIs for delivery quotes, serviceability, stores, businesses, menus, orders, item management, promotions, and webhooks."
     },
+    "doublespeed": {
+      "kind": "package",
+      "packageName": "@api-emulator/doublespeed",
+      "specifier": "./providers/@doublespeed/api-emulator.mjs",
+      "description": "DoubleSpeed provides social posting, comments, templates, clone jobs, webhooks, accounts, and Comment Monitor workflows."
+    },
     "doppler": {
       "kind": "package",
       "packageName": "@api-emulator/doppler",

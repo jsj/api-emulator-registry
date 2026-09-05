@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { createHarness } from '../../scripts/provider-smoke-harness.mjs';
+import { contract, plugin, PRODUCT_ID, routeManifest } from './api-emulator.mjs';
+const h = createHarness(plugin), headers = { authorization: 'Bearer ds_emulator', 'content-type': 'application/json' }, call = (method, path, body) => h.call(method, path, body, headers);
+assert.equal(contract.provider, 'doublespeed'); for (const [m, p] of routeManifest) assert.ok(h.app.routes.some((r) => r.method === m && r.path === p.replaceAll(/{([^}]+)}/g, ':$1')));
+assert.equal((await h.call('GET', '/api/v1/accounts')).status, 401); assert.equal((await call('GET', '/api/v1/accounts')).payload.accounts[0].username, 'myaccount');
+assert.equal((await call('GET', '/api/v1/posts?status=all')).payload.posts.length, 1);
+const made = await call('POST', '/api/posts/create-from-urls', { productId: PRODUCT_ID, accountUsername: 'myaccount', description: 'Smoke', imageUrls: ['https://example.test/a.jpg'], draft: true }); assert.equal(made.status, 201); assert.equal((await call('PATCH', `/api/v1/posts/${made.payload.postId}/status`, { status: 'scheduled' })).payload.status, 'scheduled'); assert.equal((await call('DELETE', `/api/v1/posts/${made.payload.postId}`)).payload.deleted, true);
+assert.equal((await call('GET', '/api/v1/templates?only_pinned=true')).payload.templates.length, 1); const clone = await call('POST', '/api/v1/clone', { source: 'https://example.test/source.mp4' }); assert.equal((await call('GET', `/api/v1/clone/${clone.payload.jobId}`)).payload.status, 'completed');
+const wh = await call('POST', '/api/v1/webhooks', { url: 'https://hooks.example.test/doublespeed' }); assert.match(wh.payload.secret, /^dswhsec_/); assert.equal((await call('POST', `/api/v1/webhooks/${wh.payload.webhook.id}/test`, {})).payload.delivered, true);
+const comments = await call('POST', '/api/v1/comments', { rows: [{ postLink: 'https://www.tiktok.com/@creator/video/7491234567890123456', comment: 'Smoke comment' }] }); assert.equal(comments.payload.comments_queued, 1); assert.equal((await call('GET', `/api/v1/comments/status?ids=${comments.payload.comments[0].id}`)).payload.comments[0].status, 'queued'); assert.match((await call('PUT', '/api/v1/comments/webhook', { url: 'https://hooks.example.test/comments' })).payload.secret, /^dswhsec_/);
+const monitor = (await call('GET', '/api/v1/monitors')).payload.monitors[0].id; assert.equal((await call('POST', `/api/v1/monitors/${monitor}/accounts`, { accounts: [{ platform: 'tiktok', username: '@New_Creator' }] })).payload.added[0].username, 'new_creator');
+console.log('doublespeed smoke ok');

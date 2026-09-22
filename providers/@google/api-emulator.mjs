@@ -10,6 +10,14 @@ export const contract = {
   discoveryServiceCount: WORKSPACE_SERVICES.length,
   serviceIds: WORKSPACE_SERVICES.map((service) => service.serviceId),
   adapterRoutePrefixes: ['/:service/:version/*', '/upload/:service/:version/*', '/$discovery/rest'],
+  exactReadEndpoints: [
+    'GET /docs/v1/documents/:documentId',
+    'GET /v1/documents/:documentId',
+    'GET /sheets/v4/spreadsheets/:spreadsheetId',
+    'GET /v4/spreadsheets/:spreadsheetId',
+    'GET /sheets/v4/spreadsheets/:spreadsheetId/values/:range',
+    'GET /v4/spreadsheets/:spreadsheetId/values/:range',
+  ],
 };
 
 export const plugin = {

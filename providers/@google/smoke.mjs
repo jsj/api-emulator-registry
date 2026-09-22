@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { contract, plugin } from './api-emulator.mjs';
+import { contract, plugin, seedFromConfig } from './api-emulator.mjs';
 
 function createHarness() {
   const routes = new Map();
@@ -41,6 +41,7 @@ function createHarness() {
   }
 
   return {
+    seed: (config) => seedFromConfig(store, 'https://google.test', config),
     async call(method, path, body = {}, params = {}, queries = {}) {
       const dynamic = matchDynamic(method, path);
       const handler =
@@ -97,6 +98,37 @@ assert.equal(event.payload.summary, 'Smoke Event');
 
 const sheet = await harness.call('POST', '/sheets/v4/spreadsheets', { properties: { title: 'Smoke Sheet' } });
 assert.match(sheet.payload.spreadsheetId, /^sheet_/);
+
+const spreadsheet = await harness.call('GET', '/v4/spreadsheets/sheet_emulator_seed');
+assert.equal(spreadsheet.payload.properties.title, 'Quarterly Plan');
+assert.equal(spreadsheet.payload.sheets[0].properties.title, 'Plan');
+
+const formattedValues = await harness.call('GET', '/v4/spreadsheets/sheet_emulator_seed/values/Plan!A1%3AC3');
+assert.equal(formattedValues.payload.range, 'Plan!A1:C3');
+assert.equal(formattedValues.payload.values[1][1], '$1,200.00');
+
+const formulaValues = await harness.call('GET', '/sheets/v4/spreadsheets/sheet_emulator_seed/values/Plan!A1%3AC3', {}, {}, { valueRenderOption: 'FORMULA' });
+assert.equal(formulaValues.payload.values[1][2], '=B2-1150');
+
+const invalidRender = await harness.call('GET', '/v4/spreadsheets/sheet_emulator_seed/values/Plan!A1%3AC3', {}, {}, { valueRenderOption: 'WRITE' });
+assert.equal(invalidRender.status, 400);
+
+const fullDocument = await harness.call('GET', '/v1/documents/doc_emulator_seed', {}, {}, { includeTabsContent: 'true' });
+assert.equal(fullDocument.payload.title, 'Workspace Plan');
+assert.equal(fullDocument.payload.tabs[0].documentTab.body.content[0].paragraph.elements[0].textRun.content, 'Workspace plan\n');
+
+const firstTabDocument = await harness.call('GET', '/docs/v1/documents/doc_emulator_seed');
+assert.equal(firstTabDocument.payload.tabs.length, 0);
+assert.equal(firstTabDocument.payload.body.content[0].paragraph.elements[0].textRun.content, 'Workspace plan\n');
+
+harness.seed({
+  spreadsheets: [{ spreadsheetId: 'sheet_custom', properties: { title: 'Custom' }, sheets: [] }],
+  sheetValues: { sheet_custom: { 'Data!A1': { formatted: [['Ready']], unformatted: [['Ready']], formula: [['Ready']] } } },
+  docs: [{ documentId: 'doc_custom', title: 'Custom Doc', tabs: [] }],
+});
+assert.equal((await harness.call('GET', '/v4/spreadsheets/sheet_custom')).payload.properties.title, 'Custom');
+assert.equal((await harness.call('GET', '/v4/spreadsheets/sheet_custom/values/Data!A1')).payload.values[0][0], 'Ready');
+assert.equal((await harness.call('GET', '/v1/documents/doc_custom')).payload.title, 'Custom Doc');
 
 const generic = await harness.call('GET', '/vault/v1/matters', {}, { service: 'vault', version: 'v1', '*': 'vault/v1/matters' });
 assert.equal(generic.payload.kind, 'vault#matters');

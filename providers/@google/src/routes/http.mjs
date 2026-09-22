@@ -50,8 +50,31 @@ function state(store) {
         end: { dateTime: new Date(Date.now() + 3600000).toISOString() },
       },
     ],
-    spreadsheets: {},
-    docs: {},
+    spreadsheets: {
+      sheet_emulator_seed: {
+        spreadsheetId: 'sheet_emulator_seed',
+        spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/sheet_emulator_seed',
+        properties: { title: 'Quarterly Plan', locale: 'en_US', timeZone: 'UTC' },
+        sheets: [{ properties: { sheetId: 0, title: 'Plan', index: 0, gridProperties: { rowCount: 100, columnCount: 10 } } }],
+      },
+    },
+    sheetValues: {
+      sheet_emulator_seed: {
+        'Plan!A1:C3': {
+          formatted: [['Item', 'Budget', 'Variance'], ['Hosting', '$1,200.00', '$50.00'], ['Software', '$800.00', '-$25.00']],
+          unformatted: [['Item', 'Budget', 'Variance'], ['Hosting', 1200, 50], ['Software', 800, -25]],
+          formula: [['Item', 'Budget', 'Variance'], ['Hosting', 1200, '=B2-1150'], ['Software', 800, '=B3-825']],
+        },
+      },
+    },
+    docs: {
+      doc_emulator_seed: {
+        documentId: 'doc_emulator_seed',
+        title: 'Workspace Plan',
+        revisionId: '1',
+        tabs: [{ tabProperties: { tabId: 't.0', title: 'Plan', index: 0 }, documentTab: { body: { content: [{ startIndex: 1, endIndex: 16, paragraph: { elements: [{ startIndex: 1, endIndex: 16, textRun: { content: 'Workspace plan\n' } }] } }] } } }],
+      },
+    },
     generic: {},
     hits: [],
   };
@@ -166,6 +189,37 @@ function discoveryDoc(c) {
     servicePath: `${service}/${version}/`,
     resources: {},
   };
+}
+
+function spreadsheetResponse(spreadsheet) {
+  return structuredClone(spreadsheet);
+}
+
+function valuesResponse(c, store) {
+  const spreadsheetId = param(c, 'spreadsheetId');
+  const spreadsheet = state(store).spreadsheets[spreadsheetId];
+  if (!spreadsheet) return jsonError(c, 404, 'Spreadsheet not found');
+  const rawRange = param(c, 'range');
+  let range = rawRange;
+  try { range = decodeURIComponent(rawRange); } catch {}
+  const seeded = state(store).sheetValues[spreadsheetId]?.[range];
+  const render = query(c, 'valueRenderOption', 'FORMATTED_VALUE');
+  if (!['FORMATTED_VALUE', 'UNFORMATTED_VALUE', 'FORMULA'].includes(render)) return jsonError(c, 400, 'Invalid valueRenderOption', 'badRequest');
+  const dateTimeRender = query(c, 'dateTimeRenderOption', 'SERIAL_NUMBER');
+  if (!['SERIAL_NUMBER', 'FORMATTED_STRING'].includes(dateTimeRender)) return jsonError(c, 400, 'Invalid dateTimeRenderOption', 'badRequest');
+  const values = seeded?.[render === 'FORMULA' ? 'formula' : render === 'UNFORMATTED_VALUE' ? 'unformatted' : 'formatted'] ?? [];
+  return c.json({ range, majorDimension: 'ROWS', values });
+}
+
+function documentResponse(c, store) {
+  const doc = state(store).docs[param(c, 'documentId')];
+  if (!doc) return jsonError(c, 404, 'Document not found');
+  const result = structuredClone(doc);
+  const includeTabsContent = query(c, 'includeTabsContent', 'false') === 'true';
+  if (includeTabsContent) return c.json(result);
+  result.body = result.tabs?.[0]?.documentTab?.body ?? { content: [] };
+  result.tabs = [];
+  return c.json(result);
 }
 
 function registerGenericWorkspaceAdapter(app, store) {
@@ -297,12 +351,20 @@ export function registerRoutes(app, store, contract) {
     saveState(store, next);
     return c.json(spreadsheet);
   });
-  app.get('/sheets/v4/spreadsheets/:spreadsheetId', (c) => {
+  const getSpreadsheet = (c) => {
     hit(store, 'sheets.spreadsheets.get');
     const spreadsheet = state(store).spreadsheets[param(c, 'spreadsheetId')];
     if (!spreadsheet) return jsonError(c, 404, 'Spreadsheet not found');
-    return c.json(spreadsheet);
-  });
+    return c.json(spreadsheetResponse(spreadsheet));
+  };
+  app.get('/sheets/v4/spreadsheets/:spreadsheetId', getSpreadsheet);
+  app.get('/v4/spreadsheets/:spreadsheetId', getSpreadsheet);
+  const getValues = (c) => {
+    hit(store, 'sheets.values.get');
+    return valuesResponse(c, store);
+  };
+  app.get('/sheets/v4/spreadsheets/:spreadsheetId/values/:range', getValues);
+  app.get('/v4/spreadsheets/:spreadsheetId/values/:range', getValues);
   app.post('/sheets/v4/spreadsheets/:spreadsheetId/values/:range:append', async (c) => {
     hit(store, 'sheets.values.append');
     return c.json({
@@ -322,12 +384,12 @@ export function registerRoutes(app, store, contract) {
     saveState(store, next);
     return c.json(doc);
   });
-  app.get('/docs/v1/documents/:documentId', (c) => {
+  const getDocument = (c) => {
     hit(store, 'docs.documents.get');
-    const doc = state(store).docs[param(c, 'documentId')];
-    if (!doc) return jsonError(c, 404, 'Document not found');
-    return c.json(doc);
-  });
+    return documentResponse(c, store);
+  };
+  app.get('/docs/v1/documents/:documentId', getDocument);
+  app.get('/v1/documents/:documentId', getDocument);
 
   app.get('/inspect/contract', (c) => c.json(contract));
   app.get('/inspect/state', (c) => c.json(state(store)));
@@ -346,5 +408,10 @@ export function seedFromConfigState(store, config = {}) {
   if (Array.isArray(config.driveFiles)) next.driveFiles = config.driveFiles;
   if (Array.isArray(config.gmailMessages)) next.gmailMessages = config.gmailMessages;
   if (Array.isArray(config.calendarEvents)) next.calendarEvents = config.calendarEvents;
+  if (Array.isArray(config.spreadsheets)) {
+    next.spreadsheets = Object.fromEntries(config.spreadsheets.map((spreadsheet) => [spreadsheet.spreadsheetId, spreadsheet]));
+  }
+  if (config.sheetValues && typeof config.sheetValues === 'object') next.sheetValues = config.sheetValues;
+  if (Array.isArray(config.docs)) next.docs = Object.fromEntries(config.docs.map((doc) => [doc.documentId, doc]));
   saveState(store, next);
 }

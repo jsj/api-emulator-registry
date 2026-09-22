@@ -1,0 +1,7 @@
+{
+  "name": "polymarket-emulator-verification",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node sdk.mjs", "test:cli": "node cli.mjs" },
+  "devDependencies": { "@polymarket/client": "0.10.0" }
+}

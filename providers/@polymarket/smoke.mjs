@@ -7,6 +7,7 @@ function createHarness() {
   const app = {
     get: (path, handler) => routes.set(`GET ${path}`, handler),
     post: (path, handler) => routes.set(`POST ${path}`, handler),
+    delete: (path, handler) => routes.set(`DELETE ${path}`, handler),
   };
   const store = {
     getData: (key) => data.get(key),
@@ -49,3 +50,4 @@ const requests = await harness.call('GET', '/inspect/requests');
 assert.ok(requests.payload.length >= 2);
 
 console.log('polymarket smoke ok');
+await import('./http-smoke.mjs');

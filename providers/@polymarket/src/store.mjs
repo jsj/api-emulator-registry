@@ -1,3 +1,8 @@
+import { marketFromBody } from './concepts/markets.mjs';
+
+export const FIXTURE_TIME = 1780272000;
+export const FIXTURE_ADDRESS = '0x1111111111111111111111111111111111111111';
+
 export const DEFAULT_MARKETS = [
   {
     id: 'polymarket-weather-2026',
@@ -17,13 +22,23 @@ export const DEFAULT_MARKETS = [
     endDate: '2026-12-31T00:00:00Z',
     description: 'Emulated Polymarket space industry market.',
   },
-];
+].map((market, index) => marketFromBody({
+  ...market,
+  conditionId: `0x${String(index + 1).padStart(64, '0')}`,
+  clobTokenIds: JSON.stringify([String(1001 + index * 2), String(1002 + index * 2)]),
+  version: 'v1',
+  orderPriceMinTickSize: 0.01,
+  orderMinSize: 1,
+  negRisk: false,
+}));
 
 export function state(store) {
   const existing = store.getData?.('polymarket:state');
   if (existing) return existing;
   const initial = {
-    markets: Object.fromEntries(DEFAULT_MARKETS.map((market) => [market.id, market])),
+    markets: Object.fromEntries(structuredClone(DEFAULT_MARKETS).map((market) => [market.id, market])),
+    orders: {},
+    nextOrderId: 1,
     requests: [],
   };
   store.setData?.('polymarket:state', initial);

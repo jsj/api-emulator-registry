@@ -571,6 +571,7 @@ async function runYfinanceSdkSmoke(baseUrl) {
   try {
     const install = await run(python, ['-m', 'pip', 'install', '--quiet', '--target', join(dir, 'site'), 'git+https://github.com/jsj/yfinance.git'], {
       env: { PIP_DISABLE_PIP_VERSION_CHECK: '1' },
+      timeout: 120_000,
     }).catch((error) => ({ error }));
     if (install.error) return { skipped: true, reason: 'jsj/yfinance install unavailable' };
     const smoke = join(dir, 'smoke.py');
@@ -1277,10 +1278,10 @@ async function runOpenAiCompatibleCliSmoke(baseUrl) {
   const openai = await commandPath('openai');
   if (!openai) return null;
 
-  const fireworks = await run(openai, ['--api-base', `${baseUrl}/inference/v1/`, '--api-key', 'fw-emulator-key', 'api', 'chat.completions.create', '-m', 'accounts/fireworks/models/llama-v3p1-8b-instruct', '-g', 'user', 'hello fireworks']);
+  const fireworks = await run(openai, ['--base-url', `${baseUrl}/inference/v1/`, '--api-key', 'fw-emulator-key', '--format', 'json', 'chat:completions', 'create', '--model', 'accounts/fireworks/models/llama-v3p1-8b-instruct', '--message', JSON.stringify({ role: 'user', content: 'hello fireworks' })]);
   assert.match(fireworks.stdout, /Fireworks emulator response/);
 
-  const together = await run(openai, ['--api-base', `${baseUrl}/together/v1/`, '--api-key', 'together-emulator-key', 'api', 'chat.completions.create', '-m', 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', '-g', 'user', 'hello together']);
+  const together = await run(openai, ['--base-url', `${baseUrl}/together/v1/`, '--api-key', 'together-emulator-key', '--format', 'json', 'chat:completions', 'create', '--model', 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', '--message', JSON.stringify({ role: 'user', content: 'hello together' })]);
   assert.match(together.stdout, /Together AI emulator response/);
   return { ok: true };
 }
@@ -1551,6 +1552,26 @@ asyncio.run(main())
       await rm(dir, { recursive: true, force: true });
     },
   };
+}
+
+async function runModalCliSmoke() {
+  const modalGrpc = await startModalGrpcServer();
+  if (!modalGrpc) return null;
+  try {
+    const env = {
+      MODAL_SERVER_URL: modalGrpc.baseUrl,
+      MODAL_TOKEN_ID: 'ak-emulator',
+      MODAL_TOKEN_SECRET: 'as-emulator',
+      MODAL_CONFIG_PATH: join(tmpdir(), 'api-emulator-modal-empty.toml'),
+    };
+    const tokenInfo = await run(modalGrpc.modal, ['token', 'info'], { env });
+    assert.match(tokenInfo.stdout, /Workspace: emulator/);
+    const listed = await run(modalGrpc.modal, ['app', 'list', '--json'], { env });
+    assert.equal(JSON.parse(listed.stdout)[0]['App ID'], 'ap-aaaaaaaaaaaaaaaaaaaaaa');
+    return true;
+  } finally {
+    await modalGrpc.close();
+  }
 }
 
 async function patchedLucentCli(baseUrl) {
@@ -2642,11 +2663,16 @@ async function builtSpogoCli(baseUrl) {
 
     const factoryPath = join(root, 'internal', 'app', 'context_factory.go');
     const factorySource = await readFile(factoryPath, 'utf8');
-    const patchedFactorySource = factorySource.replace(
-      'return spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source, Timeout: c.Settings.Timeout},',
-      'baseURL := os.Getenv("SPOGO_SPOTIFY_BASE_URL")\n\ttokenBaseURL := os.Getenv("SPOGO_SPOTIFY_TOKEN_BASE_URL")\n\treturn spotify.NewClient(spotify.Options{\n\t\tTokenProvider: spotify.CookieTokenProvider{Source: source, Timeout: c.Settings.Timeout, BaseURL: tokenBaseURL},\n\t\tBaseURL:       baseURL,',
-    );
-    if (patchedFactorySource === factorySource) {
+    const patchedFactorySource = factorySource
+      .replace(
+        'func (c *Context) newWebClient(source cookies.Source) (*spotify.Client, error) {',
+        'func (c *Context) newWebClient(source cookies.Source) (*spotify.Client, error) {\n\tif baseURL := os.Getenv("SPOGO_SPOTIFY_BASE_URL"); baseURL != "" {\n\t\treturn spotify.NewClient(spotify.Options{TokenProvider: spotify.CookieTokenProvider{Source: source, Timeout: c.Settings.Timeout, BaseURL: os.Getenv("SPOGO_SPOTIFY_TOKEN_BASE_URL")}, BaseURL: baseURL, Market: c.Profile.Market, Language: c.Profile.Language, Device: c.Profile.Device, Timeout: c.Settings.Timeout})\n\t}',
+      )
+      .replace(
+        'func (c *Context) newConnectClient(source cookies.Source, webClient *spotify.Client) (*spotify.ConnectClient, error) {',
+        'func (c *Context) newConnectClient(source cookies.Source, webClient *spotify.Client) (*spotify.ConnectClient, error) {\n\tif os.Getenv("SPOGO_SPOTIFY_BASE_URL") != "" {\n\t\treturn nil, errors.New("Connect fallback disabled for localhost smoke")\n\t}',
+      );
+    if (!patchedFactorySource.includes('BaseURL: os.Getenv("SPOGO_SPOTIFY_TOKEN_BASE_URL")') || !patchedFactorySource.includes('Connect fallback disabled for localhost smoke')) {
       await rm(dir, { recursive: true, force: true });
       throw new Error('spogo localhost source patch no longer applies');
     }
@@ -3533,6 +3559,12 @@ async function main() {
       spotify: { plugin: spotifyPlugin, run: runSpogoCliSmoke },
       supabase: { plugin: supabasePlugin, run: runSupabaseCliSmoke },
       fal: { plugin: falPlugin, run: runFalCliSmoke },
+      modal: { plugin: modalPlugin, run: runModalCliSmoke },
+      'yahoo-finance': { plugin: yahooFinancePlugin, run: async (baseUrl) => {
+        const result = await runYfinanceSdkSmoke(baseUrl);
+        assert.ok(!result.skipped, result.reason);
+        return result;
+      } },
     }[selectedProvider];
     if (!targeted) throw new Error(`Targeted CLI smoke is not configured for ${selectedProvider}`);
     const app = createApp();
@@ -4014,7 +4046,7 @@ async function main() {
     assert.equal(JSON.parse(kubectl.stdout).items[0].metadata.name, 'default');
     await rm(kubeDir, { recursive: true, force: true });
 
-    const openai = await run('openai', ['--api-base', `${baseUrl}/v1/`, '--api-key', 'sk-test', 'api', 'chat.completions.create', '-m', 'gpt-4.1-mini', '-g', 'user', 'hello from cli']);
+    const openai = await run('openai', ['--base-url', `${baseUrl}/v1/`, '--api-key', 'sk-test', '--format', 'json', 'chat:completions', 'create', '--model', 'gpt-4.1-mini', '--message', JSON.stringify({ role: 'user', content: 'hello from cli' })]);
     assert.match(openai.stdout, /openai-emulator-text/);
 
     const hfWhoami = await fetch(`${baseUrl}/api/whoami-v2`, {
@@ -4147,23 +4179,7 @@ async function main() {
     assert.equal(modalToken.status, 200);
     assert.equal((await modalToken.json()).workspace_name, 'emulator');
 
-    const modalGrpc = await startModalGrpcServer();
-    if (modalGrpc) {
-      try {
-        const modalEnv = {
-          MODAL_SERVER_URL: modalGrpc.baseUrl,
-          MODAL_TOKEN_ID: 'ak-emulator',
-          MODAL_TOKEN_SECRET: 'as-emulator',
-          MODAL_CONFIG_PATH: join(tmpdir(), 'api-emulator-modal-empty.toml'),
-        };
-        const tokenInfo = await run(modalGrpc.modal, ['token', 'info'], { env: modalEnv });
-        assert.match(tokenInfo.stdout, /Workspace: emulator/);
-        const listed = await run(modalGrpc.modal, ['app', 'list', '--json'], { env: modalEnv });
-        assert.equal(JSON.parse(listed.stdout)[0].app_id, 'ap-aaaaaaaaaaaaaaaaaaaaaa');
-      } finally {
-        await modalGrpc.close();
-      }
-    } else {
+    if (!await runModalCliSmoke()) {
       console.warn('modal CLI or Python gRPC deps unavailable; Modal route smoke covered');
     }
 
@@ -4904,6 +4920,7 @@ async function main() {
     },
     { port: Array.from({ length: 13 }, (_, offset) => 8787 + offset), host: '127.0.0.1' },
   );
+
 }
 
 await main();

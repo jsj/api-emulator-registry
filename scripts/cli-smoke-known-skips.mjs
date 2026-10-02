@@ -1,6 +1,7 @@
 // Known limitations that may be absent when optional clients are installed.
 // New skip reasons must be investigated before they are added here.
 export const knownCliSmokeSkipPrefixes = [
+  'Shortcut Python requests CLI smoke skipped:',
   'ADP, Concur, and Deel have no safely required local CLI',
   'health CLI smoke skipped: muinmomin/whoop-cli hardcodes',
   'health CLI smoke skipped: steipete/eightctl and pyEight hardcode',

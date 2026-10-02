@@ -1062,6 +1062,12 @@
       "specifier": "./providers/@shopify/api-emulator.mjs",
       "description": "Shopify Admin APIs provide shop, products, orders, inventory, customers, and GraphQL commerce workflows."
     },
+    "shortcut": {
+      "kind": "package",
+      "packageName": "@api-emulator/shortcut",
+      "specifier": "./providers/@shortcut/api-emulator.mjs",
+      "description": "Shortcut Platform API emulates spreadsheet jobs, skills, uploads, downloads, cancellation, and usage export."
+    },
     "sierra": {
       "kind": "package",
       "packageName": "@api-emulator/sierra",

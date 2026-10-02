@@ -6,7 +6,9 @@ import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { commandPath, createApp, run, Store, withServer } from './cli-smoke-runtime.mjs';
 import { generateKeyPairSync } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { knownCliSmokeSkipPrefixes } from './cli-smoke-known-skips.mjs';
+import { plugin as shortcutPlugin } from '../providers/@shortcut/api-emulator.mjs';
 
 const cliSmokeSkips = [];
 const originalConsoleWarn = console.warn.bind(console);
@@ -3547,6 +3549,44 @@ async function runFalCliSmoke(baseUrl) {
   }
 }
 
+async function runShortcutCliSmoke(baseUrl) {
+  const python = await commandPath('python3');
+  if (!python) return false;
+  try {
+    await run(python, ['-c', 'import requests']);
+  } catch {
+    return false;
+  }
+  const userSite = (await run(python, ['-c', 'import site; print(site.getusersitepackages())'])).stdout.trim();
+  const dir = await mkdtemp(join(tmpdir(), 'api-emulator-shortcut-cli-'));
+  try {
+    const script = fileURLToPath(new URL('../test_api.py', import.meta.url));
+    const result = await run(python, [script], {
+      cwd: dir,
+      timeout: 30_000,
+      env: {
+        HOME: dir,
+        PYTHONPATH: [userSite, process.env.PYTHONPATH].filter(Boolean).join(':'),
+        SHORTCUT_API_KEY: 'sc-emulator-cli-test',
+        SHORTCUT_API_BASE_URL: `${baseUrl}/api/spreadsheets`,
+        SHORTCUT_POLL_SECONDS: '0.01',
+      },
+    });
+    assert.match(result.stdout, /Saved result\.xlsx/);
+    const workbook = await readFile(join(dir, 'result.xlsx'));
+    assert.equal(workbook.readUInt32LE(0), 0x04034b50);
+    await run(python, ['-c', 'import zipfile; z=zipfile.ZipFile("result.xlsx"); assert "xl/worksheets/sheet1.xml" in z.namelist(); assert z.testzip() is None'], { cwd: dir });
+    const jobs = await fetch(`${baseUrl}/api/spreadsheets`, {
+      headers: { authorization: 'Bearer sc-emulator-cli-test' },
+    });
+    assert.equal(jobs.status, 200);
+    assert.equal((await jobs.json()).runs[0].status, 'completed');
+    return true;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   const providerFlag = process.argv.findIndex((arg) => arg === '--provider' || arg.startsWith('--provider='));
   const selectedProvider = providerFlag < 0 ? undefined : process.argv[providerFlag] === '--provider'
@@ -3559,6 +3599,7 @@ async function main() {
       spotify: { plugin: spotifyPlugin, run: runSpogoCliSmoke },
       supabase: { plugin: supabasePlugin, run: runSupabaseCliSmoke },
       fal: { plugin: falPlugin, run: runFalCliSmoke },
+      shortcut: { plugin: shortcutPlugin, run: runShortcutCliSmoke },
       modal: { plugin: modalPlugin, run: runModalCliSmoke },
       'yahoo-finance': { plugin: yahooFinancePlugin, run: async (baseUrl) => {
         const result = await runYfinanceSdkSmoke(baseUrl);
@@ -4921,6 +4962,13 @@ async function main() {
     { port: Array.from({ length: 13 }, (_, offset) => 8787 + offset), host: '127.0.0.1' },
   );
 
+  const shortcutApp = createApp();
+  shortcutPlugin.register(shortcutApp, new Store());
+  await withServer(shortcutApp, async (baseUrl) => {
+    if (!await runShortcutCliSmoke(baseUrl)) {
+      console.warn('Shortcut Python requests CLI smoke skipped: python3 or requests is unavailable; direct route smoke covered');
+    }
+  });
 }
 
 await main();

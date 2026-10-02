@@ -3,7 +3,7 @@ import { createHarness } from '../../scripts/provider-smoke-harness.mjs';
 import { contract, plugin, routeManifest } from './api-emulator.mjs';
 
 const harness = createHarness(plugin);
-const headers = { Authorization: 'Bearer xbt_emulator', 'X-XBOW-API-Version': '2026-07-01' };
+const headers = { Authorization: 'Bearer xbt_emulator', 'X-XBOW-API-Version': '2026-08-01' };
 const call = (method, path, body) => harness.call(method, path, body, headers);
 const ORG = '123e4567-e89b-12d3-a456-426614174001';
 const ASSET = '123e4567-e89b-12d3-a456-426614174002';
@@ -47,8 +47,11 @@ const updatedAsset = await call('PUT', `/api/v1/assets/${ASSET}`, {
 assert.equal(updatedAsset.payload.name, 'Updated target');
 
 assert.equal((await call('GET', `/api/v1/assets/${ASSET}/assessments`)).payload.items[0].id, ASSESSMENT);
-const createdAssessment = await call('POST', `/api/v1/assets/${ASSET}/assessments`, { attackCredits: 20 });
+assert.equal((await call('POST', `/api/v1/assets/${ASSET}/assessments`, { attackCredits: 20 })).status, 400);
+const createdAssessment = await call('POST', `/api/v1/assets/${ASSET}/assessments`, { attackCredits: 20, impactDemonstration: 'moderate', resourceIds: [] });
 assert.equal(createdAssessment.payload.attackCredits, 20);
+assert.equal(createdAssessment.payload.impactDemonstration, 'moderate');
+assert.deepEqual(createdAssessment.payload.resourceIds, []);
 assert.equal((await call('GET', `/api/v1/assessments/${ASSESSMENT}`)).payload.state, 'waiting-for-capacity');
 assert.equal((await call('POST', `/api/v1/assessments/${ASSESSMENT}/pause`)).payload.state, 'paused');
 assert.equal((await call('POST', `/api/v1/assessments/${ASSESSMENT}/resume`)).payload.state, 'waiting-for-capacity');
@@ -78,7 +81,7 @@ assert.equal((await call('GET', `/api/v1/webhooks/${WEBHOOK}`)).payload.id, WEBH
 assert.equal((await call('PATCH', `/api/v1/webhooks/${WEBHOOK}`, { targetUrl: 'https://new.example.test/hook' })).payload.targetUrl, 'https://new.example.test/hook');
 assert.equal((await call('POST', `/api/v1/webhooks/${WEBHOOK}/ping`)).status, 204);
 assert.equal((await call('GET', `/api/v1/webhooks/${WEBHOOK}/deliveries`)).payload.items[0].payload.type, 'ping');
-const newWebhook = await call('POST', `/api/v1/organizations/${ORG}/webhooks`, { apiVersion: '2026-07-01', events: ['finding.changed'], targetUrl: 'https://events.example.test' });
+const newWebhook = await call('POST', `/api/v1/organizations/${ORG}/webhooks`, { apiVersion: '2026-08-01', events: ['finding.changed'], targetUrl: 'https://events.example.test' });
 assert.equal(newWebhook.status, 201);
 assert.equal((await call('DELETE', `/api/v1/webhooks/${newWebhook.payload.id}`)).status, 204);
 

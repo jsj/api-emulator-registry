@@ -1,7 +1,7 @@
 import { fixedNow, getState, readBody, setState } from '../../scripts/provider-plugin-kit.mjs';
 
 const STATE_KEY = 'xbow:state';
-const API_VERSION = '2026-07-01';
+const API_VERSION = '2026-08-01';
 const REQUEST_ID = 'req_xbow_emulator_000001';
 const ORG_ID = '123e4567-e89b-12d3-a456-426614174001';
 const ASSET_ID = '123e4567-e89b-12d3-a456-426614174002';
@@ -90,7 +90,7 @@ function asset(id = ASSET_ID, organizationId = ORG_ID, input = {}) {
 }
 
 function assessment(id = ASSESSMENT_ID, assetId = ASSET_ID, organizationId = ORG_ID, input = {}) {
-  return { assetId, attackCredits: input.attackCredits ?? 40, createdAt: fixedNow, id, name: input.name ?? 'Emulator Assessment', organizationId, progress: input.progress ?? 0, recentEvents: input.recentEvents ?? [], state: input.state ?? 'waiting-for-capacity', updatedAt: fixedNow };
+  return { assetId, attackCredits: input.attackCredits ?? 40, createdAt: fixedNow, id, impactDemonstration: input.impactDemonstration ?? 'off', name: input.name ?? 'Emulator Assessment', organizationId, progress: input.progress ?? 0, recentEvents: input.recentEvents ?? [], resourceIds: input.resourceIds ?? [], state: input.state ?? 'waiting-for-capacity', updatedAt: fixedNow };
 }
 
 function finding(id = FINDING_ID, assetId = ASSET_ID, organizationId = ORG_ID) {
@@ -178,7 +178,7 @@ function openApiDocument() {
 }
 
 export const contract = {
-  provider: 'xbow', source: 'XBOW OpenAPI 2026-07-01', sourceUrl: 'https://docs.xbow.com/api/openapi-2026-07-01.json',
+  provider: 'xbow', source: 'XBOW OpenAPI 2026-08-01', sourceUrl: 'https://docs.xbow.com/api/openapi-2026-08-01.json',
   docs: 'https://docs.xbow.com/api/', baseUrl: 'https://console.xbow.com/api/v1/', auth: 'Authorization: Bearer <token>',
   versionHeader: `X-XBOW-API-Version: ${API_VERSION}`, pagination: 'limit/after cursor',
   errorShape: { code: 'string', error: 'string', message: 'string', requestId: 'string' },
@@ -216,7 +216,8 @@ export const plugin = {
       return c.json(page(s.assessments.filter((entry) => entry.assetId === c.req.param('assetId')).map((entry) => summary(entry, ['createdAt', 'id', 'name', 'progress', 'state', 'updatedAt'])), c));
     });
     on('post', '/api/v1/assets/:assetId/assessments', async (c) => {
-      const s = state(store); const target = s.assets.find((entry) => entry.id === c.req.param('assetId')); if (!target) return notFound(c, 'Asset'); const body = await readBody(c); const invalid = required(c, body, ['attackCredits']); if (invalid) return invalid;
+      const s = state(store); const target = s.assets.find((entry) => entry.id === c.req.param('assetId')); if (!target) return notFound(c, 'Asset'); const body = await readBody(c); const invalid = required(c, body, ['attackCredits', 'impactDemonstration', 'resourceIds']); if (invalid) return invalid;
+      if (!['off', 'moderate', 'deep'].includes(body.impactDemonstration) || !Array.isArray(body.resourceIds)) return badRequest(c, 'Invalid impactDemonstration or resourceIds');
       const item = assessment(nextId(s, 'assessment'), target.id, target.organizationId, body); s.assessments.push(item); save(store, s); return c.json(item);
     });
     on('get', '/api/v1/assets/:assetId/findings', (c) => {
@@ -269,7 +270,7 @@ export const plugin = {
 
 export function seedFromConfig(store, _baseUrl, config = {}) { return save(store, { ...defaultState(), ...config }); }
 export const label = 'XBOW API emulator';
-export const endpoints = 'full XBOW 2026-07-01 REST contract';
+export const endpoints = 'full XBOW 2026-08-01 REST contract';
 export const capabilities = contract.scope;
 export const initConfig = { xbow: defaultState() };
 export { routeManifest };

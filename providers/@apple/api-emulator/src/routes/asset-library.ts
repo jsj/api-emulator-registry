@@ -4,7 +4,7 @@ import { ascId, jsonApiError, jsonApiResource } from "../jsonapi.js";
 import { getASCStore } from "../store.js";
 
 type Resource = { id: string; type: string; attributes: Record<string, any>; relationships: Record<string, any> };
-type State = { libraries: Resource[]; media: Resource[]; placements: Resource[]; transfers: Record<string, number> };
+type State = { libraries: Resource[]; media: Resource[]; placements: Resource[]; transfers: Record<string, number>; processingDelayReads?: number; processing?: Record<string, number> };
 export function assetLibraryState(store: Store): State {
   let state = store.getData<State>("asc.asset_library");
   if (!state) { state = { libraries: [], media: [], placements: [], transfers: {} }; store.setData("asc.asset_library", state); }
@@ -54,7 +54,16 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
   });
   app.get("/v1/appAssetLibraries/:id", c => one(c, state().libraries.find(r => r.id === c.req.param("id"))));
   // This fixture does not represent Apple's complete compatibility catalog.
-  const specs: Resource[] = [{ id: "creative-image", type: "appAssetLibraryRefData", attributes: { category: "CREATIVE_ASSETS", imageDimensions: { width: 1920, height: 1080 } }, relationships: {} }];
+  const specs: Resource[] = [{ id: "creative-image", type: "appAssetLibraryRefData", attributes: {
+    placementTypes: [{ placementTypeId: "PRODUCT_PAGE_HEADER_ASSET", acceptsAssetCategories: categories }],
+    imageSpecs: [{ specId: "creative-image", dimensions: { minWidth: 1920, maxWidth: 1920, minHeight: 1080, maxHeight: 1080 },
+      compatiblePlacementTypes: ["PRODUCT_PAGE_HEADER_ASSET"], alphaAllowed: false, fileExtensions: [".png", ".jpg"],
+      mimeTypes: ["image/png", "image/jpeg"], maxFileSize: 10485760 }],
+    videoSpecs: [{ specId: "creative-video", dimensions: { minWidth: 1920, maxWidth: 1920, minHeight: 1080, maxHeight: 1080 },
+      compatiblePlacementTypes: ["PRODUCT_PAGE_HEADER_ASSET"], frameRates: [{ minFps: 24, maxFps: 30 }],
+      duration: { min: "PT1S", max: "PT30S" }, audioRequired: false, fileExtensions: [".mp4", ".mov"],
+      mimeTypes: ["video/mp4", "video/quicktime"], maxFileSize: 524288000 }]
+  }, relationships: {} }];
   app.get("/v1/appAssetLibraryRefData", c => list(c, specs));
   app.get("/v1/appAssetLibraryRefData/:id", c => one(c, specs.find(r => r.id === c.req.param("id"))));
   for (const kind of ["Images", "Videos"]) {
@@ -75,7 +84,13 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
       } };
       state().media.push(resource); return c.json({ data: render(resource) }, 201);
     });
-    app.get(`/v1/${type}/:id`, c => one(c, state().media.find(r => r.id === c.req.param("id") && r.type === type)));
+    app.get(`/v1/${type}/:id`, c => {
+      const r = state().media.find(r => r.id === c.req.param("id") && r.type === type);
+      if (r && r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== undefined) {
+        if (state().processing![r.id]-- <= 0) { r.attributes.state = "READY_FOR_REVIEW"; delete state().processing![r.id]; }
+      }
+      return one(c, r);
+    });
     app.get(`/v1/${type}/:id/placements`, c => {
       if (!state().media.some(r => r.id === c.req.param("id") && r.type === type)) return missing(c);
       return list(c, state().placements.filter(r => refID(r, kind === "Images" ? "image" : "video") === c.req.param("id")));
@@ -91,7 +106,12 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
       if (attrs.uploaded === true && (r.attributes.state !== "AWAITING_UPLOAD" || state().transfers[r.id] !== r.attributes.fileSize)) return bad(c, "Asset bytes are incomplete");
       if (attrs.previewFrameTimeCode !== undefined && ["APPROVED", "ARCHIVED"].includes(r.attributes.state)) return bad(c, "Approved poster frames cannot change");
       Object.assign(r.attributes, attrs, { lastModifiedDate: new Date().toISOString() });
-      if (attrs.uploaded === true) { r.attributes.state = "READY_FOR_REVIEW"; delete r.attributes.uploadOperations; }
+      if (attrs.uploaded === true) { r.attributes.state = state().processingDelayReads ? "UPLOAD_COMPLETE" : "READY_FOR_REVIEW";
+        if (state().processingDelayReads) (state().processing ??= {})[r.id] = state().processingDelayReads!;
+        r.attributes.specId = kind === "Images" ? "creative-image" : "creative-video";
+        if (kind === "Images") r.attributes.imageAsset = { width: 1920, height: 1080, templateUrl: `https://assets.example.com/${r.id}/{w}x{h}.png` };
+        else r.attributes.videoAsset = `https://assets.example.com/${r.id}.mp4`;
+        delete r.attributes.uploadOperations; }
       if (attrs.archived === true) r.attributes.state = "ARCHIVED";
       if (attrs.archived === false && r.attributes.state === "ARCHIVED") r.attributes.state = "APPROVED";
       return one(c, r);

@@ -2069,7 +2069,29 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
     return one(c, library);
   });
   app.get("/v1/appAssetLibraries/:id", (c) => one(c, state().libraries.find((r) => r.id === c.req.param("id"))));
-  const specs = [{ id: "creative-image", type: "appAssetLibraryRefData", attributes: { category: "CREATIVE_ASSETS", imageDimensions: { width: 1920, height: 1080 } }, relationships: {} }];
+  const specs = [{ id: "creative-image", type: "appAssetLibraryRefData", attributes: {
+    placementTypes: [{ placementTypeId: "PRODUCT_PAGE_HEADER_ASSET", acceptsAssetCategories: categories }],
+    imageSpecs: [{
+      specId: "creative-image",
+      dimensions: { minWidth: 1920, maxWidth: 1920, minHeight: 1080, maxHeight: 1080 },
+      compatiblePlacementTypes: ["PRODUCT_PAGE_HEADER_ASSET"],
+      alphaAllowed: false,
+      fileExtensions: [".png", ".jpg"],
+      mimeTypes: ["image/png", "image/jpeg"],
+      maxFileSize: 10485760
+    }],
+    videoSpecs: [{
+      specId: "creative-video",
+      dimensions: { minWidth: 1920, maxWidth: 1920, minHeight: 1080, maxHeight: 1080 },
+      compatiblePlacementTypes: ["PRODUCT_PAGE_HEADER_ASSET"],
+      frameRates: [{ minFps: 24, maxFps: 30 }],
+      duration: { min: "PT1S", max: "PT30S" },
+      audioRequired: false,
+      fileExtensions: [".mp4", ".mov"],
+      mimeTypes: ["video/mp4", "video/quicktime"],
+      maxFileSize: 524288e3
+    }]
+  }, relationships: {} }];
   app.get("/v1/appAssetLibraryRefData", (c) => list(c, specs));
   app.get("/v1/appAssetLibraryRefData/:id", (c) => one(c, specs.find((r) => r.id === c.req.param("id"))));
   for (const kind of ["Images", "Videos"]) {
@@ -2093,7 +2115,16 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
       state().media.push(resource);
       return c.json({ data: render(resource) }, 201);
     });
-    app.get(`/v1/${type}/:id`, (c) => one(c, state().media.find((r) => r.id === c.req.param("id") && r.type === type)));
+    app.get(`/v1/${type}/:id`, (c) => {
+      const r = state().media.find((r2) => r2.id === c.req.param("id") && r2.type === type);
+      if (r && r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== void 0) {
+        if (state().processing[r.id]-- <= 0) {
+          r.attributes.state = "READY_FOR_REVIEW";
+          delete state().processing[r.id];
+        }
+      }
+      return one(c, r);
+    });
     app.get(`/v1/${type}/:id/placements`, (c) => {
       if (!state().media.some((r) => r.id === c.req.param("id") && r.type === type)) return missing(c);
       return list(c, state().placements.filter((r) => refID(r, kind === "Images" ? "image" : "video") === c.req.param("id")));
@@ -2110,7 +2141,11 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
       if (attrs.previewFrameTimeCode !== void 0 && ["APPROVED", "ARCHIVED"].includes(r.attributes.state)) return bad(c, "Approved poster frames cannot change");
       Object.assign(r.attributes, attrs, { lastModifiedDate: (/* @__PURE__ */ new Date()).toISOString() });
       if (attrs.uploaded === true) {
-        r.attributes.state = "READY_FOR_REVIEW";
+        r.attributes.state = state().processingDelayReads ? "UPLOAD_COMPLETE" : "READY_FOR_REVIEW";
+        if (state().processingDelayReads) (state().processing ??= {})[r.id] = state().processingDelayReads;
+        r.attributes.specId = kind === "Images" ? "creative-image" : "creative-video";
+        if (kind === "Images") r.attributes.imageAsset = { width: 1920, height: 1080, templateUrl: `https://assets.example.com/${r.id}/{w}x{h}.png` };
+        else r.attributes.videoAsset = `https://assets.example.com/${r.id}.mp4`;
         delete r.attributes.uploadOperations;
       }
       if (attrs.archived === true) r.attributes.state = "ARCHIVED";

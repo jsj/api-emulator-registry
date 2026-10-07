@@ -40,10 +40,19 @@ try {
   assert.equal((await xc("view", "--library-id", library))[0].data.id, library);
   await xc("view", "--app-id", "1234567890", "--relationships-only");
   await xc("specs"); await xc("specs", "--id", "creative-image");
-  const file = join(scratch, "image.png"); await writeFile(file, "abc");
+  const file = join(scratch, "image.png"), videoFile = join(scratch, "video.mp4");
+  for (const args of [
+    ["-f", "lavfi", "-i", "color=c=blue:s=1920x1080", "-frames:v", "1", "-pix_fmt", "rgb24", file],
+    ["-f", "lavfi", "-i", "color=c=blue:s=1920x1080:r=30", "-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p", videoFile]
+  ]) {
+    const generated = Bun.spawnSync(["ffmpeg", "-hide_banner", "-loglevel", "error", ...args]);
+    assert.equal(generated.exitCode, 0, new TextDecoder().decode(generated.stderr));
+  }
+  assetLibraryState(store).processingDelayReads = 1;
   const images = [];
   for (const kind of ["images", "videos"]) {
-    const id = (await xc(kind, "upload", "--library-id", library, "--file", file, "--confirm"))[0].data.id;
+    const id = (await xc(kind, "upload", "--library-id", library, "--file", kind === "images" ? file : videoFile, "--confirm", "--wait", "--timeout", "10"))[0].data.id;
+    await xc(kind, "wait", "--id", id, "--timeout", "10");
     if (kind === "images") images.push(id);
     await xc(kind, "get", "--id", id);
     await xc(kind, "rename", "--id", id, "--name", "Summer", "--confirm");
@@ -56,7 +65,7 @@ try {
     await xc(kind, "archive", "--id", id, "--confirm");
     await xc(kind, "unarchive", "--id", id, "--confirm");
   }
-  const second = (await xc("images", "upload", "--library-id", library, "--file", file, "--confirm"))[0].data.id;
+  const second = (await xc("images", "upload", "--library-id", library, "--file", file, "--confirm", "--wait", "--timeout", "10"))[0].data.id;
   images.push(second);
   const pages = await xc("images", "list", "--library-id", library, "--limit", "1", "--paginate");
   assert.equal(pages.length, 2);

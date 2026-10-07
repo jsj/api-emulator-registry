@@ -1,4 +1,4 @@
-// @apple/api-emulator/src/jsonapi.ts
+// src/jsonapi.ts
 import { randomBytes } from "crypto";
 function ascId() {
   return randomBytes(8).toString("hex");
@@ -24,6 +24,7 @@ function jsonApiList(baseUrl, type, items, cursor, limit, total) {
       type,
       id: item.id,
       attributes: item.attributes,
+      ...item.relationships ? { relationships: item.relationships } : {},
       links: { self: `${baseUrl}/v1/${type}/${item.id}` }
     })),
     links: {
@@ -58,7 +59,7 @@ async function parseJsonApiBody(c) {
   };
 }
 
-// @apple/api-emulator/src/routes/auth.ts
+// src/routes/auth.ts
 function getUsers(store) {
   return store.getData("asc.users") ?? [];
 }
@@ -248,7 +249,7 @@ function ascUserRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/apns.ts
+// src/routes/apns.ts
 var APNS_FAILURE_REASONS = /* @__PURE__ */ new Set([
   "BadDeviceToken",
   "BadExpirationDate",
@@ -535,7 +536,7 @@ function apnsRoutes({ app, store }) {
   });
 }
 
-// @apple/api-emulator/src/routes/cloudkit.ts
+// src/routes/cloudkit.ts
 var now3 = () => (/* @__PURE__ */ new Date()).toISOString();
 var token = () => `ck-${Math.random().toString(36).slice(2, 12)}`;
 function recordKey(container, environment, database) {
@@ -672,7 +673,7 @@ function cloudKitRoutes({ app, store }) {
   });
 }
 
-// @apple/api-emulator/src/store.ts
+// src/store.ts
 function getASCStore(store) {
   return {
     apps: store.collection("asc.apps", ["asc_id", "bundle_id"]),
@@ -683,7 +684,7 @@ function getASCStore(store) {
   };
 }
 
-// @apple/api-emulator/src/routes/review-submissions.ts
+// src/routes/review-submissions.ts
 function getScenario(store) {
   return store.getData("asc.review_scenario") ?? "approve";
 }
@@ -822,7 +823,7 @@ function reviewSubmissionRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/reviews.ts
+// src/routes/reviews.ts
 function getReviews(store) {
   return store.getData("asc.customer_reviews") ?? [];
 }
@@ -922,7 +923,7 @@ function reviewRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/xcode-cloud.ts
+// src/routes/xcode-cloud.ts
 function getProducts(store) {
   return store.getData("asc.ci_products") ?? [];
 }
@@ -1181,7 +1182,7 @@ function xcodeCloudRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/testflight.ts
+// src/routes/testflight.ts
 function getBetaGroups(store) {
   return store.getData("asc.beta_groups") ?? [];
 }
@@ -1388,7 +1389,7 @@ function testflightRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/upload.ts
+// src/routes/upload.ts
 function getUploads(store) {
   return store.getData("asc.uploads") ?? [];
 }
@@ -1547,7 +1548,7 @@ function uploadRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/analytics.ts
+// src/routes/analytics.ts
 function getSnapshot(store) {
   return store.getData("asc.analytics_snapshot") ?? null;
 }
@@ -1587,7 +1588,7 @@ function analyticsRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/apps.ts
+// src/routes/apps.ts
 function appRoutes({ app, store, baseUrl }) {
   const asc = getASCStore(store);
   app.get("/v1/apps", (c) => {
@@ -1789,7 +1790,7 @@ function appRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/metadata.ts
+// src/routes/metadata.ts
 function getAppInfoLocalizations(store) {
   return store.getData("asc.app_info_localizations") ?? [];
 }
@@ -1942,7 +1943,7 @@ function metadataRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/review-detail.ts
+// src/routes/review-detail.ts
 function getDetails(store) {
   let map = store.getData("asc.review_details");
   if (!map) {
@@ -2013,7 +2014,175 @@ function reviewDetailRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/review-items.ts
+// src/routes/asset-library.ts
+function assetLibraryState(store) {
+  let state = store.getData("asc.asset_library");
+  if (!state) {
+    state = { libraries: [], media: [], placements: [], transfers: {} };
+    store.setData("asc.asset_library", state);
+  }
+  return state;
+}
+var owners = ["appStoreVersionLocalization", "appCustomProductPageLocalization", "appStoreVersionExperimentTreatmentLocalization", "appEventLocalization"];
+var categories = ["CREATIVE_ASSETS", "APP_SCREENSHOTS_AND_PREVIEWS"];
+var placementTypes = ["APP_SCREENSHOT", "IMESSAGE_APP_SCREENSHOT", "APP_PREVIEW", "PRODUCT_PAGE_HEADER_ASSET", "APP_STORE_SEARCH_RESULTS_ASSET", "SEARCH_RESULTS_ADS_ASSET", "TODAY_TAB_ADS_ASSET", "EVENT_CARD_ASSET", "EVENT_DETAILS_PAGE_ASSET", "RETENTION_MESSAGE_ASSET"];
+var refID = (r, key) => r.relationships[key]?.data?.id;
+function assetLibraryRoutes({ app, store, baseUrl }) {
+  const state = () => assetLibraryState(store);
+  const bad = (c, detail) => c.json(jsonApiError(409, "ENTITY_ERROR", "Invalid asset operation", detail), 409);
+  const missing = (c) => c.json(jsonApiError(404, "NOT_FOUND", "Not Found", "Resource not found"), 404);
+  const render = (r) => jsonApiResource(baseUrl, r.type, r.id, r.attributes, r.relationships).data;
+  const one = (c, r) => r ? c.json({ data: render(r) }) : missing(c);
+  const list = (c, items) => {
+    const limit = Number(c.req.query("limit") ?? "50"), cursor = Number(c.req.query("cursor") ?? "0");
+    if (!Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(cursor) || cursor < 0) return bad(c, "Invalid pagination");
+    for (const field of ["category", "state", "referenceName", "specId", "id"]) {
+      const filter = c.req.query(`filter[${field}]`);
+      if (filter) items = items.filter((r) => filter.split(",").includes(String(field === "id" ? r.id : r.attributes[field])));
+    }
+    const sorts = (c.req.query("sort") ?? "").split(",").filter(Boolean);
+    if (sorts.some((s) => !["createdDate", "lastModifiedDate", "referenceName"].includes(s.replace(/^-/, "")))) return bad(c, "Invalid sort field");
+    items = [...items].sort((a, b) => {
+      for (const sort of sorts) {
+        const key = sort.replace(/^-/, "");
+        const result = String(a.attributes[key] ?? "").localeCompare(String(b.attributes[key] ?? ""));
+        if (result) return sort.startsWith("-") ? -result : result;
+      }
+      return 0;
+    });
+    const next = new URL(c.req.url);
+    next.searchParams.set("cursor", String(cursor + limit));
+    return c.json({
+      data: items.slice(cursor, cursor + limit).map(render),
+      links: { next: cursor + limit < items.length ? next.toString() : null },
+      meta: { paging: { total: items.length, limit } }
+    });
+  };
+  app.get("/v1/apps/:id/assetLibrary", (c) => {
+    const id = c.req.param("id");
+    if (!getASCStore(store).apps.findOneBy("asc_id", id)) return missing(c);
+    let library = state().libraries.find((r) => refID(r, "app") === id);
+    if (!library) {
+      library = { id: `library-${id}`, type: "appAssetLibraries", attributes: {}, relationships: { app: { data: { type: "apps", id } } } };
+      state().libraries.push(library);
+    }
+    return one(c, library);
+  });
+  app.get("/v1/appAssetLibraries/:id", (c) => one(c, state().libraries.find((r) => r.id === c.req.param("id"))));
+  const specs = [{ id: "creative-image", type: "appAssetLibraryRefData", attributes: { category: "CREATIVE_ASSETS", imageDimensions: { width: 1920, height: 1080 } }, relationships: {} }];
+  app.get("/v1/appAssetLibraryRefData", (c) => list(c, specs));
+  app.get("/v1/appAssetLibraryRefData/:id", (c) => one(c, specs.find((r) => r.id === c.req.param("id"))));
+  for (const kind of ["Images", "Videos"]) {
+    const type = `appAssetLibrary${kind}`;
+    app.get(`/v1/appAssetLibraries/:id/${kind.toLowerCase()}`, (c) => {
+      if (!state().libraries.some((r) => r.id === c.req.param("id"))) return missing(c);
+      return list(c, state().media.filter((r) => r.type === type && refID(r, "assetLibrary") === c.req.param("id")));
+    });
+    app.post(`/v1/${type}`, async (c) => {
+      const { data } = await c.req.json();
+      const attrs = data?.attributes, library = data?.relationships?.assetLibrary?.data;
+      if (data?.type !== type || library?.type !== "appAssetLibraries" || !state().libraries.some((r) => r.id === library.id) || !attrs?.fileName || !Number.isSafeInteger(attrs.fileSize) || attrs.fileSize < 1 || !categories.includes(attrs.category)) return bad(c, "Invalid upload reservation");
+      const id = ascId(), now4 = (/* @__PURE__ */ new Date()).toISOString();
+      const resource = { id, type, relationships: { assetLibrary: { data: library } }, attributes: {
+        ...attrs,
+        state: "AWAITING_UPLOAD",
+        createdDate: now4,
+        lastModifiedDate: now4,
+        uploadOperations: [{ method: "PUT", url: `${baseUrl}/_asc/assets/${id}`, offset: 0, length: attrs.fileSize, requestHeaders: [] }]
+      } };
+      state().media.push(resource);
+      return c.json({ data: render(resource) }, 201);
+    });
+    app.get(`/v1/${type}/:id`, (c) => one(c, state().media.find((r) => r.id === c.req.param("id") && r.type === type)));
+    app.get(`/v1/${type}/:id/placements`, (c) => {
+      if (!state().media.some((r) => r.id === c.req.param("id") && r.type === type)) return missing(c);
+      return list(c, state().placements.filter((r) => refID(r, kind === "Images" ? "image" : "video") === c.req.param("id")));
+    });
+    app.patch(`/v1/${type}/:id`, async (c) => {
+      const r = state().media.find((r2) => r2.id === c.req.param("id") && r2.type === type);
+      if (!r) return missing(c);
+      const { data } = await c.req.json();
+      if (data?.type !== type || data?.id !== r.id) return bad(c, "Resource type or ID mismatch");
+      const attrs = data.attributes ?? {};
+      if (Object.keys(attrs).some((k) => !["referenceName", "archived", "uploaded", ...kind === "Videos" ? ["previewFrameTimeCode"] : []].includes(k))) return bad(c, "Unsupported attribute");
+      if (attrs.archived === true && r.attributes.state !== "APPROVED") return bad(c, "Only approved assets can be archived");
+      if (attrs.uploaded === true && (r.attributes.state !== "AWAITING_UPLOAD" || state().transfers[r.id] !== r.attributes.fileSize)) return bad(c, "Asset bytes are incomplete");
+      if (attrs.previewFrameTimeCode !== void 0 && ["APPROVED", "ARCHIVED"].includes(r.attributes.state)) return bad(c, "Approved poster frames cannot change");
+      Object.assign(r.attributes, attrs, { lastModifiedDate: (/* @__PURE__ */ new Date()).toISOString() });
+      if (attrs.uploaded === true) {
+        r.attributes.state = "READY_FOR_REVIEW";
+        delete r.attributes.uploadOperations;
+      }
+      if (attrs.archived === true) r.attributes.state = "ARCHIVED";
+      if (attrs.archived === false && r.attributes.state === "ARCHIVED") r.attributes.state = "APPROVED";
+      return one(c, r);
+    });
+    app.delete(`/v1/${type}/:id`, (c) => {
+      const index = state().media.findIndex((r) => r.id === c.req.param("id") && r.type === type);
+      if (index < 0) return missing(c);
+      if (state().placements.some((r) => refID(r, kind === "Images" ? "image" : "video") === c.req.param("id"))) return bad(c, "Asset has active placements");
+      state().media.splice(index, 1);
+      delete state().transfers[c.req.param("id")];
+      return c.body(null, 204);
+    });
+  }
+  app.put("/_asc/assets/:id", async (c) => {
+    const r = state().media.find((r2) => r2.id === c.req.param("id"));
+    if (!r) return missing(c);
+    const length = (await c.req.arrayBuffer()).byteLength;
+    if (r.attributes.state !== "AWAITING_UPLOAD" || length !== r.attributes.fileSize) return bad(c, "Unexpected upload bytes");
+    state().transfers[r.id] = length;
+    return c.body(null, 200);
+  });
+  for (const owner of owners) app.get(`/v1/${owner}s/:id/placements`, (c) => list(c, state().placements.filter((r) => refID(r, owner) === c.req.param("id"))));
+  app.post("/v1/appAssetLibraryPlacements", async (c) => {
+    const { data } = await c.req.json();
+    const rel = data?.relationships ?? {}, attrs = data?.attributes ?? {}, keys = ["image", "video"].filter((k) => rel[k]);
+    if (data?.type !== "appAssetLibraryPlacements" || keys.length !== 1 || owners.filter((k) => rel[k]).length !== 1 || !placementTypes.includes(attrs.placementType)) return bad(c, "Invalid placement relationships or type");
+    const key = keys[0], asset = state().media.find((r2) => r2.id === rel[key].data?.id && r2.type === rel[key].data?.type);
+    if (!asset || !["READY_FOR_REVIEW", "APPROVED", "ACCEPTED", "COMPLETE"].includes(asset.attributes.state)) return bad(c, "Asset is unavailable for placement");
+    const r = { id: ascId(), type: "appAssetLibraryPlacements", attributes: { ...attrs, mediaType: key.toUpperCase() }, relationships: rel };
+    state().placements.push(r);
+    return c.json({ data: render(r) }, 201);
+  });
+  app.get("/v1/appAssetLibraryPlacements/:id", (c) => one(c, state().placements.find((r) => r.id === c.req.param("id"))));
+  app.delete("/v1/appAssetLibraryPlacements/:id", (c) => {
+    const index = state().placements.findIndex((r) => r.id === c.req.param("id"));
+    if (index < 0) return missing(c);
+    state().placements.splice(index, 1);
+    return c.body(null, 204);
+  });
+  app.post("/v1/appAssetLibraryPlacementOrderingRequests", async (c) => {
+    const { data } = await c.req.json();
+    const rel = data?.relationships ?? {}, selected = owners.filter((k) => rel[k]), ids = rel.orderedPlacements?.data?.map((r) => r.id);
+    if (data?.type !== "appAssetLibraryPlacementOrderingRequests" || selected.length !== 1 || selected[0] === "appEventLocalization" || !data.attributes?.placementGroup || !Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) return bad(c, "Invalid placement order");
+    const eligible = state().placements.filter((r) => refID(r, selected[0]) === rel[selected[0]].data?.id && r.attributes.placementGroup === data.attributes.placementGroup);
+    if (ids.length !== eligible.length || ids.some((id) => !eligible.some((r) => r.id === id))) return bad(c, "Order must contain every placement in the selected group");
+    state().placements = state().placements.filter((r) => !eligible.includes(r)).concat(ids.map((id) => eligible.find((r) => r.id === id)));
+    return c.json({ data: { type: data.type, id: ascId(), attributes: data.attributes, relationships: rel } }, 201);
+  });
+  const relationships = [
+    "/v1/apps/:id/relationships/assetLibrary",
+    "/v1/appAssetLibraries/:id/relationships/images",
+    "/v1/appAssetLibraries/:id/relationships/videos",
+    "/v1/appAssetLibraryImages/:id/relationships/placements",
+    "/v1/appAssetLibraryVideos/:id/relationships/placements",
+    ...owners.map((owner) => `/v1/${owner}s/:id/relationships/placements`)
+  ];
+  for (const path of relationships) app.get(path, async (c) => {
+    const url = new URL(c.req.url);
+    url.pathname = url.pathname.replace("/relationships/", "/");
+    const response = await app.request(url.toString());
+    if (!response.ok) return response;
+    const envelope = await response.json();
+    const linkage = (r) => ({ type: r.type, id: r.id });
+    envelope.data = Array.isArray(envelope.data) ? envelope.data.map(linkage) : linkage(envelope.data);
+    if (envelope.links?.next) envelope.links.next = envelope.links.next.replace(url.pathname, new URL(c.req.url).pathname);
+    return c.json(envelope);
+  });
+}
+
+// src/routes/review-items.ts
 function getItems(store) {
   return store.getData("asc.review_submission_items") ?? [];
 }
@@ -2036,7 +2205,8 @@ function reviewItemRoutes({ app, store, baseUrl }) {
         "reviewSubmissionItems",
         items.map((i) => ({
           id: i.id,
-          attributes: { state: i.state, appStoreVersionId: i.app_store_version_id }
+          attributes: { state: i.state, appStoreVersionId: i.app_store_version_id },
+          relationships: i.relationships
         })),
         0,
         50,
@@ -2048,13 +2218,23 @@ function reviewItemRoutes({ app, store, baseUrl }) {
     const body = await parseJsonApiBody(c);
     const submissionRel = body.relationships?.reviewSubmission;
     const submissionId = submissionRel?.data?.id ?? "";
+    const media = ["appAssetLibraryImage", "appAssetLibraryVideo"].filter((key) => body.relationships?.[key]);
+    if (media.length) {
+      const selected = body.relationships[media[0]].data;
+      const expectedType = media[0] === "appAssetLibraryImage" ? "appAssetLibraryImages" : "appAssetLibraryVideos";
+      const asset = assetLibraryState(store).media.find((r) => r.id === selected?.id && r.type === expectedType && selected?.type === expectedType);
+      if (body.type !== "reviewSubmissionItems" || !submissionId || media.length !== 1 || !asset || asset.attributes.state !== "READY_FOR_REVIEW") {
+        return c.json(jsonApiError(409, "ENTITY_ERROR", "Invalid review item", "Select one asset ready for review and a submission"), 409);
+      }
+    }
     const versionRel = body.relationships?.appStoreVersion;
     const versionId = versionRel?.data?.id ?? "";
     const item = {
       id: ascId(),
       submission_id: submissionId,
       state: "READY_FOR_REVIEW",
-      app_store_version_id: versionId
+      app_store_version_id: versionId,
+      relationships: body.relationships
     };
     const items = getItems(store);
     items.push(item);
@@ -2063,7 +2243,7 @@ function reviewItemRoutes({ app, store, baseUrl }) {
       jsonApiResource(baseUrl, "reviewSubmissionItems", item.id, {
         state: item.state,
         appStoreVersionId: item.app_store_version_id
-      }),
+      }, item.relationships),
       201
     );
   });
@@ -2131,7 +2311,7 @@ function reviewItemRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/crud.ts
+// src/crud.ts
 function snakeCase(s) {
   return s.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
 }
@@ -2259,7 +2439,7 @@ function registerNestedList(app, store, baseUrl, parentPath, config, parentParam
   });
 }
 
-// @apple/api-emulator/src/routes/stubs.ts
+// src/routes/stubs.ts
 function stubRoutes({ app, store, baseUrl }) {
   const reg = (config) => registerCrud(app, store, baseUrl, config);
   const nested = (parentPath, config, parentParam, storeField) => registerNestedList(app, store, baseUrl, parentPath, config, parentParam, storeField);
@@ -2752,7 +2932,7 @@ function stubRoutes({ app, store, baseUrl }) {
   });
 }
 
-// @apple/api-emulator/src/routes/admin.ts
+// src/routes/admin.ts
 function adminRoutes({ app, store, baseUrl }) {
   const asc = getASCStore(store);
   app.post("/_admin/reset", (c) => {
@@ -2906,7 +3086,7 @@ function adminRoutes({ app, store, baseUrl }) {
   }));
 }
 
-// @apple/api-emulator/src/asc.ts
+// src/asc.ts
 var ascCapabilities = [
   "asc-apps",
   "asc-build-uploads",
@@ -2915,7 +3095,8 @@ var ascCapabilities = [
   "asc-review-submissions",
   "asc-xcode-cloud",
   "asc-metadata",
-  "asc-readiness"
+  "asc-readiness",
+  "asc-asset-library"
 ];
 var ascContract = {
   provider: "app-store-connect",
@@ -2983,6 +3164,7 @@ function seedFromConfig(store, _baseUrl, config) {
   }
 }
 function registerASCRoutes(ctx) {
+  assetLibraryRoutes(ctx);
   reviewSubmissionRoutes(ctx);
   ascUserRoutes(ctx);
   reviewRoutes(ctx);
@@ -3009,7 +3191,7 @@ var ascPlugin = {
   }
 };
 
-// @apple/api-emulator/src/index.ts
+// src/index.ts
 var contract = {
   provider: "apple",
   source: "Sign in with Apple, Apple APNs provider API, and CloudKit Web Services",

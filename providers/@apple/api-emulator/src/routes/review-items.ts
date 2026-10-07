@@ -1,4 +1,5 @@
 import type { RouteContext, Store } from "@api-emulator/core";
+import { assetLibraryState } from "./asset-library.js";
 import { ascId, jsonApiResource, jsonApiList, jsonApiError, parseCursor, parseJsonApiBody } from "../jsonapi.js";
 
 interface ReviewSubmissionItem {
@@ -6,6 +7,7 @@ interface ReviewSubmissionItem {
   submission_id: string;
   state: string;
   app_store_version_id: string;
+  relationships?: Record<string, unknown>;
 }
 
 interface ReviewAttachment {
@@ -43,6 +45,7 @@ export function reviewItemRoutes({ app, store, baseUrl }: RouteContext): void {
         items.map((i) => ({
           id: i.id,
           attributes: { state: i.state, appStoreVersionId: i.app_store_version_id },
+          relationships: i.relationships,
         })),
         0,
         50,
@@ -56,6 +59,15 @@ export function reviewItemRoutes({ app, store, baseUrl }: RouteContext): void {
     const body = await parseJsonApiBody(c);
     const submissionRel = body.relationships?.reviewSubmission;
     const submissionId = submissionRel?.data?.id ?? "";
+    const media = ["appAssetLibraryImage", "appAssetLibraryVideo"].filter(key => body.relationships?.[key]);
+    if (media.length) {
+      const selected = body.relationships[media[0]].data;
+      const expectedType = media[0] === "appAssetLibraryImage" ? "appAssetLibraryImages" : "appAssetLibraryVideos";
+      const asset = assetLibraryState(store).media.find(r => r.id === selected?.id && r.type === expectedType && selected?.type === expectedType);
+      if (body.type !== "reviewSubmissionItems" || !submissionId || media.length !== 1 || !asset || asset.attributes.state !== "READY_FOR_REVIEW") {
+        return c.json(jsonApiError(409, "ENTITY_ERROR", "Invalid review item", "Select one asset ready for review and a submission"), 409);
+      }
+    }
     const versionRel = body.relationships?.appStoreVersion;
     const versionId = versionRel?.data?.id ?? "";
 
@@ -64,6 +76,7 @@ export function reviewItemRoutes({ app, store, baseUrl }: RouteContext): void {
       submission_id: submissionId,
       state: "READY_FOR_REVIEW",
       app_store_version_id: versionId,
+      relationships: body.relationships,
     };
     const items = getItems(store);
     items.push(item);
@@ -73,7 +86,7 @@ export function reviewItemRoutes({ app, store, baseUrl }: RouteContext): void {
       jsonApiResource(baseUrl, "reviewSubmissionItems", item.id, {
         state: item.state,
         appStoreVersionId: item.app_store_version_id,
-      }),
+      }, item.relationships),
       201,
     );
   });

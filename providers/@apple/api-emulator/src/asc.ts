@@ -14,6 +14,7 @@ import { metadataRoutes } from "./routes/metadata.js";
 import { reviewDetailRoutes } from "./routes/review-detail.js";
 import { reviewItemRoutes } from "./routes/review-items.js";
 import { stubRoutes } from "./routes/stubs.js";
+import { assetLibraryRoutes } from "./routes/asset-library.js";
 import { adminRoutes } from "./routes/admin.js";
 import type { ReviewScenario } from "./entities.js";
 
@@ -52,6 +53,7 @@ export const ascCapabilities = [
   "asc-xcode-cloud",
   "asc-metadata",
   "asc-readiness",
+  "asc-asset-library",
 ] as const;
 
 export const ascContract = {
@@ -129,6 +131,7 @@ export function seedFromConfig(store: Store, _baseUrl: string, config: ASCSeedCo
 }
 
 export function registerASCRoutes(ctx: RouteContext): void {
+  assetLibraryRoutes(ctx);
   reviewSubmissionRoutes(ctx);
   ascUserRoutes(ctx);
   reviewRoutes(ctx);

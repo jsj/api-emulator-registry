@@ -24,7 +24,7 @@ export function seedFromConfig(store, baseUrl, config = {}) {
 }
 
 export const label = 'App Store Connect API emulator';
-export const endpoints = 'apps, builds, versions, reviewSubmissions, users, ciProducts, betaGroups, betaTesters, uploads, analytics, localizations, reviewDetails, certificates, profiles, screenshots, devices, subscriptions, and gameCenter';
+export const endpoints = 'apps, builds, versions, reviewSubmissions, users, ciProducts, betaGroups, betaTesters, uploads, analytics, localizations, reviewDetails, certificates, profiles, screenshots, devices, subscriptions, gameCenter, and assetLibrary';
 export const capabilities = contract.scope;
 export const initConfig = {
   'app-store-connect': {

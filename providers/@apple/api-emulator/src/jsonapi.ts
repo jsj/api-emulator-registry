@@ -36,7 +36,7 @@ export function jsonApiResource(
 export function jsonApiList(
   baseUrl: string,
   type: string,
-  items: Array<{ id: string; attributes: Record<string, unknown> }>,
+  items: Array<{ id: string; attributes: Record<string, unknown>; relationships?: Record<string, unknown> }>,
   cursor: number,
   limit: number,
   total: number,
@@ -48,6 +48,7 @@ export function jsonApiList(
       type,
       id: item.id,
       attributes: item.attributes,
+      ...(item.relationships ? { relationships: item.relationships } : {}),
       links: { self: `${baseUrl}/v1/${type}/${item.id}` },
     })),
     links: {

@@ -13,7 +13,8 @@ function setup() {
   });
   store.setData("asc.beta_groups", [{ id: "group", name: "Beta", app_id: "app", is_internal_group: false, public_link_enabled: true }]);
   store.setData("asc.beta_testers", [{ id: "tester", email: "test@example.com" }]);
-  ascPlugin.register(app, store, undefined, "http://localhost");
+  const webhooks = { dispatch: () => {}, subscribe: () => () => {} } as never;
+  ascPlugin.register(app, store, webhooks, "http://localhost");
   const request = (method: string, path: string, data?: unknown) => app.request(path, {
     method, headers: { "Content-Type": "application/json" }, ...(data ? { body: JSON.stringify({ data }) } : {}),
   });

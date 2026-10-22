@@ -167,7 +167,7 @@ export function appleIdentityRoutes({ app, store }: RouteContext): void {
   });
 
   app.post("/auth/revoke", async (c) => {
-    const body = await c.req.parseBody().catch(() => ({}));
+    const body: Record<string, string | File> = await c.req.parseBody().catch(() => ({}));
     store.setData("apple:last-revoked-token", body.token ?? null);
     return c.body(null, 200);
   });

@@ -32,6 +32,7 @@ export function adminRoutes({ app, store, baseUrl }: RouteContext): void {
     store.setData("asc.beta_groups", []);
     store.setData("asc.beta_testers", []);
     store.setData("asc.beta_build_localizations", []);
+    store.setData("asc.testflight_metadata", undefined);
     store.setData("asc.users", []);
     store.setData("asc.actors", []);
     store.setData("asc.uploads", []);

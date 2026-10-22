@@ -1,3 +1,4 @@
+import { testflightMetadataRoutes } from "./testflight-metadata.js";
 import type { RouteContext, Store } from "@api-emulator/core";
 import { ascId, jsonApiResource, jsonApiList, jsonApiError, parseCursor, parseJsonApiBody } from "../jsonapi.js";
 
@@ -19,13 +20,6 @@ interface BetaTester {
   state: string | null;
 }
 
-interface BetaBuildLocalization {
-  id: string;
-  build_id: string;
-  locale: string;
-  whats_new: string;
-}
-
 function getBetaGroups(store: Store): BetaGroup[] {
   return store.getData<BetaGroup[]>("asc.beta_groups") ?? [];
 }
@@ -42,15 +36,9 @@ function setBetaTesters(store: Store, testers: BetaTester[]): void {
   store.setData("asc.beta_testers", testers);
 }
 
-function getLocalizations(store: Store): BetaBuildLocalization[] {
-  return store.getData<BetaBuildLocalization[]>("asc.beta_build_localizations") ?? [];
-}
-
-function setLocalizations(store: Store, locs: BetaBuildLocalization[]): void {
-  store.setData("asc.beta_build_localizations", locs);
-}
-
-export function testflightRoutes({ app, store, baseUrl }: RouteContext): void {
+export function testflightRoutes(ctx: RouteContext): void {
+  testflightMetadataRoutes(ctx);
+  const { app, store, baseUrl } = ctx;
   // List beta groups
   app.get("/v1/betaGroups", (c) => {
     const groups = getBetaGroups(store);
@@ -187,86 +175,4 @@ export function testflightRoutes({ app, store, baseUrl }: RouteContext): void {
     );
   });
 
-  // Beta build localizations
-  app.get("/v1/builds/:buildId/betaBuildLocalizations", (c) => {
-    const buildId = c.req.param("buildId");
-    const locs = getLocalizations(store).filter((l) => l.build_id === buildId);
-
-    return c.json(
-      jsonApiList(
-        baseUrl,
-        "betaBuildLocalizations",
-        locs.map((l) => ({
-          id: l.id,
-          attributes: { locale: l.locale, whatsNew: l.whats_new },
-        })),
-        0,
-        50,
-        locs.length,
-      ),
-    );
-  });
-
-  // Create beta build localization
-  app.post("/v1/betaBuildLocalizations", async (c) => {
-    const body = await parseJsonApiBody(c);
-    const locale = (body.attributes.locale as string) ?? "en-US";
-    const whatsNew = (body.attributes.whatsNew as string) ?? "";
-    const buildRel = body.relationships?.build;
-    const buildId = buildRel?.data?.id ?? "";
-
-    const loc: BetaBuildLocalization = { id: ascId(), build_id: buildId, locale, whats_new: whatsNew };
-    const locs = getLocalizations(store);
-    locs.push(loc);
-    setLocalizations(store, locs);
-
-    return c.json(
-      jsonApiResource(baseUrl, "betaBuildLocalizations", loc.id, { locale: loc.locale, whatsNew: loc.whats_new }),
-      201,
-    );
-  });
-
-  // Update beta build localization
-  app.patch("/v1/betaBuildLocalizations/:id", async (c) => {
-    const id = c.req.param("id");
-    const locs = getLocalizations(store);
-    const idx = locs.findIndex((l) => l.id === id);
-    if (idx === -1) {
-      return c.json(jsonApiError(404, "NOT_FOUND", "Not Found", `BetaBuildLocalization ${id} not found`), 404);
-    }
-
-    const body = await parseJsonApiBody(c);
-    if (body.attributes.whatsNew !== undefined) {
-      locs[idx].whats_new = body.attributes.whatsNew as string;
-    }
-    setLocalizations(store, locs);
-
-    return c.json(
-      jsonApiResource(baseUrl, "betaBuildLocalizations", locs[idx].id, {
-        locale: locs[idx].locale,
-        whatsNew: locs[idx].whats_new,
-      }),
-    );
-  });
-
-  // Delete beta build localization
-  app.delete("/v1/betaBuildLocalizations/:id", (c) => {
-    const id = c.req.param("id");
-    const locs = getLocalizations(store);
-    const idx = locs.findIndex((l) => l.id === id);
-    if (idx === -1) {
-      return c.json(jsonApiError(404, "NOT_FOUND", "Not Found", `BetaBuildLocalization ${id} not found`), 404);
-    }
-    locs.splice(idx, 1);
-    setLocalizations(store, locs);
-    return c.body(null, 204);
-  });
-
-  // Beta app review detail
-  app.get("/v1/apps/:appId/betaAppReviewDetail", (c) => {
-    const appId = c.req.param("appId");
-    return c.json(
-      jsonApiResource(baseUrl, "betaAppReviewDetails", `review-detail-${appId}`, {}),
-    );
-  });
 }

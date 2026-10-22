@@ -25,6 +25,9 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `GET ${prefix}/users`
 - `GET ${prefix}/owners`
 - `GET ${prefix}/services`
+- `GET ${prefix}/postgres`
+- `GET ${prefix}/key-value`
+- `GET ${prefix}/workflows`
 - `POST ${prefix}/services`
 - `GET ${prefix}/services/:serviceId`
 - `POST ${prefix}/blueprints/validate`

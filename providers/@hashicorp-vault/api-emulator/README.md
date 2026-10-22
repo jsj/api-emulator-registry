@@ -28,6 +28,7 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `POST /v1/sys/mounts/:path`
 - `GET /v1/sys/internal/ui/mounts/:path{.+}`
 - `POST /v1/:mount/data/:path{.+}`
+- `PUT /v1/:mount/data/:path{.+}`
 - `GET /v1/:mount/data/:path{.+}`
 - `GET /v1/:mount/metadata/:path{.+}`
 - `GET /v1/:mount/metadata`

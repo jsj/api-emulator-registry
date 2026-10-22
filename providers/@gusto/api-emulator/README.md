@@ -22,6 +22,7 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Supported API
 
+- `GET /v1/token_info`
 - `GET /v1/me`
 - `GET /v1/companies/:companyId/employees`
 - `POST /v1/companies/:companyId/employees`

@@ -1,76 +1,88 @@
 # @api-emulator/apple-ads
 
-This package emulates the Apple Ads Platform API v1 with deterministic state and test credentials.
+Apple Ads Platform API v1 provides campaign management, reporting, recommendations, search popularity, account management, and change history.
 
-It is part of [api-emulator](https://github.com/jsj/api-emulator), which provides local API services for tests and offline agents.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/apple-ads
 ```
 
-## Run
-
-Run this command from the registry root:
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@apple-ads/api-emulator.mjs --service apple-ads
 ```
 
-Use the local URL that `api-emulator` displays.
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
 ## Supported API
 
-The emulator supports these Apple Ads Platform API v1 areas:
-
-- Apps, eligibility records, and app locale details
-- Campaigns, ad groups, keywords, negative keywords, and ads
-- Creatives, product pages, assets, rejection reasons, and shared budgets
-- Business brands, business categories, location groups, and locations
-- Bulk keyword operations
-- Campaign, ad group, ad, keyword, and search-term reports
-- Business-brand campaign, ad group, ad, keyword, and search-term reports
-- Impression-share reports and search-term-popularity reports
-- Ad accounts, organizations, access lists, and advertiser resources
-- Recommendations, suggestions, and change history
-
-## Authentication
-
-Use `POST /auth/local` to get the fixed test token and account identifiers.
-
-Send the token and account identifier with each `/v1` request:
-
-```text
-Authorization: Bearer apple-ads-emulator-token
-X-AP-Context: adAccountId=123456789
-```
-
-## Test data
-
-The emulator uses fixed data for the fictional AwayFinder app and its campaigns.
-
-The test data does not contain production credentials or customer information.
+- `POST /v1/${path}/query`
+- `GET /v1/${path}/:id`
+- `POST /v1/${path}`
+- `PUT /v1/${path}/:id`
+- `DELETE /v1/${path}/:id`
+- `POST /v1/${path}/bulk-${operation}`
+- `GET /health`
+- `GET /openapi.json`
+- `POST /auth/local`
+- `GET /v1/search/apps`
+- `POST /v1/eligibilities/apps/query`
+- `GET /v1/apps/:id`
+- `POST /v1/apps/:id/locale-details/query`
+- `POST /v1/metadata/apps/supported-languages/query`
+- `GET /v1/campaigns/:id/legacy-app-limited-status-reason-details`
+- `POST /v1/product-pages/query`
+- `GET /v1/product-pages/:id`
+- `POST /v1/product-pages/locale-details/query`
+- `POST /v1/assets/upload`
+- `GET /v1/assets/:id`
+- `DELETE /v1/assets/:id`
+- `GET /v1/rejection-reasons/apps/:id`
+- `POST /v1/rejection-reasons/business-brands/query`
+- `POST /v1/reports/apps/${kind}/query`
+- `POST /v1/reports/business-brands/${kind}/query`
+- `POST /v1/insights/apps/impression-share/query`
+- `POST /v1/insights/apps/search-term-popularity/query`
+- `GET /v1/me`
+- `GET /v1/acls`
+- `GET /v1/orgs/:id`
+- `GET /v1/advertiser-resources`
+- `GET /v1/search/geo`
+- `POST /v1/search/geo`
+- `POST /v1/locations/query`
+- `GET /v1/locations/:id`
+- `POST /v1/ad-accounts`
+- `GET /v1/ad-accounts/:id`
+- `PUT /v1/ad-accounts/:id`
+- `POST /v1/recommendations/${type}/${action}`
+- `POST /v1/suggestions/keywords/query`
 
 ## Coverage
 
-- Level: `full-operation`
-- Operations: `104 of 104`
-- Contract: `GET /openapi.json`
-- Evidence: The coverage check calls every operation in the generated contract.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
-Run the coverage check from the registry root:
+## Credentials
 
-```bash
-npm run contract:apple-ads
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
+
+```yaml
+apple-ads:
+  # Add provider-specific seed state here.
 ```
-
-The OpenAPI document uses general request and response schemas.
-Apple has not published the complete v1 field schemas.
-The July 2026 preview guide lists 78 operations.
-Apple Developer documentation supplies 26 additional operations.
 
 ## Links
 
-- [Apple Ads Platform API v1 guide](https://ads.apple.com/adsdam/app-store/us/en_us/documents/api-preview-guide.pdf)
+- [Official API docs](https://ads.apple.com/adsdam/app-store/us/en_us/documents/api-preview-guide.pdf)
 - [api-emulator](https://github.com/jsj/api-emulator)

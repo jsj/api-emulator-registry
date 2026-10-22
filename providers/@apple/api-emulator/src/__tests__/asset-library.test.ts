@@ -58,6 +58,41 @@ describe("Asset Library 4.5.1 subset", () => {
     expect(second.links.next).toBe(null);
     expect((await request("/v1/appAssetLibraries/library-1234567890/images?limit=201")).status).toBe(409);
   });
+  it.each([
+    ["Images", false], ["Images", true], ["Videos", false], ["Videos", true],
+  ] as const)("advances delayed %s processing through collection-only polling (filtered=%s)", async (kind, filtered) => {
+    const { request, store, upload } = setup();
+    assetLibraryState(store).processingDelayReads = 2;
+    const asset = await upload(kind);
+    const other = await upload(kind === "Images" ? "Videos" : "Images");
+    expect(asset.attributes.state).toBe("UPLOAD_COMPLETE");
+    const path = `/v1/appAssetLibraries/library-1234567890/${kind.toLowerCase()}`
+      + (filtered ? "?filter[state]=READY_FOR_REVIEW" : "");
+    for (let read = 0; read < 3; read++) {
+      const response = await request(path);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      if (filtered && read < 2) expect(body.data).toEqual([]);
+      else {
+        expect(body.data.map((r: any) => r.id)).toEqual([asset.id]);
+        expect(body.data[0].attributes.state).toBe(read < 2 ? "UPLOAD_COMPLETE" : "READY_FOR_REVIEW");
+      }
+    }
+    expect(assetLibraryState(store).processing?.[asset.id]).toBeUndefined();
+    expect(assetLibraryState(store).processing?.[other.id]).toBe(2);
+    expect((await (await request(path)).json()).data[0].attributes.state).toBe("READY_FOR_REVIEW");
+  });
+  it.each(["Images", "Videos"])("shares the deterministic processing counter between collection and detail reads for %s", async kind => {
+    const { request, store, upload } = setup();
+    assetLibraryState(store).processingDelayReads = 2;
+    const asset = await upload(kind);
+    const collection = `/v1/appAssetLibraries/library-1234567890/${kind.toLowerCase()}`;
+    const detail = `/v1/${asset.type}/${asset.id}`;
+    expect((await (await request(collection)).json()).data[0].attributes.state).toBe("UPLOAD_COMPLETE");
+    expect((await (await request(detail)).json()).data.attributes.state).toBe("UPLOAD_COMPLETE");
+    expect((await (await request(collection)).json()).data[0].attributes.state).toBe("READY_FOR_REVIEW");
+    expect((await (await request(detail)).json()).data.attributes.state).toBe("READY_FOR_REVIEW");
+  });
   it("guards archive and poster eligibility", async () => {
     const { request, store, upload } = setup(), asset = await upload("Videos");
     const path = `/v1/${asset.type}/${asset.id}`;

@@ -51,6 +51,13 @@ try {
   assetLibraryState(store).processingDelayReads = 1;
   const images = [];
   for (const kind of ["images", "videos"]) {
+    const pending = (await xc(kind, "upload", "--library-id", library, "--file", kind === "images" ? file : videoFile, "--confirm"))[0].data.id;
+    assert.equal(assetLibraryState(store).media.find(r => r.id === pending).attributes.state, "UPLOAD_COMPLETE");
+    const firstPoll = (await xc(kind, "list", "--library-id", library, "--state", "READY_FOR_REVIEW"))[0];
+    assert(!firstPoll.data.some(r => r.id === pending));
+    const readyPoll = (await xc(kind, "list", "--library-id", library, "--state", "READY_FOR_REVIEW"))[0];
+    assert(readyPoll.data.some(r => r.id === pending && r.attributes.state === "READY_FOR_REVIEW"));
+    await xc(kind, "delete", "--id", pending, "--confirm");
     const id = (await xc(kind, "upload", "--library-id", library, "--file", kind === "images" ? file : videoFile, "--confirm", "--wait", "--timeout", "10"))[0].data.id;
     await xc(kind, "wait", "--id", id, "--timeout", "10");
     if (kind === "images") images.push(id);

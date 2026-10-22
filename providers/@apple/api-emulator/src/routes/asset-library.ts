@@ -19,6 +19,11 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
   const state = () => assetLibraryState(store);
   const bad = (c: Context, detail: string) => c.json(jsonApiError(409, "ENTITY_ERROR", "Invalid asset operation", detail), 409);
   const missing = (c: Context) => c.json(jsonApiError(404, "NOT_FOUND", "Not Found", "Resource not found"), 404);
+  const advanceProcessing = (r: Resource) => {
+    if (r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== undefined) {
+      if (state().processing![r.id]-- <= 0) { r.attributes.state = "READY_FOR_REVIEW"; delete state().processing![r.id]; }
+    }
+  };
   const render = (r: Resource) => jsonApiResource(baseUrl, r.type, r.id, r.attributes, r.relationships).data;
   const one = (c: Context, r?: Resource) => r ? c.json({ data: render(r) }) : missing(c);
   const list = (c: Context, items: Resource[]) => {
@@ -70,7 +75,10 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
     const type = `appAssetLibrary${kind}`;
     app.get(`/v1/appAssetLibraries/:id/${kind.toLowerCase()}`, c => {
       if (!state().libraries.some(r => r.id === c.req.param("id"))) return missing(c);
-      return list(c, state().media.filter(r => r.type === type && refID(r, "assetLibrary") === c.req.param("id")));
+      const media = state().media.filter(r => r.type === type && refID(r, "assetLibrary") === c.req.param("id"));
+      // Advance before filtering so READY_FOR_REVIEW queries can observe pending assets becoming ready.
+      media.forEach(advanceProcessing);
+      return list(c, media);
     });
     app.post(`/v1/${type}`, async c => {
       const { data } = await c.req.json();
@@ -86,9 +94,7 @@ export function assetLibraryRoutes({ app, store, baseUrl }: RouteContext): void 
     });
     app.get(`/v1/${type}/:id`, c => {
       const r = state().media.find(r => r.id === c.req.param("id") && r.type === type);
-      if (r && r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== undefined) {
-        if (state().processing![r.id]-- <= 0) { r.attributes.state = "READY_FOR_REVIEW"; delete state().processing![r.id]; }
-      }
+      if (r) advanceProcessing(r);
       return one(c, r);
     });
     app.get(`/v1/${type}/:id/placements`, c => {

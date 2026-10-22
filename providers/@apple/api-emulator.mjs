@@ -2235,6 +2235,14 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
   const state = () => assetLibraryState(store);
   const bad = (c, detail) => c.json(jsonApiError(409, "ENTITY_ERROR", "Invalid asset operation", detail), 409);
   const missing = (c) => c.json(jsonApiError(404, "NOT_FOUND", "Not Found", "Resource not found"), 404);
+  const advanceProcessing = (r) => {
+    if (r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== void 0) {
+      if (state().processing[r.id]-- <= 0) {
+        r.attributes.state = "READY_FOR_REVIEW";
+        delete state().processing[r.id];
+      }
+    }
+  };
   const render = (r) => jsonApiResource(baseUrl, r.type, r.id, r.attributes, r.relationships).data;
   const one = (c, r) => r ? c.json({ data: render(r) }) : missing(c);
   const list = (c, items) => {
@@ -2302,7 +2310,9 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
     const type = `appAssetLibrary${kind}`;
     app.get(`/v1/appAssetLibraries/:id/${kind.toLowerCase()}`, (c) => {
       if (!state().libraries.some((r) => r.id === c.req.param("id"))) return missing(c);
-      return list(c, state().media.filter((r) => r.type === type && refID(r, "assetLibrary") === c.req.param("id")));
+      const media = state().media.filter((r) => r.type === type && refID(r, "assetLibrary") === c.req.param("id"));
+      media.forEach(advanceProcessing);
+      return list(c, media);
     });
     app.post(`/v1/${type}`, async (c) => {
       const { data } = await c.req.json();
@@ -2321,12 +2331,7 @@ function assetLibraryRoutes({ app, store, baseUrl }) {
     });
     app.get(`/v1/${type}/:id`, (c) => {
       const r = state().media.find((r2) => r2.id === c.req.param("id") && r2.type === type);
-      if (r && r.attributes.state === "UPLOAD_COMPLETE" && state().processing?.[r.id] !== void 0) {
-        if (state().processing[r.id]-- <= 0) {
-          r.attributes.state = "READY_FOR_REVIEW";
-          delete state().processing[r.id];
-        }
-      }
+      if (r) advanceProcessing(r);
       return one(c, r);
     });
     app.get(`/v1/${type}/:id/placements`, (c) => {

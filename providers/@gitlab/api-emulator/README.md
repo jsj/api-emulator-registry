@@ -22,8 +22,9 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Supported API
 
+- `POST /api/v4/*`
 - `GET /api/v4/user`
-- `GET /api/v4/users?username=<username>`
+- `GET /api/v4/users`
 - `GET /api/v4/projects/:project`
 - `GET /api/v4/projects/:project/issues`
 - `POST /api/v4/projects/:project/issues`
@@ -45,17 +46,13 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 ## Coverage
 
-- Contract: GitLab 19.2.1 OpenAPI 3.0 (`1702` operations)
-- Stateful: the user, project, issue, merge request, note, discussion, and iteration routes listed above
-- Generic fallback: all other `/api/v4/*` operations return deterministic protocol-compatible placeholder responses
-- Contract check: `npm run contract:gitlab`
-
-The generic fallback provides endpoint and HTTP-method compatibility. It does not reproduce the full state transitions or response schemas of a live GitLab instance. Add a stateful override when a test depends on an operation's semantics.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
 
 ## Credentials
 
-You do not need production credentials. Clients can use any fake token through
-`PRIVATE-TOKEN`, `Authorization`, or `glab auth login` with a local API host.
+You do not need production credentials. Use fixed local credentials if your client requires them.
 
 ## Test data
 
@@ -63,13 +60,9 @@ Add repeatable test data to the provider configuration.
 
 ```yaml
 gitlab:
-  projects: []
-  issues: []
-  iterations: []
-  merge_requests: []
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
 - [api-emulator](https://github.com/jsj/api-emulator)
-- [GitLab 19.2.1 OpenAPI 3.0 specification](https://gitlab.com/gitlab-org/gitlab/-/blob/v19.2.1-ee/doc/api/openapi/openapi_v3.yaml)

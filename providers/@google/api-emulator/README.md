@@ -24,24 +24,11 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 
 The emulator source lists the supported local API endpoints.
 
-## Docs and Sheets reads
-
-The emulator supports the read operations that the guarded GWS CLI uses:
-
-- `GET /v1/documents/:documentId`
-- `GET /v4/spreadsheets/:spreadsheetId`
-- `GET /v4/spreadsheets/:spreadsheetId/values/:range`
-
-The service-prefixed forms under `/docs/v1` and `/sheets/v4` are also available.
-Sheets values support formatted values, unformatted values, and formulas.
-Docs reads support the `includeTabsContent` option.
-
-Seed data can contain `docs`, `spreadsheets`, and `sheetValues` fields.
-
 ## Coverage
 
-- Level: `stateful-core`
-- Evidence: The smoke test covers Docs content, Sheets metadata, value ranges, render modes, and custom seed data.
+- Level: `stub`
+- Meaning: This emulator has a small starter API.
+- Evidence: starter surface with smoke coverage.
 
 ## Credentials
 

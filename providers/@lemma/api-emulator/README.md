@@ -1,42 +1,51 @@
 # @api-emulator/lemma
 
-Lemma receives agent traces and exposes ingest-delivery status for observability workflows.
+Lemma provides agent trace ingestion and ingest-status APIs for local observability workflows.
 
-Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/lemma
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@lemma/api-emulator.mjs --service lemma
 ```
 
-## Endpoints
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- `POST /traces/ingest` — validate and store one complete trace.
-- `GET /traces/ingest-status` — return `ready` or `not_found` for a trace.
-- `GET /inspect/state` — inspect deterministic emulator state.
+## Supported API
 
-## Auth
+- `POST /traces/ingest`
+- `GET /traces/ingest-status`
+- `GET /inspect/state`
 
-Use `Authorization: Bearer lemma_emulator_key`. The default project ID is `00000000-0000-4000-8000-000000000001`.
+## Coverage
 
-## Seed Configuration
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
+
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
 
 ```yaml
 lemma:
-  apiKey: lemma_emulator_key
-  projects:
-    - 00000000-0000-4000-8000-000000000001
+  # Add provider-specific seed state here.
 ```
 
 ## Links
 
-- [Official trace contract](https://docs.uselemma.ai/reference/trace-contract)
-- [Official SDK repository](https://github.com/uselemma/lemma)
+- [Official API docs](https://docs.uselemma.ai/reference/trace-contract)
 - [api-emulator](https://github.com/jsj/api-emulator)

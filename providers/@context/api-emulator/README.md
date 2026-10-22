@@ -23,7 +23,9 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 ## Supported API
 
 - `GET ${prefix}/brand/retrieve`
+- `POST ${prefix}/brand/retrieve`
 - `GET ${prefix}/brand/retrieve/simple`
+- `GET ${prefix}/brand/retrieve-simplified`
 - `GET ${prefix}/brand/transaction_identifier`
 - `POST ${prefix}/brand/ai/product`
 - `POST ${prefix}/brand/ai/query`

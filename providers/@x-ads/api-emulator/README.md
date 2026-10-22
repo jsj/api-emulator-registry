@@ -1,33 +1,50 @@
 # @api-emulator/x-ads
 
-X Ads MCP provides campaign, line-item, targeting, creative, account, and analytics tools.
+X Ads MCP provides account, campaign, line-item, targeting, creative, and analytics tools with paused-by-default writes.
 
-Part of [api-emulator](https://github.com/jsj/api-emulator) — local drop-in replacement services for CI and no-network sandboxes.
+Use this emulator for local tests, CI, and offline agent runs. It keeps your tests separate from the production API.
 
-## Install
+## Start the emulator
+
+1. Install the package.
 
 ```bash
 npm install @api-emulator/x-ads
 ```
 
-## Run
+2. From this registry, start the emulator.
 
 ```bash
 npx -p api-emulator api --plugin ./providers/@x-ads/api-emulator.mjs --service x-ads
 ```
 
-## Endpoints
+The emulator uses the local URL that api-emulator prints. Set your client base URL to this local URL.
 
-- `POST /mcp` — Streamable HTTP MCP initialize, tools/list, and tools/call.
-- `GET /inspect/state` — inspect deterministic campaigns and related state.
+## Supported API
 
-## Auth
+- `POST /mcp`
+- `GET /inspect/state`
 
-The emulator accepts synthetic local bearer-token configuration. It never contacts X. Production uses OAuth2 scopes `ads.read`, `ads.write`, and `offline.access`.
+## Coverage
 
-Campaign and line-item creation always starts `PAUSED`, matching the production safety contract. Activation requires the explicit activation tools.
+- Level: `smoke-only`
+- Meaning: A smoke test starts the emulator and checks its main behavior.
+- Evidence: a direct smoke test exists, but a conformance manifest does not exist.
+
+## Credentials
+
+Use a fixed bearer token or API key in each test. The emulator does not send these credentials to the provider.
+
+## Test data
+
+Add repeatable test data to the provider configuration.
+
+```yaml
+x-ads:
+  # Add provider-specific seed state here.
+```
 
 ## Links
 
-- [Official X Ads MCP documentation](https://docs.x.com/x-ads-api/mcp)
+- [Official API docs](https://docs.x.com/x-ads-api/mcp)
 - [api-emulator](https://github.com/jsj/api-emulator)

@@ -43,8 +43,6 @@ The emulator uses the local URL that api-emulator prints. Set your client base U
 - `PUT ${prefix}/webhook_subscriptions/:subscriptionId`
 - `DELETE ${prefix}/webhook_subscriptions/:subscriptionId`
 
-The emulator implements Partner API v3 only. It does not expose legacy v2 routes or accept `X-LINQ-INTEGRATION-TOKEN`.
-
 ## Coverage
 
 - Level: `smoke-only`

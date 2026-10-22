@@ -69,14 +69,13 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "24"
-          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Publish providers
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           PROVIDER_VERSION: ${{ inputs.version }}
           PROVIDERS: ${{ inputs.providers }}
           CHANGED_ONLY: ${{ inputs.changed_only }}
@@ -84,12 +83,4 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
           FORCE: ${{ inputs.force }}
           PUBLISH_CONCURRENCY: ${{ inputs.publish_concurrency }}
-        run: |
-          cleanup() {
-            npm config delete //registry.npmjs.org/:_authToken >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-          if [ "$DRY_RUN" != "true" ] && [ -n "${NPM_TOKEN:-}" ]; then
-            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          fi
-          node scripts/publish-provider-packages.mjs
+        run: node scripts/publish-provider-packages.mjs

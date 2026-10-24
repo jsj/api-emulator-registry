@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: npm run test:infrastructure
       - run: node --test scripts/parity/*.test.mjs
       - run: node scripts/parity.mjs robinhood-trading
       - uses: actions/upload-artifact@v4

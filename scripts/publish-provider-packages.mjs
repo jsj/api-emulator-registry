@@ -1,3 +1,4 @@
+import { runPool } from './publish-worker-pool.mjs';
 import { selectChangedPackageProviders } from './provider-release-selection.mjs';
 import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -255,17 +256,6 @@ async function publishProvider(slug) {
     failures.push(name);
     console.error(error.message);
   }
-}
-
-async function runPool(items, limit, worker) {
-  let index = 0;
-  const workers = Array.from({ length: limit }, async () => {
-    while (index < items.length) {
-      const item = items[index++];
-      await worker(item);
-    }
-  });
-  await Promise.all(workers);
 }
 
 try {
